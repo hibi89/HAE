@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import re
+from http.client import HTTPException
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
@@ -213,15 +214,22 @@ class DbvoraClient:
                 if response.headers.get_content_type() != "application/json":
                     raise DbvoraClientError("INVALID_RESPONSE", "DBVORA returned a non-JSON response.")
                 length = response.headers.get("Content-Length")
-                if length is not None and (not length.isdigit() or int(length) > MAX_RESPONSE_BYTES):
-                    raise DbvoraClientError("RESPONSE_TOO_LARGE", "DBVORA response exceeds the local size limit.")
+                if length is not None:
+                    if not length.isascii() or not length.isdigit():
+                        raise DbvoraClientError("INVALID_RESPONSE", "DBVORA returned an invalid response length.")
+                    if len(length) > len(str(MAX_RESPONSE_BYTES)) or int(length) > MAX_RESPONSE_BYTES:
+                        raise DbvoraClientError("RESPONSE_TOO_LARGE", "DBVORA response exceeds the local size limit.")
                 raw = response.read(MAX_RESPONSE_BYTES + 1)
+        except DbvoraClientError:
+            raise
         except HTTPError as exc:
             status = exc.code
             exc.close()
             raise DbvoraClientError("HTTP_" + str(status), "DBVORA rejected the local request.") from None
-        except (URLError, OSError, TimeoutError):
+        except (URLError, OSError, TimeoutError, HTTPException):
             raise DbvoraClientError("UNAVAILABLE", "DBVORA local service is unavailable.") from None
+        except ValueError:
+            raise DbvoraClientError("INVALID_RESPONSE", "DBVORA returned an invalid response.") from None
         if len(raw) > MAX_RESPONSE_BYTES:
             raise DbvoraClientError("RESPONSE_TOO_LARGE", "DBVORA response exceeds the local size limit.")
         try:
@@ -230,7 +238,7 @@ class DbvoraClient:
                 object_pairs_hook=_unique_object,
                 parse_constant=_reject_constant,
             )
-        except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
+        except (UnicodeDecodeError, json.JSONDecodeError, ValueError, RecursionError):
             raise DbvoraClientError("INVALID_RESPONSE", "DBVORA returned invalid JSON.") from None
 
     def fetch_inventory(self) -> dict[str, object]:
