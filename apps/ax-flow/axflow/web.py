@@ -8,6 +8,7 @@ import time
 import uuid
 from collections import OrderedDict, deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from importlib.resources import files
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
@@ -150,10 +151,9 @@ def create_server(
             parsed = urlsplit(self.path)
             if parsed.path in _ASSETS:
                 filename, content_type = _ASSETS[parsed.path]
-                asset = Path(__file__).with_name("static") / filename
                 try:
-                    body = asset.read_bytes()
-                except OSError:
+                    body = files("axflow").joinpath("static", filename).read_bytes()
+                except (OSError, ModuleNotFoundError, TypeError):
                     self._send_json(500, {"error": "local UI asset unavailable"})
                     return
                 self._send_bytes(200, body, content_type)
