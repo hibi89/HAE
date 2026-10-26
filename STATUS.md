@@ -8,7 +8,7 @@
 ## Product readiness
 | Component | State | Evidence |
 | --- | --- | --- |
-| REA_APP static source analyzer | MVP_VERIFIED (PARTIAL) | `23bbc979657ccb25bcbba5ddfe2c647476dc0051`, gap slice `52c7860b67dd6dc991c46141b2e841bde74d858f`; 8 Python tests + Node parser assertions pass |
+| REA_APP static source analyzer | MVP_VERIFIED (BOUNDED SCOPE) | code `1e43893146bdbd46b030e56e84e1d4959c07ab35`; 9 Python tests + Node parser assertions pass |
 | AX FLOW local runtime | NOT_STARTED | no code/tests |
 | Natural-language planner and file input | NOT_STARTED | no code/tests |
 | OAuth, Gmail/Sheets connectors | NOT_STARTED | no account credentials, no auth test |
@@ -18,7 +18,7 @@
 | Vercel/Production | NOT_APPLICABLE | local-first product, no hosted service |
 
 ## Next
-Use the bounded n8n notes and remaining REA_APP blueprint gaps in `docs/NEXT_TASK.md` for chief review. Keep the independent AX FLOW runner/engine on hold until that review. Update exact SHAs/test evidence after writes.
+Run the final acceptance audit for REA_APP blueprint A using the current synthetic CLI evidence and recorded limits. Keep the independent AX FLOW runner/engine on hold until chief review. Update exact SHAs/test evidence after writes.
 
 ## Bootstrap verified after GitHub writes (2026-10-27 KST)
 - GitHub repository visibility independently rechecked: **private**.
@@ -71,3 +71,12 @@ Use the bounded n8n notes and remaining REA_APP blueprint gaps in `docs/NEXT_TAS
 - Verification: `python -m unittest discover -s tools/rea-app/tests -v` — **8 passed**; `npm --prefix tools/rea-app run test:parser` — **PASS**. First Python run failed 3 tests because this shell did not set `NODE_PATH` for the globally installed parser; reran with `NODE_PATH=$APPDATA/npm/node_modules/n8n/node_modules`, resolved `@babel/parser@7.29.9`, and all tests passed. No product-code defect.
 - Research limitation/failure: direct access to the standalone credentials environment-variable page failed in the docs browser; key-sharing and encryption behavior were cross-checked against the official queue-mode and key-rotation pages. No external n8n test instance or licensing counsel was available/used.
 - Remaining REA_APP blueprint limits: Python AST, value/data-flow analysis, real symlink/junction and clean npm-install verification, Windows packaging, and authorized real-repository validation remain open. They are recorded as limits, not regressions. No standalone AX FLOW execution engine has been implemented.
+
+## 2026-10-27 KST — bounded local value-flow slice verified
+- Code commit: `1e43893146bdbd46b030e56e84e1d4959c07ab35` (parent `f25abdc6d7424677ead023e445a3baa401e19f63`). `tools/rea-app` release metadata is now 0.2.0.
+- Blueprint gap closed: AST-backed `value_flow_edges` report direct local identifier aliases, simple call-result assignments, identifier call arguments and identifier returns with path/line evidence. Ambiguous duplicate bindings and reassigned names are omitted. The report explicitly excludes control-flow, runtime-value and cross-module value-flow inference.
+- Verification from `tools/rea-app`: `python -m unittest discover -s tests -v` — **9 passed**; `npm run test:parser` — **PASS**; `python -m rea_app --version` — **rea-app 0.2.0**. Tests confirm multiline use-site/call-site/return-site lines, deterministic repeat, source bytes unchanged, no literal value copied into the report, and ambiguity/reassignment exclusions. Parser resolved via host-installed `@babel/parser@7.29.9` using `NODE_PATH=C:\Users\haein\AppData\Roaming\npm\node_modules\n8n\node_modules`.
+- Failed invocation and recovery: first ran the repo-root unittest path while the shell was already in `tools/rea-app`; unittest reported “Start directory is not importable.” Reran the README command with `-s tests`; all checks passed. No product-code defect.
+- Environmental limits still unverified: a clean parser install from the project manifest, physical symlink/junction creation on this Windows sandbox, Windows packaging, and an explicitly authorized non-synthetic source scan. Python and other languages remain inventory-only; value-flow scope is conservative by design.
+- Changed paths: `tools/rea-app/rea_app/__init__.py`, `rea_app/graph.py`, `babel_parser_adapter.cjs`, `package.json`, `README.md`, `tests/test_cli.py`, and `tests/parser_adapter.test.cjs`. No external service, customer data, credentials, n8n source or AX FLOW runtime used.
+- Rollback: revert code commit `1e43893146bdbd46b030e56e84e1d4959c07ab35` to return to the prior passing analyzer state at `f25abdc6d7424677ead023e445a3baa401e19f63`.

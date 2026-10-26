@@ -40,3 +40,19 @@ Sources: [execution order](https://docs.n8n.io/build/flow-logic/understand-execu
 Verification on synthetic fixtures: `python -m unittest discover -s tools/rea-app/tests -v` — **8 passed**; `npm --prefix tools/rea-app run test:parser` — **PASS**. One first test command omitted `NODE_PATH`, causing 3 expected parser-unavailable failures; setting it to the installed global Babel parser location made the entire suite pass. A standalone credentials environment-variable docs page was inaccessible; encryption-key evidence was cross-checked from queue-mode and key-rotation docs. No n8n source or runtime used.
 
 **Hold point:** before any independent AX FLOW runner/engine work, chief review must compare the passing REA_APP scope and remaining blueprint gaps. Current REA_APP limits: Python AST, value/data-flow, physical symlink/junction and clean npm install validation, Windows packaging, and authorized real-source validation. The next task is to decide which of these merit a bounded follow-up; do not start the standalone engine before review.
+
+## 2026-10-27 KST — REA_APP bounded data-flow checkpoint
+
+Implemented and committed as `1e43893146bdbd46b030e56e84e1d4959c07ab35` (parent `f25abdc6d7424677ead023e445a3baa401e19f63`): `value_flow_edges` now cover same-scope direct aliases, call results assigned to simple names, identifier call arguments and identifier returns. Every edge includes exact source/use/call/return lines. Duplicated or reassigned bindings are omitted. This is a conservative syntax-level subset; control-flow, runtime semantics and cross-module value flow remain out of scope. Tool version is 0.2.0.
+
+Verification from `tools/rea-app`: with `NODE_PATH` pointing to the host-installed Babel parser, `python -m unittest discover -s tests -v` — **9 passed**; `npm run test:parser` — **PASS**; `python -m rea_app --version` — **rea-app 0.2.0**. One failed invocation used a repo-root test path while already in the package directory; rerunning the documented `-s tests` command passed. Full result and rollback are in `STATUS.md` and `HANDOFF.md`.
+
+### Blueprint A acceptance audit
+
+- Synthetic JS/TS source scan through the real CLI: covered by integration tests.
+- Dependency, entrypoint, imported-call and bounded local value-flow evidence: covered with exact relative paths and lines; observed syntax is labeled separately from inferred entrypoint metadata.
+- Repeatability and read-only behavior: JSON/Markdown byte-identical across reruns and synthetic source snapshots unchanged.
+- Resource/safety limits: file-count and total-byte caps fail closed; per-file caps, binary/secret/dependency skips, output-outside-root and parser-missing behavior are tested. Physical link creation is restricted by this Windows host; a test double exercises the scanner's rejection branch.
+- Language limits are explicit: JS/TS receives AST parsing; Python and other files are inventory-only. No universal source-reconstruction claim.
+
+**Remaining environment/coverage limits:** clean npm dependency install (registry/cache unavailable), physical symlink/junction test (host permission), Windows packaging and authorized non-synthetic source validation. These do not block the synthetic supported-scope MVP. Keep the runner/engine paused until chief review; no n8n source or code was reused.
