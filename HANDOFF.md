@@ -13,3 +13,17 @@
 
 ## New chat recovery
 Read `HANDOFF.md` → `STATUS.md` → `AGENTS.md` → `REQUIREMENTS.md` → `docs/ARCHITECTURE.md` → `docs/NEXT_TASK.md` → actual source and tests. User `ㄱ` means next safe work unit. Do not repeat completed tasks.
+
+## Verified bootstrap completion checkpoint (2026-10-27 KST)
+1. **Goal:** AX FLOW end-user local automation, REA_APP source-analysis tool; distinct logical product directories, optional external DBVORA.
+2. **Completed:** 14-file private repository documentation/source-layout bootstrap committed at `28271b5b8df6241d4a6be3a1e404b93d41379bb2`. Three branches successfully created from the documented main baseline: `REA_APP`, `develop`, `feature/axflow-mvp`. GitHub remote file reads verified every branch.
+3. **Tests:** GitHub repository/branches/docs reads succeeded; 0 application unit/integration/browser/security/Windows tests run. No product implementation.
+4. **Progress:** R0 initial repo setup DONE as verified documentation-only; R1 REA_APP analyzer is NEXT, not started.
+5. **Issues:** Prior empty GitHub repository returned expected 404 until README init. No recurring failure or source restore needed.
+6. **Repository:** `hibi89/AX_FLOW`, **private**, `main` stable, three feature/integration branches as above. Baseline commit `28271b5b8df6241d4a6be3a1e404b93d41379bb2`; status update subsequently `537b73cb91e5ba01241d89a8767f16792f674edc`. HEAD will advance with this handoff; verify all refs next time instead of presuming SHA.
+7. **Production:** None, Vercel N/A, no CLI/application launch command yet; only GitHub Markdown.
+8. **Safety/originals:** No pre-existing product code/data; original empty repo and README Git history retained; no secrets or auth data introduced; DBVORA/SMAX not changed.
+9. **Next:** User decision on implementation design (A proposed Python CLI/local engine vs B OSS core integration), then work on REA_APP synthetic static analyzer in `REA_APP`. No deployment, customer source, OAuth apps or public access before approval.
+10. **Time/proof:** 2026-10-27 KST. Confirmed GitHub private metadata, branch names, cross-branch file retrieval and commit author/committer `hibi89`. No full runtime tests exist.
+
+**Note:** Documentation-only branches should be aligned to this latest main handoff checkpoint before independent feature development; verify with branch SHA after synchronization.
