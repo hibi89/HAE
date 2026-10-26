@@ -9,16 +9,16 @@
 | Component | State | Evidence |
 | --- | --- | --- |
 | REA_APP static source analyzer | MVP_VERIFIED (BOUNDED SYNTHETIC JS/TS) | `REA_APP@80e8d7aad99c1c40d503848ed620421837b79477`; 10 Python + Node parser tests |
-| AX FLOW local runtime | P7_SYNTHETIC_INTERVAL_TRIGGER_VERIFIED (NOT CUSTOMER READY) | interval scheduler/tests/docs commits `e16d39dbd962b093b39fed0176261364154a41e3` → `bef87cce42960cb31daaeb10b8e2ede0698a5748`; Windows Python 3.11 full suite 54/54 PASS |
+| AX FLOW local runtime | P8_SYNTHETIC_INTERVAL + ZIPAPP_API_SMOKE_VERIFIED (NOT CUSTOMER READY) | package/UI commit chain ends `c1219d2d55b0ea1cbd195fcdbcb9ec386220e83e`; Windows Python 3.11 full suite 57/57 PASS |
 | Natural-language planner and file input | PARTIAL | four bounded Korean/English CSV intents: full import, filtered import, conditional import, read-only lookup; visible browser E2E remains unverified |
 | OAuth, Gmail/Sheets connectors | NOT_STARTED | no account credentials, no auth test |
 | DBVORA integration | P5_SYNTHETIC_READ_ONLY_VERIFIED | selected-file `p0-01.v1` API over loopback; tables/columns/PK/FK/size displayed; customer DB and packaged service deployment unverified |
 | Recovery, resilience and performance | PARTIAL | real process crash resume, cross-process same-run replay, persisted interval due ticks, crash replay and concurrent tick deduplication are tested; DBVORA restore and broader load bounds remain open |
-| Windows install, customer tests, security assessment | NOT_STARTED | no releases |
+| Windows package, customer tests, security assessment | PARTIAL (STDlib ZIPAPP SMOKE) | package CLI, synthetic SQLite workflow and packaged localhost preview/run tested; no signed installer or customer/release evidence |
 | Vercel/Production | NOT_APPLICABLE | local-first product, no hosted service |
 
 ## Next
-The local interval trigger now passes bounded synthetic CLI, persistence, crash-replay and concurrency tests. Remaining Blueprint gates: visible browser click/render E2E, independently verified DBVORA restore, security review, Windows installation/package smoke, and customer/release evidence. The n8n behavior review is recorded from official documentation only; no source/assets were copied. Keep customer data, OAuth, public deployment and DBVORA writes behind approval gates.
+The standard-library Windows zipapp and packaged localhost API smoke pass from outside the source tree. Remaining Blueprint gates are visible browser click/render E2E, independently verified DBVORA restore, security assessment, signed installer, and customer/release evidence. Symlink traversal code exists, but this host denied creation of a symlink fixture, so that case remains unverified. Keep real customer data, OAuth, public deployment and DBVORA writes behind approval gates.
 
 ## Bootstrap verified after GitHub writes (2026-10-27 KST)
 - GitHub repository visibility independently rechecked: **private**.
@@ -166,3 +166,14 @@ The local interval trigger now passes bounded synthetic CLI, persistence, crash-
 - **Progress estimate:** 72% by the A–E equal-weight heuristic (A100/B95/C70/D60/E35). This is progress tracking only; product remains PARTIAL and is not customer ready.
 - **UI/site:** existing local page is `http://127.0.0.1:8765/`; it remains the P6 UI and does not expose schedule editing. No additional site needs to be opened. DBVORA service is separate and currently unavailable.
 - **Next atomic task:** produce a standard-library-only Windows `.pyz` package smoke from this branch, including zip-safe UI assets, and run its CLI plus local page GET from outside the source tree. This is a package proof, not a signed installer or release.
+
+
+## 2026-10-27 KST — P8 Windows zipapp and packaged UI API smoke passed
+- **Branch/commit chain:** `hibi89/AX_FLOW`, `feature/axflow-mvp`; zip-safe UI resources `f04f8b65cbeb8074e99fd7031377d02cdcd58f0d`; packager `5bbb5c1a6d313eeef3efed67c2026266ce365cbf`; packaged CLI/UI test `5b10c8eb5a79163d95167230b304a032f462ac19`; final packaged preview/run test `301b1f7c0e195c4af897bc80dbc3a9ca6ec76c1c`; latest README `c1219d2d55b0ea1cbd195fcdbcb9ec386220e83e`.
+- **Implemented:** a standard-library `.pyz` builder copies only the AX FLOW Python package/static assets, rejects source symlinks, requires an existing output parent, and refuses to overwrite a package. UI resources load through `importlib.resources` from the archive.
+- **Executed verification:** Windows Python 3.11.9, package tests 3/3 and full suite **57/57 PASS**. The package was built to a temporary directory outside the source tree with `PYTHONPATH` removed; packaged CLI validated and executed a synthetic SQLite write/read flow. Packaged localhost server returned HTML/JS/CSS, and Korean preview→explicitly approved CSV import returned a redacted completion receipt with one business row. `node --check` and `python -m py_compile` passed. Localhost-only integration checks used loopback permission; no dependency install/network service was required.
+- **Failure/recovery:** no failure in final package/full tests. An attempt to create a real Windows symlink fixture returned an OS permission error; the code path remains unverified on this host. It is recorded as a coverage limitation, not as a pass.
+- **Blueprint comparison:** C API workflow now passes from a bundled package but remains PARTIAL because visible browser click/render E2E is not verified and planning is intentionally limited to four CSV intents. D's read-only synthetic inventory contract/live smoke is recorded, but browser-linked DBVORA view and independent source-preserving restore are still open; the DBVORA process is currently stopped and restore is separately gated. E now has a local package smoke, not a signed installer, security assessment or release evidence.
+- **Progress estimate:** **76%** by the A–E equal-weight heuristic (A100/B95/C80/D60/E45). This is internal progress only. Product remains PARTIAL, not customer ready.
+- **Website:** no new site is required. Existing tab remains `http://127.0.0.1:8765/` (P6 UI); scheduler is CLI-only. The temporary packaged UI smoke shut down its own test server.
+- **Next:** perform bounded, read-only security review of local bind/origin/path handling, data redaction, and package contents, then implement only defects found with regression tests. External DBVORA restore, visual browser check that the UI helper refuses, signed installer and customer/release gates remain on hold until independently authorized.
