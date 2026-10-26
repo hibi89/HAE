@@ -605,6 +605,94 @@ class TestEngine(unittest.TestCase):
                 "Find rows in this CSV where amount >= 100 and id = A", "sales.csv"
             )
 
+    def test_hard_process_exit_after_csv_commit_resumes_without_duplicate(self):
+        inputs = self.root / "crash-input"
+        inputs.mkdir()
+        (inputs / "contacts.csv").write_text("id,name\n1,First\n2,Second\n", encoding="utf-8")
+        plan = build_template("csv_to_sqlite", csv_path="contacts.csv")
+        plan_file = self.root / "crash-plan.json"
+        plan_file.write_text(json.dumps(plan), encoding="utf-8")
+        state = self.root / "crash-state.db"
+        business = self.root / "crash-business.db"
+        helper = self.root / "crash_after_import.py"
+        helper.write_text(
+            "import json, os, sys\n"
+            "from pathlib import Path\n"
+            "sys.path.insert(0, str(Path.cwd()))\n"
+            "from axflow.engine import Engine\n"
+            "class CrashEngine(Engine):\n"
+            " def _evaluate_step(self, step, results, outcomes, run_id, inject_stop_after_business, **kwargs):\n"
+            "  value = super()._evaluate_step(step, results, outcomes, run_id, False, **kwargs)\n"
+            "  if step['op'] == 'sqlite_import_csv': os._exit(73)\n"
+            "  return value\n"
+            "state,business,root,run_id,plan_path=sys.argv[1:]\n"
+            "plan=json.loads(Path(plan_path).read_text(encoding='utf-8'))\n"
+            "CrashEngine(state,business,input_root=Path(root)).execute(plan,run_id,approve_writes=True)\n",
+            encoding="utf-8",
+        )
+        cwd = Path(__file__).resolve().parents[1]
+        crashed = subprocess.run(
+            [sys.executable, str(helper), str(state), str(business), str(inputs), "HardCrashRun", str(plan_file)],
+            cwd=cwd, capture_output=True, text=True, timeout=15,
+        )
+        self.assertEqual(crashed.returncode, 73, crashed.stderr)
+        self.assertEqual(inspect_run(state, "HardCrashRun")["status"], "running")
+        with closing(sqlite3.connect(business)) as con:
+            self.assertEqual(
+                con.execute("SELECT COUNT(*) FROM csv_records WHERE run_id='HardCrashRun'").fetchone()[0], 2
+            )
+
+        resumed = Engine(state, business, input_root=inputs).execute(
+            plan, "HardCrashRun", approve_writes=True
+        )
+        self.assertEqual(resumed["imported_rows"], 2)
+        self.assertEqual(inspect_run(state, "HardCrashRun")["status"], "completed")
+        with closing(sqlite3.connect(business)) as con:
+            rows = con.execute(
+                "SELECT row_number,payload_json FROM csv_records WHERE run_id='HardCrashRun' ORDER BY row_number"
+            ).fetchall()
+        self.assertEqual([row[0] for row in rows], [1, 2])
+        self.assertEqual([json.loads(row[1])["id"] for row in rows], ["1", "2"])
+
+    def test_cross_process_same_run_replay_is_idempotent(self):
+        plan_file = self.root / "process-plan.json"
+        plan_file.write_text(json.dumps(self.plan), encoding="utf-8")
+        command = [
+            sys.executable, "-m", "axflow", "run", str(plan_file),
+            "--state", str(self.root / "state.db"), "--data", str(self.root / "business.db"),
+            "--run-id", "SharedProcessRun", "--synthetic", "--approve-writes",
+        ]
+        blocker = sqlite3.connect(self.root / "state.db", timeout=1, isolation_level=None)
+        blocker.execute("BEGIN EXCLUSIVE")
+        processes = []
+        try:
+            cwd = Path(__file__).resolve().parents[1]
+            processes = [
+                subprocess.Popen(command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True),
+                subprocess.Popen(command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True),
+            ]
+            time.sleep(0.15)
+        finally:
+            blocker.rollback()
+            blocker.close()
+
+        completed = []
+        for process in processes:
+            stdout, stderr = process.communicate(timeout=15)
+            self.assertEqual(process.returncode, 0, stderr)
+            completed.append(json.loads(stdout))
+        self.assertEqual([item["result"] for item in completed], [
+            {"count": 2, "name": "fixture"}, {"count": 2, "name": "fixture"},
+        ])
+        with closing(sqlite3.connect(self.root / "business.db")) as con:
+            self.assertEqual(
+                con.execute(
+                    "SELECT COUNT(*) FROM records WHERE run_id='SharedProcessRun' AND step_id='save'"
+                ).fetchone()[0],
+                1,
+            )
+        self.assertEqual(inspect_run(self.root / "state.db", "SharedProcessRun")["status"], "completed")
+
     def test_engine_rejects_path_like_run_ids_and_unsafe_database_paths(self):
         with self.assertRaises(PlanError):
             self.engine.execute(self.plan, "../escape", approve_writes=True)
@@ -620,3 +708,4 @@ class TestEngine(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
