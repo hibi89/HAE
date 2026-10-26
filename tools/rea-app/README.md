@@ -35,6 +35,11 @@ passed as direct call arguments, and direct identifier returns. It omits duplica
 or reassigned bindings. These are syntax-level observations, not control-flow-aware
 taint analysis or cross-module value-flow claims; the tool does not execute code.
 
+The report also records observed callable exports and their explicit parameter
+and return type annotations. It includes names, optional/rest/default-presence
+flags, and definition/export line evidence. It never records default values or
+function bodies, and it does not infer types or describe function behavior.
+
 ## Verification
 
 From `tools/rea-app` run:
@@ -48,4 +53,5 @@ The synthetic tests cover deterministic output, ESM and CommonJS references,
 alias/external resolution, cyclic imports, entry points, syntax errors, binary and
 secret exclusions, symlink handling where the host allows symlink creation,
 empty repositories, scan caps, missing-parser behavior, local value-flow evidence,
-ambiguous/reassigned binding exclusions and source-tree integrity.
+ambiguous/reassigned binding exclusions, exported callable signatures and
+source-tree integrity.

@@ -136,7 +136,7 @@ class ReaAppCliTests(unittest.TestCase):
         report = json.loads(first_json)
 
         self.assertEqual(report["schema_version"], "rea-app-source-map/v1")
-        self.assertEqual(report["tool_version"], "0.2.0")
+        self.assertEqual(report["tool_version"], "0.3.0")
         self.assertEqual(report["parser"], "@babel/parser@7.29.9")
         self.assertEqual(report["summary"]["packages"], 2)
         self.assertGreaterEqual(report["summary"]["dependency_edges"], 9)
@@ -256,6 +256,57 @@ class ReaAppCliTests(unittest.TestCase):
         self.assertEqual(repeat.returncode, 0, repeat.stderr + repeat.stdout)
         self.assertEqual(json_path.read_bytes(), first_json)
         self.assertEqual(markdown_path.read_bytes(), first_markdown)
+        self.assertEqual(snapshot(self.source), before)
+
+    def test_exported_function_contracts_include_only_explicit_syntax_and_evidence(self) -> None:
+        self.write(
+            "src/contracts.ts",
+            "export async function load(id: string, options?: { cache: boolean }): Promise<Result> { return await source('private-body-text'); }\n"
+            "export const transform = (value: string, count = 9137): string => value;\n"
+            "function helper(input: Payload): void {}\n"
+            "export { helper as publicHelper };\n"
+            "export default function (input: Payload): Promise<Response> { return route(input); }\n",
+        )
+        before = snapshot(self.source)
+        result = self.run_scan()
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        report_path = self.output / "source-map.json"
+        markdown_path = self.output / "source-map.md"
+        report_bytes = report_path.read_bytes()
+        report = json.loads(report_bytes)
+        contracts = report["function_contracts"]
+        self.assertEqual(report["summary"]["function_contracts"], 4)
+
+        load = next(item for item in contracts if item["exported_as"] == "load")
+        self.assertEqual(load["kind"], "FunctionDeclaration")
+        self.assertTrue(load["async"])
+        self.assertEqual(load["parameters"][0]["type_annotation"], "string")
+        self.assertTrue(load["parameters"][1]["optional"])
+        self.assertEqual(load["parameters"][1]["type_annotation"], "{ cache: boolean }")
+        self.assertEqual(load["return_type_annotation"], "Promise<Result>")
+        self.assertEqual(load["evidence"]["definition"], {"path": "src/contracts.ts", "line": 1})
+        self.assertEqual(load["evidence"]["export"], {"path": "src/contracts.ts", "line": 1, "name": "load"})
+
+        transform = next(item for item in contracts if item["exported_as"] == "transform")
+        self.assertTrue(transform["parameters"][1]["has_default"])
+        self.assertNotIn("default_value", transform["parameters"][1])
+        self.assertEqual(transform["return_type_annotation"], "string")
+        helper = next(item for item in contracts if item["exported_as"] == "publicHelper")
+        self.assertEqual(helper["symbol"], "helper")
+        default = next(item for item in contracts if item["exported_as"] == "default")
+        self.assertEqual(default["symbol"], "default")
+        self.assertEqual(default["return_type_annotation"], "Promise<Response>")
+
+        json_text = report_bytes.decode("utf-8")
+        markdown_text = markdown_path.read_text(encoding="utf-8")
+        self.assertNotIn("private-body-text", json_text)
+        self.assertNotIn("9137", json_text)
+        self.assertIn("Exported function contracts", markdown_text)
+        self.assertIn("count = <default>", markdown_text)
+        self.assertIn("export evidence `src/contracts.ts:4`", markdown_text)
+        repeat = self.run_scan()
+        self.assertEqual(repeat.returncode, 0, repeat.stderr + repeat.stdout)
+        self.assertEqual(report_path.read_bytes(), report_bytes)
         self.assertEqual(snapshot(self.source), before)
 
     def test_file_count_cap_fails_closed_without_partial_reports(self) -> None:

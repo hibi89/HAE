@@ -45,7 +45,245 @@ function configValue(node) {
   if (node.type === 'ObjectExpression') {
     const value = {};
     for (const property of node.properties) {
-      if (property.type !== 'ObjectProperty' }¸Ó[h‘éì¶»§q«^uember) {
+      if (property.type !== 'ObjectProperty' || property.computed) continue;
+      const key = nodeName(property.key);
+      if (key !== null) value[key] = configValue(property.value);
+    }
+    return value;
+  }
+  return undefined;
+}
+
+function sourceString(node) {
+  return node && node.type === 'StringLiteral' ? node.value : null;
+}
+
+function collectDeclarationExports(declaration, out) {
+  if (!declaration) return;
+  if (declaration.type === 'VariableDeclaration') {
+    for (const item of declaration.declarations) {
+      const names = namesFromPattern(item.id, '*').map((binding) => binding.local);
+      for (const name of names) out.push({ name, source_name: name, kind: 'export', line: lineOf(declaration) });
+    }
+  } else if (declaration.id && declaration.id.name) {
+    out.push({ name: declaration.id.name, source_name: declaration.id.name, kind: 'export', line: lineOf(declaration) });
+  }
+}
+
+function functionName(node, parent) {
+  if (node.type === 'FunctionDeclaration' && node.id) return node.id.name;
+  if (node.type === 'FunctionExpression' && node.id) return node.id.name;
+  if (["ClassMethod", "ClassPrivateMethod", "ObjectMethod"].includes(node.type)) return nodeName(node.key) || '<method>';
+  if (["FunctionExpression", "ArrowFunctionExpression"].includes(node.type)) {
+    if (parent && parent.type === 'VariableDeclarator') return nodeName(parent.id) || '<anonymous>';
+    if (parent && parent.type === 'AssignmentExpression') {
+      return nodeName(parent.left) || (parent.left.type === 'MemberExpression' && !parent.left.computed
+        ? nodeName(parent.left.property)
+        : null) || '<anonymous>';
+    }
+    if (parent && parent.type === 'ObjectProperty') return nodeName(parent.key) || '<anonymous>';
+  }
+  return null;
+}
+
+const FUNCTION_TYPES = new Set([
+  'FunctionDeclaration',
+  'FunctionExpression',
+  'ArrowFunctionExpression',
+  'ObjectMethod',
+  'ClassMethod',
+  'ClassPrivateMethod',
+]);
+
+function simpleCalleeName(node) {
+  if (!node) return null;
+  if (node.type === 'Identifier') return node.name;
+  if (node.type === 'MemberExpression' && !node.computed && node.property.type === 'Identifier') {
+    return node.property.name;
+  }
+  return null;
+}
+
+function typeText(annotation, content) {
+  if (!annotation || typeof annotation.start !== 'number' || typeof annotation.end !== 'number') return null;
+  const text = content.slice(annotation.start, annotation.end).replace(/^\s*:\s*/, '').trim();
+  return text && text.length <= 240 ? text : null;
+}
+
+function parameterContract(parameter, content) {
+  let item = parameter;
+  if (item && item.type === 'TSParameterProperty') item = item.parameter;
+  let rest = false;
+  let hasDefault = false;
+  if (item && item.type === 'RestElement') {
+    rest = true;
+    item = item.argument;
+  }
+  if (item && item.type === 'AssignmentPattern') {
+    hasDefault = true;
+    item = item.left;
+  }
+  return {
+    name: item && item.type === 'Identifier' ? item.name : null,
+    pattern: item && item.type !== 'Identifier' ? item.type : null,
+    optional: Boolean(item && item.optional),
+    rest,
+    has_default: hasDefault,
+    type_annotation: typeText(item && item.typeAnnotation, content)
+      || typeText(parameter && parameter.typeAnnotation, content),
+  };
+}
+
+function exportedAssignmentName(left) {
+  if (!left || left.type !== 'MemberExpression') return null;
+  const objectName = nodeName(left.object);
+  const member = nodeName(left.property);
+  if (objectName === 'exports' && member) return member;
+  if (objectName === 'module' && member === 'exports') return 'default';
+  if (
+    left.object && left.object.type === 'MemberExpression' &&
+    nodeName(left.object.object) === 'module' &&
+    nodeName(left.object.property) === 'exports' && member
+  ) return member;
+  return null;
+}
+
+function functionDefinition(node, parent) {
+  if (parent && parent.type === 'ExportDefaultDeclaration') {
+    return { symbol: node.id && node.id.name ? node.id.name : 'default', direct_export: 'default' };
+  }
+  if (node.type === 'FunctionDeclaration' && node.id) return { symbol: node.id.name };
+  if (parent && parent.type === 'VariableDeclarator' && parent.id && parent.id.type === 'Identifier') {
+    return { symbol: parent.id.name };
+  }
+  if (parent && parent.type === 'AssignmentExpression' && parent.right === node) {
+    const symbol = exportedAssignmentName(parent.left);
+    if (symbol) return { symbol, direct_export: symbol };
+  }
+  if (node.type === 'FunctionExpression' && node.id) return { symbol: node.id.name };
+  return null;
+}
+
+function parseSource(file) {
+  const lower = file.path.toLowerCase();
+  const isTypeScript = /\.(?:ts|tsx|mts|cts)$/.test(lower);
+  const isTsx = lower.endsWith('.tsx');
+  const plugins = ['decorators-legacy', 'importAttributes'];
+  if (isTypeScript) plugins.push(['typescript', { isTSX: isTsx }]);
+  if (isTsx || lower.endsWith('.jsx')) plugins.push('jsx');
+  const edges = [];
+  const bindings = [];
+  const exports = [];
+  const calls = [];
+  const valueFlows = [];
+  const functionNodes = [];
+  let ast;
+
+  try {
+    ast = babelParser.parse(file.content, {
+      sourceType: 'unambiguous',
+      sourceFilename: file.path,
+      errorRecovery: true,
+      plugins,
+    });
+  } catch (error) {
+    return {
+      path: file.path,
+      parse_errors: [{ line: error.loc && error.loc.line ? error.loc.line : 1, message: error.message }],
+      edges,
+      bindings,
+      exports,
+      calls,
+      value_flows: valueFlows,
+      function_contracts: [],
+    };
+  }
+
+  function addEdge(kind, specifier, node, importBindings = []) {
+    if (typeof specifier !== 'string') return;
+    const edgeIndex = edges.length;
+    edges.push({ kind, specifier, line: lineOf(node) });
+    for (const binding of importBindings) bindings.push({ ...binding, edge_index: edgeIndex, kind });
+  }
+
+  for (const statement of ast.program.body) {
+    if (statement.type === 'ImportDeclaration') {
+      const foundBindings = [];
+      for (const specifier of statement.specifiers) {
+        if (specifier.type === 'ImportDefaultSpecifier') foundBindings.push({ local: specifier.local.name, imported: 'default' });
+        else if (specifier.type === 'ImportNamespaceSpecifier') foundBindings.push({ local: specifier.local.name, imported: '*' });
+        else foundBindings.push({ local: specifier.local.name, imported: nodeName(specifier.imported) || specifier.imported.value });
+      }
+      addEdge(statement.importKind === 'type' ? 'type_import' : 'import', sourceString(statement.source), statement, foundBindings);
+    } else if (statement.type === 'ExportNamedDeclaration') {
+      if (statement.source) addEdge('reexport', sourceString(statement.source), statement);
+      if (statement.specifiers.length) {
+        for (const specifier of statement.specifiers) {
+          exports.push({
+            name: nodeName(specifier.exported),
+            source_name: nodeName(specifier.local),
+            kind: statement.source ? 'reexport' : 'export',
+            line: lineOf(statement),
+          });
+        }
+      } else {
+        collectDeclarationExports(statement.declaration, exports);
+      }
+    } else if (statement.type === 'ExportAllDeclaration') {
+      addEdge('reexport', sourceString(statement.source), statement);
+      exports.push({ name: nodeName(statement.exported) || '*', kind: 'reexport_all', line: lineOf(statement) });
+    } else if (statement.type === 'ExportDefaultDeclaration') {
+      const declaration = statement.declaration;
+      const sourceName = declaration && declaration.id && declaration.id.name
+        ? declaration.id.name
+        : declaration && declaration.type === 'Identifier' ? declaration.name : 'default';
+      exports.push({ name: 'default', source_name: sourceName, kind: 'default_export', line: lineOf(statement) });
+    } else if (statement.type === 'TSExportAssignment') {
+      exports.push({ name: 'default', source_name: 'default', kind: 'export_assignment', line: lineOf(statement) });
+    } else if (statement.type === 'TSImportEqualsDeclaration') {
+      const reference = statement.moduleReference;
+      if (reference && reference.expression) addEdge('require', sourceString(reference.expression), statement, [{ local: statement.id.name, imported: '*' }]);
+    }
+  }
+
+  function visit(node, parent = null, currentCaller = '<module>') {
+    if (!node || typeof node !== 'object') return;
+    const namedFunction = functionName(node, parent);
+    const caller = namedFunction || currentCaller;
+    if (FUNCTION_TYPES.has(node.type) && !['ObjectMethod', 'ClassMethod', 'ClassPrivateMethod'].includes(node.type)) {
+      const definition = functionDefinition(node, parent);
+      if (definition) functionNodes.push({ node, ...definition });
+    }
+
+    if (node.type === 'CallExpression') {
+      const callee = node.callee;
+      const isRequire = callee && callee.type === 'Identifier' && callee.name === 'require';
+      const isDynamicImport = (callee && callee.type === 'Import') || node.type === 'ImportExpression';
+      if (isRequire && node.arguments.length && node.arguments[0].type === 'StringLiteral') {
+        const foundBindings = parent && parent.type === 'VariableDeclarator'
+          ? namesFromPattern(parent.id, '*')
+          : [];
+        addEdge('require', sourceString(node.arguments[0]), node, foundBindings);
+      } else if (isDynamicImport && node.arguments.length && node.arguments[0].type === 'StringLiteral') {
+        addEdge('dynamic_import', sourceString(node.arguments[0]), node);
+      }
+      calls.push({
+        callee: file.content.slice(callee.start, callee.end).slice(0, 160),
+        caller,
+        line: lineOf(node),
+      });
+    } else if (node.type === 'ImportExpression' && node.source && node.source.type === 'StringLiteral') {
+      addEdge('dynamic_import', sourceString(node.source), node);
+    } else if (node.type === 'TSImportType' && node.argument && node.argument.type === 'TSLiteralType') {
+      addEdge('type_import', sourceString(node.argument.literal), node);
+    }
+
+    if (node.type === 'AssignmentExpression' && node.operator === '=') {
+      const left = node.left;
+      if (left && left.type === 'MemberExpression') {
+        const objectName = nodeName(left.object);
+        const member = left.computed ? nodeName(left.property) : nodeName(left.property);
+        if (objectName === 'exports' && member) {
           exports.push({ name: member, source_name: member, kind: 'commonjs_export', line: lineOf(node) });
         } else if (objectName === 'module' && member === 'exports') {
           exports.push({ name: 'default', source_name: 'default', kind: 'commonjs_export', line: lineOf(node) });
@@ -69,6 +307,31 @@ function configValue(node) {
     }
   }
   visit(ast.program);
+
+  const functionContracts = [];
+  for (const exported of exports) {
+    if (!['export', 'default_export', 'commonjs_export'].includes(exported.kind)) continue;
+    const sourceName = exported.source_name || exported.name;
+    const candidates = functionNodes.filter((item) =>
+      item.symbol === sourceName || item.symbol === exported.name || item.direct_export === exported.name,
+    );
+    if (candidates.length !== 1) continue;
+    const item = candidates[0];
+    const node = item.node;
+    functionContracts.push({
+      symbol: item.symbol,
+      exported_as: exported.name,
+      kind: node.type,
+      async: Boolean(node.async),
+      generator: Boolean(node.generator),
+      parameters: (node.params || []).map((parameter) => parameterContract(parameter, file.content)),
+      return_type_annotation: typeText(node.returnType, file.content),
+      evidence: {
+        definition: { path: file.path, line: lineOf(node) },
+        export: { path: file.path, line: exported.line, name: exported.name },
+      },
+    });
+  }
 
   function collectValueFlows(scopeRoot, scopeParent, isModule = false) {
     const declarations = [];
@@ -215,7 +478,7 @@ function configValue(node) {
     line: error.loc && error.loc.line ? error.loc.line : 1,
     message: error.message,
   }));
-  return { path: file.path, parse_errors: parseErrors, edges, bindings, exports, calls, value_flows: valueFlows };
+  return { path: file.path, parse_errors: parseErrors, edges, bindings, exports, calls, value_flows: valueFlows, function_contracts: functionContracts };
 }
 
 function parseTsConfig(file) {
