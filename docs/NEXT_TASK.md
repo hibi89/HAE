@@ -1,3 +1,13 @@
+## Current checkpoint (P9 local boundary fixes passed — 2026-10-27 KST)
+
+`feature/axflow-mvp`: response hardening `30be45331ea71b5a39cd2530764664dd8620d565`, regressions `2da4b40ebfeec92b0fb589c75392c3e962e5ffb7`. Windows Python 3.11.9 DBVORA client suite 9/9; full suite 59/59; Node syntax and Python compilation pass. Hostile 5000-digit Content-Length and deeply nested JSON now fail closed. Read-only code review verified loopback-only binding/client, Host/Origin gate, capped/rate-limited requests, CSP/no-store, DOM textContent, and redirect-disabled GET-only bounded DBVORA client.
+
+A–E progress heuristic: **77%** (A100/B95/C80/D60/E50); product remains PARTIAL. This review is not independent certification. Remaining: visible browser click/render, OS-denied symlink fixture, running DBVORA browser view and separately authorized restore, signed installer, customer/release evidence, independent security review. No new site needs opening; existing localhost tab remains at `http://127.0.0.1:8765/`.
+
+**NEXT ATOMIC TASK:** continue with only permission-free quality gates; preserve explicit notes for any release gate requiring user or external authorization. Do not merge to main/develop or claim 100% until required evidence exists.
+
+---
+
 ## Current checkpoint (P8 zipapp/package API smoke passed — 2026-10-27 KST)
 
 Branch `feature/axflow-mvp` P8 commits end at `c1219d2d55b0ea1cbd195fcdbcb9ec386220e83e`. Windows Python 3.11.9: package tests 3/3, full suite 57/57; JS syntax and py_compile pass. A stdlib `.pyz` ran from outside the source tree with no `PYTHONPATH`; CLI synthetic SQLite and packaged UI GET/preview/approved-run passed. The completion receipt did not expose the fixture row. Overwrite was rejected without changing artifact SHA.
