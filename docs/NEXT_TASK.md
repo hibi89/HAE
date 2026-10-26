@@ -1,5 +1,13 @@
 # Next work unit — 2026-10-27 KST (ACTIVE fast-track)
 
+## Current checkpoint (P3 passed)
+
+The synthetic CSV→SQLite runner and deterministic `csv_to_sqlite` template are implemented and verified on Windows Python 3.11: `apps/ax-flow` full suite **22/22 PASS**. Latest code commits: `c233fcb206ae7675413bddc13f94cda1d182a7ce` and `b50989ff832bbc35b93305761e8e534fd45555c7` on `feature/axflow-mvp`. n8n behavior review is complete from official docs only; no n8n code or assets were copied.
+
+Target Blueprint V1 comparison: A passes for bounded synthetic REA_APP scope; B is a verified limited runner slice; C is incomplete because natural-language planning and a customer UI are absent; D/E remain incomplete because the DBVORA bridge, browser E2E, Windows packaging and release security gates are absent. Overall completion is **PARTIAL**, not 100%.
+
+**Next:** implement only the minimal localhost template UI (select CSV→SQLite, preview/validate IR, explicit synthetic run, show redacted status). Keep no-auth local scope and existing synthetic/write-approval gates. Run an actual browser-to-engine test and announce before opening a visible browser. Do not broaden the independent runner beyond that UI integration until overall review.
+
 **Owner decision supersedes 21-week plan:** first 2 weeks REA_APP + own n8n-like runner; next 3 weeks AX FLOW + parallel DBVORA integration. Read docs/FAST_TRACK_5_WEEK.md, docs/TARGET_BLUEPRINT_V1.md, docs/CODEX_EXTRA_HIGH_ORDER.md before any implementation.
 
 ## Codex first authorized implementation unit (MVP D1–D3, REA_APP branch)

@@ -1,6 +1,6 @@
 # AX FLOW independent runner — v0.1.0 (synthetic-only)
 
-**Status: first executable engine slice, not a customer-ready AX FLOW product.** All work is original Python stdlib code. No n8n source, modified n8n runtime, customer data or remote API access involved.
+**Status: verified synthetic runner plus deterministic template, not a customer-ready AX FLOW product.** All work is original Python stdlib code. No n8n source, modified n8n runtime, customer data or remote API access involved.
 
 ## Selected architecture
 1. Python 3 stdlib `sqlite3` + JSON IR, local CLI: cheap/install-free engine proof and deterministic tests (SELECTED).
@@ -25,7 +25,7 @@ From `apps/ax-flow/` with Python 3.11+:
 ```shell
 python -m unittest discover -s tests -v
 ```
-Latest P2 checkpoint: Windows Python 3.11, **20/20 tests PASS**. This includes existing P0/P1 CLI/recovery/concurrency checks, both IF/ELSE outcomes, mapping transforms, held-lock retry/timeout/recovery, full CLI CSV→SQLite import, payload-redacted CSV checkpointing, source-change rejection, and malformed/oversized/path-escape input rejection. CI and clean third-party installs have not been run.
+Latest full suite: Windows Python 3.11, **22/22 tests PASS** at P3. This includes P0/P1 CLI/recovery/concurrency checks, both IF/ELSE outcomes, mapping transforms, held-lock retry/timeout/recovery, CSV→SQLite import and replay, and generated-template → validate → actual CLI import. Unsupported templates, unsafe paths, missing `--synthetic`, and unused template command options are rejected. CI and clean third-party installs have not been run.
 
 For a manual synthetic demo, create a JSON file outside the repo:
 ```json

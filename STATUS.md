@@ -9,8 +9,8 @@
 | Component | State | Evidence |
 | --- | --- | --- |
 | REA_APP static source analyzer | MVP_VERIFIED (BOUNDED SYNTHETIC JS/TS) | `REA_APP@80e8d7aad99c1c40d503848ed620421837b79477`; 10 Python + Node parser tests |
-| AX FLOW local runtime | P2_CSV_SQLITE_VERIFIED / P3_TEMPLATE_AND_N8N_ANALYSIS_NEXT (SYNTHETIC ONLY) | `feature/axflow-mvp@ebc2bbfdf05e51fc82732fce73da849146872b43`; Windows Python 3.11 full suite 20/20 PASS |
-| Natural-language planner and file input | NOT_STARTED | no code/tests |
+| AX FLOW local runtime | P3_TEMPLATE_VERIFIED (SYNTHETIC ONLY) | `feature/axflow-mvp@b50989ff832bbc35b93305761e8e534fd45555c7`; Windows Python 3.11 full suite 22/22 PASS |
+| Natural-language planner and file input | PARTIAL | one deterministic CSV→SQLite template emits validated IR; natural-language planning and local UI not implemented |
 | OAuth, Gmail/Sheets connectors | NOT_STARTED | no account credentials, no auth test |
 | DBVORA integration | NOT_STARTED | separate repository remains unchanged |
 | Recovery, resilience and performance | PARTIAL | handled failure status, resume/idempotent SQLite replay and threaded claims tested; hard-kill recovery and multi-process stress unverified |
@@ -18,7 +18,7 @@
 | Vercel/Production | NOT_APPLICABLE | local-first product, no hosted service |
 
 ## Next
-Continue on `feature/axflow-mvp`: study n8n behavior from public/authorized material without copying source, and build the constrained local template→IR path. Keep external auth, real customer data, paid services, deployments and DBVORA source changes behind their documented approval gates.
+Continue on `feature/axflow-mvp`: implement the smallest local UI for choosing/configuring the tested template and viewing validation/run status, then verify the browser-to-engine flow. Keep external auth, real customer data, paid services, deployments and DBVORA source changes behind their documented approval gates.
 
 ## Bootstrap verified after GitHub writes (2026-10-27 KST)
 - GitHub repository visibility independently rechecked: **private**.
@@ -93,3 +93,12 @@ Continue on `feature/axflow-mvp`: study n8n behavior from public/authorized mate
 - **Failure/recovery:** No test failure in this increment. The earlier retry/timeout test correction remains documented in the prior checkpoint.
 - **Not done / limits:** XLSX/PDF, arbitrary header names (CSV headers must be safe identifiers), cross-process stress, GUI, planner, DBVORA, customer files and packaging are unverified. Symlink traversal is rejected in code; no symlink fixture was executed in this Windows test run. No user data was used.
 - **Next:** After the verified runner MVP, perform lawful n8n behavioral analysis from public/authorized sources without copying code/assets, and implement a no-paid constrained template→IR slice with tests. Do not claim overall product completion; full product remains PARTIAL.
+
+## 2026-10-27 KST — P3 deterministic template and n8n behavior review
+- **Branch/code commits:** `hibi89/AX_FLOW`, `feature/axflow-mvp`; template commit `c233fcb206ae7675413bddc13f94cda1d182a7ce`, strict unused-option fix `b50989ff832bbc35b93305761e8e534fd45555c7`.
+- **Implemented:** local `template --name csv_to_sqlite --csv <relative.csv> --synthetic` prints a deterministic, validated `axflow.ir.v0` plan to stdout. Unknown templates, unsafe paths, missing synthetic guard, extra parameters and unrelated run options are rejected. No AI, network or file write occurs during generation. Existing `--input-root` and `--approve-writes` gates apply when the generated plan is run.
+- **Verification:** Windows Python 3.11; from `apps/ax-flow`, `python -m unittest discover -s tests -v` — **22 passed, 0 failed**. This includes CLI generation, parsing, validation and import into a synthetic SQLite database, plus rejected requests and the prior full suite.
+- **Observed failures and recovery:** No product test failed in this increment. Code review found template mode silently accepted unused run options; explicit rejection and a regression test were added. The first remote metadata parsing call failed because the connector nests REST JSON under `structuredContent.content`; no ref changed, and the retry used the correct structure. Blob SHAs matched local Git object hashes.
+- **n8n behavior notes (official docs only; clean-room reference):** execution order is version/config dependent; current branch scheduling completes a branch at a time in canvas order. Workflow data is item arrays, IF offers typed conditions and two outputs, executions distinguish manual/production mode and support prior-data retry/debug, and workflow-level error triggers expose bounded failure context. Official sources: [execution order](https://docs.n8n.io/build/flow-logic/understand-execution-order.md), [data structure](https://docs.n8n.io/build/work-with-data/understand-n8ns-data-structure.md), [If node](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.if.md), [executions](https://docs.n8n.io/build/understand-workflows/understand-executions.md), [error handling](https://docs.n8n.io/build/flow-logic/handle-errors-gracefully.md). No n8n code/assets/connectors were copied. Commercial obligations require legal review before productizing n8n-derived work; see the [n8n community license](https://github.com/n8n-io/n8n-docs/blob/main/docs/n8n-community-license/README.md).
+- **Blueprint comparison:** A remains verified only for bounded synthetic REA_APP scope; B has tested IR, branching, local writes/reads, receipts and restart replay but is limited to local SQLite/CSV and lacks triggers, cross-process stress and packaging; C is **not met** (no natural language or UI); D and E are **not met** (no DBVORA bridge, browser E2E, customer-data security review or supported Windows install). Overall release remains **PARTIAL**.
+- **Next atomic task:** implement the minimal local template UI and explicit validation/run/status view; keep localhost-only and synthetic-only, then test the full browser-to-engine flow. Notify the owner before opening a visible browser for that test. No website needs to stay open for current CLI work.
