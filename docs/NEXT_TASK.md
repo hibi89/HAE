@@ -1,14 +1,12 @@
 # Next work unit — 2026-10-27 KST (ACTIVE fast-track)
 
-## Current checkpoint (P3 passed)
+## Current checkpoint (P4 API flow passed)
 
-The synthetic CSV→SQLite runner and deterministic `csv_to_sqlite` template are implemented and verified on Windows Python 3.11: `apps/ax-flow` full suite **22/22 PASS**. Latest code commits: `c233fcb206ae7675413bddc13f94cda1d182a7ce` and `b50989ff832bbc35b93305761e8e534fd45555c7` on `feature/axflow-mvp`. n8n behavior review is complete from official docs only; no n8n code or assets were copied.
+The synthetic CSV→SQLite runner, bounded Korean/English planner, and localhost request UI are implemented on `feature/axflow-mvp@d21753d0f7401cefce0285458680238d007ffb38`. Windows Python 3.11 full suite **33/33 PASS** with loopback permission; JavaScript syntax and a live Korean preview→approved synthetic run→status smoke also passed. n8n behavior review is complete from official docs only; no n8n code or assets were copied.
 
-Target Blueprint V1 comparison: A passes for bounded synthetic REA_APP scope; B is a verified limited runner slice; C is incomplete because natural-language planning and a customer UI are absent; D/E remain incomplete because the DBVORA bridge, browser E2E, Windows packaging and release security gates are absent. Overall completion is **PARTIAL**, not 100%.
+Target Blueprint V1 comparison: A is previously verified for bounded synthetic REA_APP scope; B is a limited synthetic runner slice; C is partial (one workflow family, API-level E2E but visible-browser flow unverified); D/E remain incomplete because the AX FLOW–DBVORA bridge, browser E2E, customer-data security review, Windows packaging and release gates are absent. Overall completion is **PARTIAL**, not 100%.
 
-**Next:** implement only the minimal localhost template UI (select CSV→SQLite, preview/validate IR, explicit synthetic run, show redacted status). Keep no-auth local scope and existing synthetic/write-approval gates. Run an actual browser-to-engine test and announce before opening a visible browser. Do not broaden the independent runner beyond that UI integration until overall review.
-
-**Owner decision supersedes 21-week plan:** first 2 weeks REA_APP + own n8n-like runner; next 3 weeks AX FLOW + parallel DBVORA integration. Read docs/FAST_TRACK_5_WEEK.md, docs/TARGET_BLUEPRINT_V1.md, docs/CODEX_EXTRA_HIGH_ORDER.md before any implementation.
+**Next:** on existing `feature/dbvora-integration`, implement an AX FLOW-side read-only client for DBVORA's actually inspected single-file `/health` and `/api/inventory` contract, including offline/unavailable behavior. Build synthetic contract tests. Do not modify the independent DBVORA repo, access customer files, or claim a live integration without a service smoke.
 
 ## Codex first authorized implementation unit (MVP D1–D3, REA_APP branch)
 1. Verify hibi89/AX_FLOW current HEAD and read HANDOFF/STATUS/AGENTS/REQUIREMENTS/docs + actual code.

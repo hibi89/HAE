@@ -145,3 +145,17 @@ Recovery: read this latest appended block before older 21-week historical notes.
 8. **Risks/rollback:** synthetic-only; template plan still needs `--input-root` and `--approve-writes` when executed. Roll back the code commits `b50989ff832bbc35b93305761e8e534fd45555c7` and `c233fcb206ae7675413bddc13f94cda1d182a7ce` to remove the P3 slice; no remote services or customer data used.
 9. **Next atomic task:** build a minimal localhost template UI with visible plan preview, validation outcome, explicit synthetic run action and redacted run status; test browser-to-engine and notify owner before opening the visible browser. Hold independent AX FLOW execution-engine expansion pending overall review.
 10. **Time/owner actions:** 2026-10-27 KST. No site/browser needs to be left open for CLI work. User action: none now; notify before GUI verification. Overall product remains PARTIAL.
+
+
+## 2026-10-27 KST — P4 localhost request UI/API verification
+
+1. **Task/goal:** Add a bounded localhost UI for natural-language preview, validated IR, explicit synthetic run and status receipts.
+2. **Branch/base/commit:** `hibi89/AX_FLOW`, `feature/axflow-mvp`; base `d2178bbe4939f686c763c4ffb176a858ca439109`; code commit `d21753d0f7401cefce0285458680238d007ffb38`.
+3. **Changed paths:** `apps/ax-flow/axflow/{__main__.py,planner.py,web.py}`, `axflow/static/{index.html,app.css,app.js}`, engine and web tests, README.
+4. **Executed tests:** Windows Python 3.11, `python -m unittest discover -s tests -v` in `apps/ax-flow` — **33 passed, 0 failed** with loopback enabled. `node --check axflow/static/app.js` passed. Live smoke completed page GET, Korean preview, approved one-row synthetic import and completed status receipt.
+5. **Failure/recovery:** Default sandbox loopback attempts failed with `WinError 10013`; the same tests passed with explicit loopback permission. Korean token boundary and cross-origin expectation regressions were fixed in earlier P4 iteration.
+6. **Implemented/tested state:** One supported CSV→SQLite workflow family; deterministic Korean/English phrases, 512-character request bound, localhost binding, origin/host checks, request limits, CSP/no-store, preview token binding, explicit approval, redacted run receipts. No LLM or arbitrary commands.
+7. **Remaining gaps:** Visible browser click/render E2E was not verified because computer-use stopped on URL-confidence policy. General planning, DBVORA link, OAuth/providers, customer-data review, Windows installer and release security remain absent.
+8. **Risks/rollback:** Synthetic inputs and local SQLite only; localhost UI is single-user with no auth. Code rollback is commit `d21753d0f7401cefce0285458680238d007ffb38`; no customer data, public service or DBVORA source modified.
+9. **Next atomic task:** On `feature/dbvora-integration`, implement/test only the AX FLOW-side read-only DBVORA client using actual `/health` and `/api/inventory` API contract; no DBVORA source changes.
+10. **Time/owner actions:** 2026-10-27 KST. UI preview URL `http://127.0.0.1:8765/`; current server session was still active at checkpoint. External site or login is not required. Full product is PARTIAL.
