@@ -13,7 +13,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from .engine import ApprovalRequired, Engine, PlanError, StepRetryExhausted, StepTimeout
 from .dbvora_client import DbvoraClient
-from .planner import plan_request
+from .planner import plan_request, requires_write_approval, workflow_name
 from .runlog import RunLogError, inspect_run
 
 MAX_BODY_BYTES = 8192
@@ -203,7 +203,8 @@ def create_server(
                     )
                     self._send_json(200, {
                         "validated": True,
-                        "workflow": "csv_to_sqlite",
+                        "workflow": workflow_name(plan),
+                        "requires_approval": requires_write_approval(plan),
                         "planner": "bounded local rules",
                         "preview_id": preview_id,
                         "plan": plan,
@@ -211,9 +212,11 @@ def create_server(
                     return
 
                 self._require_fields(body, {"task", "csv_path", "preview_id", "approve_writes"})
-                if body["approve_writes"] is not True:
-                    raise RequestError(403, "explicit local synthetic-write approval is required")
+                if not isinstance(body["approve_writes"], bool):
+                    raise RequestError(400, "approve_writes must be a boolean")
                 plan = plan_request(body["task"], body["csv_path"])
+                if requires_write_approval(plan) and body["approve_writes"] is not True:
+                    raise RequestError(403, "explicit local synthetic-write approval is required")
                 preview_id = body["preview_id"]
                 if not isinstance(preview_id, str) or not _PREVIEW_ID.fullmatch(preview_id):
                     raise RequestError(409, "a recent matching preview is required before execution")
@@ -221,7 +224,7 @@ def create_server(
                 if run_id is None:
                     raise RequestError(409, "preview expired or no longer matches the request")
                 result = Engine(state, business, input_root=root).execute(
-                    plan, run_id, approve_writes=True
+                    plan, run_id, approve_writes=body["approve_writes"]
                 )
                 status = inspect_run(state, run_id)
                 self._send_json(200, {"run_id": run_id, "result": result, "status": status})

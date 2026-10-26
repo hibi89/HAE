@@ -21,6 +21,12 @@ class WebUITests(unittest.TestCase):
         self.inputs = self.root / "input"
         self.inputs.mkdir()
         (self.inputs / "contacts.csv").write_text("id,name\n11,Synthetic\n", encoding="utf-8")
+        (self.inputs / "sales.csv").write_text(
+            "amount,id\n125,A\n20,B\n125,C\n", encoding="utf-8"
+        )
+        (self.inputs / "people.csv").write_text(
+            "id,name\n11,PrivateMarker\n12,OtherFixture\n", encoding="utf-8"
+        )
         self.state = self.root / "ui-state.db"
         self.business = self.root / "ui-business.db"
         self.server = create_server(self.inputs, self.state, self.business, port=0)
@@ -173,6 +179,71 @@ class WebUITests(unittest.TestCase):
         status = json.loads(raw.decode("utf-8"))
         self.assertEqual(status["status"], "completed")
         self.assertNotIn("Synthetic", json.dumps(status))
+
+    def test_preview_and_execute_filtered_import_lookup_and_conditional_flows(self):
+        filtered_task = "이 CSV에서 amount가 100 이상인 행만 로컬 SQLite에 저장해줘"
+        code, _, preview = self.post_json("/api/preview", {
+            "task": filtered_task, "csv_path": "sales.csv",
+        })
+        self.assertEqual(code, 200, preview)
+        self.assertEqual(preview["workflow"], "csv_filtered_import")
+        self.assertTrue(preview["requires_approval"])
+        self.assertEqual([step["op"] for step in preview["plan"]["steps"]],
+                         ["csv_read", "csv_filter", "sqlite_import_csv"])
+        code, _, filtered = self.post_json("/api/run", {
+            "task": filtered_task, "csv_path": "sales.csv",
+            "preview_id": preview["preview_id"], "approve_writes": True,
+        })
+        self.assertEqual(code, 200, filtered)
+        self.assertEqual(filtered["result"]["imported_rows"], 2)
+
+        lookup_task = "이 CSV에서 id가 11인 행을 찾아줘"
+        code, _, preview = self.post_json("/api/preview", {
+            "task": lookup_task, "csv_path": "people.csv",
+        })
+        self.assertEqual(code, 200, preview)
+        self.assertEqual(preview["workflow"], "csv_lookup")
+        self.assertFalse(preview["requires_approval"])
+        code, _, lookup = self.post_json("/api/run", {
+            "task": lookup_task, "csv_path": "people.csv",
+            "preview_id": preview["preview_id"], "approve_writes": False,
+        })
+        self.assertEqual(code, 200, lookup)
+        self.assertEqual(lookup["result"]["matched_count"], 1)
+        self.assertEqual(lookup["result"]["matched_row_numbers"], [1])
+        self.assertNotIn("PrivateMarker", json.dumps(lookup))
+
+        conditional_task = "이 CSV에서 amount가 100 이상일 때만 로컬 SQLite에 저장해줘"
+        code, _, preview = self.post_json("/api/preview", {
+            "task": conditional_task, "csv_path": "sales.csv",
+        })
+        self.assertEqual(code, 200, preview)
+        self.assertEqual(preview["workflow"], "csv_conditional_import")
+        self.assertTrue(preview["requires_approval"])
+        self.assertIn("condition", [step["op"] for step in preview["plan"]["steps"]])
+        code, _, conditional = self.post_json("/api/run", {
+            "task": conditional_task, "csv_path": "sales.csv",
+            "preview_id": preview["preview_id"], "approve_writes": True,
+        })
+        self.assertEqual(code, 200, conditional)
+        self.assertEqual(conditional["result"]["imported_rows"], 2)
+
+        no_match_task = "이 CSV에서 amount가 500 이상일 때만 로컬 SQLite에 저장해줘"
+        code, _, preview = self.post_json("/api/preview", {
+            "task": no_match_task, "csv_path": "sales.csv",
+        })
+        self.assertEqual(code, 200, preview)
+        code, _, no_match = self.post_json("/api/run", {
+            "task": no_match_task, "csv_path": "sales.csv",
+            "preview_id": preview["preview_id"], "approve_writes": True,
+        })
+        self.assertEqual(code, 200, no_match)
+        self.assertEqual(no_match["result"], {"imported_rows": 0, "matched_rows": 0})
+        with closing(sqlite3.connect(self.business)) as con:
+            count = con.execute(
+                "SELECT COUNT(*) FROM csv_records WHERE run_id=?", (no_match["run_id"],)
+            ).fetchone()[0]
+        self.assertEqual(count, 0)
 
     def test_run_rejects_missing_or_mismatched_preview_token(self):
         _, _, preview = self.post_json("/api/preview", {

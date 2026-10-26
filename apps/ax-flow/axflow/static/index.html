@@ -21,7 +21,7 @@
       <section class="hero" aria-labelledby="page-title">
         <div class="eyebrow">LOCAL AUTOMATION · SYNTHETIC MODE</div>
         <h1 id="page-title">반복 작업을<br><span>흐름으로 바꿔보세요.</span></h1>
-        <p class="hero-copy">현재 지원하는 작업은 CSV 파일을 로컬 SQLite로 가져오는 흐름입니다. 데이터는 이 PC 밖으로 전송되지 않습니다.</p>
+        <p class="hero-copy">합성 CSV 가져오기, 조건별 저장, 읽기 전용 행 찾기를 로컬에서 실행합니다. 데이터는 이 PC 밖으로 전송되지 않습니다.</p>
       </section>
 
       <section class="workspace" aria-label="CSV 자동화 설정">
@@ -30,12 +30,12 @@
             <div class="step-label">01 · REQUEST</div>
             <h2>원하는 작업을 적어주세요</h2>
           </div>
-          <span class="scope-tag">지원 범위 1개</span>
+          <span class="scope-tag">지원 작업 4개</span>
         </div>
 
         <label for="task">작업 설명</label>
         <textarea id="task" rows="2" maxlength="512">이 CSV 파일을 로컬 SQLite에 저장해줘</textarea>
-        <p class="hint">예: “Import this CSV into local SQLite” · 이 MVP는 정해진 CSV 가져오기 요청만 처리합니다.</p>
+        <p class="hint">예: “amount가 100 이상인 행만 저장”, “id가 11인 행 찾기”, “amount가 100 이상일 때만 저장”. 비교는 한 필드만 지원합니다.</p>
 
         <label for="csv-path">CSV 경로 <span class="label-note">서버 실행 때 선택한 폴더 기준</span></label>
         <div class="path-field">
@@ -63,7 +63,7 @@
           </div>
           <span class="safe-tag">외부 연결 없음</span>
         </div>
-        <label class="approval" for="approval">
+        <label id="approval-section" class="approval" for="approval">
           <input id="approval" type="checkbox">
           <span><b>합성 데이터임을 확인하고 로컬 SQLite 쓰기를 승인합니다.</b><small>실제 고객 데이터는 이 MVP에서 사용하지 마세요.</small></span>
         </label>
@@ -77,7 +77,7 @@
         <p id="result-copy"></p>
         <div class="receipt-grid">
           <div><span>실행 ID</span><b id="run-id">—</b></div>
-          <div><span>가져온 행</span><b id="row-count">—</b></div>
+          <div><span id="row-count-label">처리 행</span><b id="row-count">—</b></div>
           <div><span>완료 단계</span><b id="step-count">—</b></div>
         </div>
         <button id="refresh-status" class="text-button" type="button">상태 새로고침</button>

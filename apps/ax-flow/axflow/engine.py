@@ -69,6 +69,7 @@ def validate(plan: object) -> dict:
             "condition": {"id", "op", "from", "field", "operator", "value"},
             "branch": {"id", "op", "condition", "then", "else"},
             "csv_read": {"id", "op", "path"},
+            "csv_filter": {"id", "op", "from", "field", "operator", "value"},
             "sqlite_put": {"id", "op", "from"},
             "sqlite_import_csv": {"id", "op", "from"},
             "sqlite_get": {"id", "op", "from"},
@@ -79,11 +80,13 @@ def validate(plan: object) -> dict:
             "sqlite_put": {"when", "max_attempts", "timeout_ms"},
             "sqlite_import_csv": {"when", "max_attempts", "timeout_ms"},
             "sqlite_get": {"when", "max_attempts", "timeout_ms"},
+            "literal": {"when"},
+            "csv_filter": {"transform"},
         }
         allowed = fields.get(op)
         if allowed is None or not allowed <= set(step) or set(step) - allowed - optional.get(op, set()):
             raise PlanError(f"unknown operation or invalid fields for {ident}")
-        if op in {"field", "map", "condition", "sqlite_put", "sqlite_import_csv", "sqlite_get"} and (
+        if op in {"field", "map", "condition", "csv_filter", "sqlite_put", "sqlite_import_csv", "sqlite_get"} and (
                 not isinstance(step["from"], str) or step["from"] not in seen):
             raise PlanError("step source must reference an earlier step")
         if (op in {"field", "map", "condition", "sqlite_put", "sqlite_get"} and
@@ -121,6 +124,31 @@ def validate(plan: object) -> dict:
                 raise PlanError("condition field must be a safe identifier")
             if not isinstance(step["operator"], str) or step["operator"] not in {"eq", "ne", "gt", "gte", "lt", "lte", "contains"}:
                 raise PlanError("unsupported condition operator")
+        if op == "csv_filter":
+            if step_ops.get(step["from"]) != "csv_read":
+                raise PlanError("csv_filter source must be a csv_read step")
+            if not isinstance(step["field"], str) or not IDENTIFIER.fullmatch(step["field"]):
+                raise PlanError("CSV filter field must be a safe identifier")
+            operator = step["operator"]
+            if not isinstance(operator, str) or operator not in {"eq", "ne", "gt", "gte", "lt", "lte", "contains"}:
+                raise PlanError("unsupported CSV filter operator")
+            value = step["value"]
+            if isinstance(value, bool) or not isinstance(value, (int, float, str)):
+                raise PlanError("CSV filter value must be a string or finite number")
+            transform = step.get("transform", "identity")
+            if not isinstance(transform, str) or transform not in {"identity", "trim", "lower", "upper", "number"}:
+                raise PlanError("unsupported CSV filter transform")
+            if transform == "number":
+                if isinstance(value, str) or isinstance(value, bool) or not isinstance(value, (int, float)):
+                    raise PlanError("numeric CSV filter requires a numeric comparison value")
+            elif not isinstance(value, str):
+                raise PlanError("text CSV filter requires a string comparison value")
+            if operator == "contains" and transform == "number":
+                raise PlanError("contains cannot use a numeric CSV filter")
+        if op == "condition" and step_ops.get(step["from"]) == "csv_filter" and step["field"] != "matched_count":
+            raise PlanError("CSV filter conditions may inspect only matched_count")
+        if op in {"field", "map", "sqlite_put", "sqlite_get"} and step_ops.get(step.get("from")) == "csv_filter":
+            raise PlanError("CSV filter row data may not flow into generic value operations")
         if op == "branch":
             condition = step["condition"]
             then_step, else_step = step["then"], step["else"]
@@ -130,7 +158,7 @@ def validate(plan: object) -> dict:
             if (not isinstance(then_step, str) or then_step not in seen or
                     not isinstance(else_step, str) or else_step not in seen):
                 raise PlanError("branch outputs must reference earlier steps")
-            if "csv_read" in {step_ops.get(then_step), step_ops.get(else_step)}:
+            if {step_ops.get(then_step), step_ops.get(else_step)} & {"csv_read", "csv_filter"}:
                 raise PlanError("CSV row data may not be exposed as a branch output")
         if op in {"sqlite_put", "sqlite_import_csv", "sqlite_get"}:
             attempts = step.get("max_attempts", 1)
@@ -148,8 +176,8 @@ def validate(plan: object) -> dict:
                 raise PlanError("when must reference an earlier condition and a boolean equals value")
         if op == "sqlite_get" and step_ops.get(step["from"]) != "sqlite_put":
             raise PlanError("sqlite_get source must be a sqlite_put step")
-        if op == "sqlite_import_csv" and step_ops.get(step["from"]) != "csv_read":
-            raise PlanError("sqlite_import_csv source must be a csv_read step")
+        if op == "sqlite_import_csv" and step_ops.get(step["from"]) not in {"csv_read", "csv_filter"}:
+            raise PlanError("sqlite_import_csv source must be a csv_read or csv_filter step")
         seen.add(ident)
         step_ops[ident] = op
     try:
@@ -272,6 +300,13 @@ class Engine:
                                 (type(exc).__name__, run_id, sid),
                             )
                         raise
+                elif op == "csv_filter" and saved[1] == "completed":
+                    # Filter rows stay in memory; deterministically rebuild them from
+                    # the hash-checked csv_read result when resuming a run.
+                    current = self._evaluate_step(step, results, outcomes, run_id, False)
+                    if self._step_receipt(op, current) != persisted:
+                        raise PlanError("CSV filter result changed since this run was checkpointed")
+                    results[sid] = current
                 else:
                     results[sid] = persisted
                 outcomes[sid] = saved[1]
@@ -359,6 +394,29 @@ class Engine:
             return step["value"]
         if op == "csv_read":
             return self._read_csv(step["path"])
+        if op == "csv_filter":
+            source = results[step["from"]]
+            if not isinstance(source, dict) or not isinstance(source.get("rows"), list):
+                raise PlanError("csv_filter requires a csv_read result")
+            if step["field"] not in source.get("headers", []):
+                raise PlanError(f"CSV field {step['field']} not found in {step['from']}")
+            transform = step.get("transform", "identity")
+            matches = []
+            for row_number, row in enumerate(source["rows"], start=1):
+                if not isinstance(row, dict) or step["field"] not in row:
+                    raise PlanError("csv_filter received a malformed CSV row")
+                candidate = self._transform(row[step["field"]], transform)
+                if self._compare(candidate, step["operator"], step["value"]):
+                    matches.append({"row_number": row_number, "values": row})
+            return {
+                "source_path": source["source_path"],
+                "source_sha256": source["source_sha256"],
+                "headers": source["headers"],
+                "row_count": source["row_count"],
+                "matches": matches,
+                "matched_count": len(matches),
+                "matched_row_numbers": [match["row_number"] for match in matches],
+            }
         if op in {"field", "map", "condition"}:
             source = results[step["from"]]
             if not isinstance(source, dict):
@@ -398,12 +456,17 @@ class Engine:
             return value
         if op == "sqlite_import_csv":
             source = results[step["from"]]
-            if not isinstance(source, dict) or not isinstance(source.get("rows"), list):
-                raise PlanError("sqlite_import_csv requires a csv_read result")
+            if not isinstance(source, dict):
+                raise PlanError("sqlite_import_csv requires a CSV result")
             digest = source["source_sha256"]
-            rows = source["rows"]
+            if isinstance(source.get("rows"), list):
+                rows = [(row_number, row) for row_number, row in enumerate(source["rows"], start=1)]
+            elif isinstance(source.get("matches"), list):
+                rows = [(item["row_number"], item["values"]) for item in source["matches"]]
+            else:
+                raise PlanError("sqlite_import_csv requires a csv_read or csv_filter result")
             with self._business(timeout=sqlite_timeout) as con:
-                for row_number, row in enumerate(rows, start=1):
+                for row_number, row in rows:
                     payload = canonical_json(row)
                     existing = con.execute(
                         "SELECT source_sha256,payload_json FROM csv_records "
@@ -444,6 +507,10 @@ class Engine:
     @staticmethod
     def _step_receipt(op: str, value: object) -> object:
         if op != "csv_read":
+            if op == "csv_filter":
+                return {key: value[key] for key in (
+                    "source_path", "source_sha256", "row_count", "matched_count", "matched_row_numbers"
+                )}
             return value
         return {key: value[key] for key in ("source_path", "source_sha256", "headers", "row_count")}
 

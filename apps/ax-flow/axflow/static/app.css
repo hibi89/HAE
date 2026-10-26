@@ -62,6 +62,7 @@ pre { overflow-x: auto; margin: 12px 0 2px; padding: 14px; border-radius: 9px; b
 .divider { height: 1px; margin: 27px 0 26px; background: var(--line); }
 .safe-tag { color: #087443; background: var(--mint); }
 .approval { display: flex; align-items: flex-start; gap: 11px; padding: 13px; border: 1px solid #dce6e2; border-radius: 10px; background: #f8fcf9; cursor: pointer; }
+#approval-section[hidden] { display: none; }
 .approval input { width: 17px; height: 17px; margin: 2px 0 0; accent-color: #08834d; flex: 0 0 auto; }
 .approval b, .approval small { display: block; }
 .approval b { color: #294b3a; font-size: 12px; }

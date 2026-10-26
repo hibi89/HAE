@@ -25,7 +25,7 @@ From `apps/ax-flow/` with Python 3.11+:
 ```shell
 python -m unittest discover -s tests -v
 ```
-Latest full suite: Windows Python 3.11, **42/42 tests PASS** at P5. This includes P0/P1 CLI/recovery/concurrency checks, CSV parsing/import/replay, rule-based English/Korean intent recognition, localhost UI API preview/run/status, DBVORA contract validation, redirect refusal, response bounds, explicit write approval, and redacted success/failure receipts. `node --check apps/ax-flow/axflow/static/app.js` also passes. A live HTTP smoke using DBVORA's unmodified `feature/p0-db-map@31b8257468d28743fb2d3767d1caa56938df756c` source inspected the synthetic business SQLite schema through AX FLOW and confirmed its SHA-256 and mtime did not change. The visible browser automation attempt stopped before navigation because the Windows UI helper could not verify the current browser URL; visual browser E2E remains unverified. CI and clean third-party installs have not been run.
+Latest full suite: Windows Python 3.11, **47/47 tests PASS** after P6 planner expansion. This includes P0/P1 CLI/recovery/concurrency checks, CSV parsing/import/filter/replay, English/Korean intent recognition, localhost UI API preview/run/status for full import, filtered import, conditional import and read-only lookup, DBVORA contract validation, redirect refusal, response bounds, per-write approval and redacted receipts. Node syntax check for axflow/static/app.js also passes. A live HTTP smoke using DBVORA's unmodified `feature/p0-db-map@31b8257468d28743fb2d3767d1caa56938df756c` source inspected the synthetic business SQLite schema through AX FLOW and confirmed its SHA-256 and mtime did not change. The visible browser automation attempt stopped before navigation because the Windows UI helper could not verify the current browser URL; visual browser E2E remains unverified. CI and clean third-party installs have not been run.
 
 For a manual synthetic demo, create a JSON file outside the repo:
 ```json
@@ -57,7 +57,7 @@ python -m axflow template --name csv_to_sqlite --csv contacts.csv --synthetic
 The command writes JSON to stdout only. `--csv` must be a safe relative `.csv` path under the `--input-root` supplied later to `run`; import still requires `--synthetic` and `--approve-writes`. Unsupported templates and extra parameters fail closed. This is a deterministic template, not natural-language planning.
 
 ## Local request UI
-The localhost UI adds a narrow, deterministic English/Korean request parser for the single supported “import CSV into local SQLite” workflow. It is rule-based and offline; it is not an LLM or a general-purpose planner. The UI previews validated IR, requires explicit synthetic-data/write approval, runs through the same engine, and displays redacted run receipts and failure status. Its DBVORA panel can display the schema and file-size metadata for the one database selected by the DBVORA service.
+The localhost UI adds a narrow, deterministic English/Korean request parser for four synthetic CSV tasks: full import, one-field filtered import, import only when the filter matches, and read-only lookup of match count/original row numbers. Filters accept one explicit safe comparison; numeric thresholds use bounded numeric conversion. The lookup never returns or checkpoints matching row contents. The parser is rule-based and offline, not an LLM or general-purpose planner. The UI previews validated IR, asks for write approval only when a plan writes SQLite, runs through the same engine, and displays redacted receipts and failure status. Its DBVORA panel can display schema/file-size metadata for the one database selected by the DBVORA service.
 
 Start it with an explicitly selected synthetic fixture folder and separate database paths:
 ```shell
@@ -78,7 +78,7 @@ python -c "import uvicorn; from dbvora.api import create_app; uvicorn.run(create
 Then add `--dbvora-url http://127.0.0.1:8766` to the AX FLOW `serve` command and press **구조 맵 새로고침** in the UI. The inspected DBVORA branch exposes an app factory but no packaged service command; the command above invokes that existing factory without changing DBVORA. The DBVORA server must be started separately. If it is absent or rejects the request, AX FLOW shows an unavailable state. Contract and HTTP behavior are synthetic-fixture tested; an actual API smoke against a synthetic AX FLOW business DB passed. Customer database use remains unverified and unauthorized.
 
 ## Next slice
-Complete visible browser E2E when the computer-use policy permits, then expand the request planner and test more than the single CSV-import workflow. Keep runtime and business DB separate and preserve tests. A 5-week stretch plan is a target, not evidence of completion.
+Run the visible browser UI check once the owner opens the localhost page and the desktop browser target can be identified safely. Continue the Blueprint gap review with interval triggers, stronger process-restart validation and Windows install/security gates; keep customer data, OAuth, external writes and release claims blocked until authorized and independently verified.
 
 ## 2026-10-27 — fast hackathon sprint / status-resume increment
 Active user target: **3–5 days** (Oct 31 preferred), max **7-day verification** (Nov 2), limited scope; see `../../docs/SPRINT_7_DAY_HACKATHON.md`. Older plans superseded.

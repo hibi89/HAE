@@ -14,6 +14,7 @@ from pathlib import Path
 from axflow.engine import (ApprovalRequired, Engine, InjectedStop, PlanError, StepRetryExhausted,
                            StepTimeout, validate)
 from axflow.runlog import inspect_run
+from axflow.planner import plan_request, requires_write_approval
 from axflow.templates import build_template
 
 
@@ -500,6 +501,109 @@ class TestEngine(unittest.TestCase):
         missing = subprocess.run(base + [str(self.root / "missing.json"), "--synthetic"], capture_output=True, text=True)
         self.assertEqual(missing.returncode, 2)
         self.assertIn("AX FLOW stopped safely", missing.stderr)
+
+    def test_csv_filter_import_is_numeric_bounded_idempotent_and_redacted(self):
+        inputs = self.root / "inputs"
+        inputs.mkdir()
+        (inputs / "sales.csv").write_text(
+            "amount,id\n125,A\n20,B\n125,C\n", encoding="utf-8"
+        )
+        plan = plan_request(
+            "이 CSV에서 amount가 100 이상인 행만 로컬 SQLite에 저장해줘", "sales.csv"
+        )
+        self.assertTrue(requires_write_approval(plan))
+        engine = Engine(self.root / "filter-state.db", self.root / "filter-business.db", input_root=inputs)
+        first = engine.execute(plan, "FilteredRun", approve_writes=True)
+        replay = engine.execute(plan, "FilteredRun", approve_writes=True)
+        self.assertEqual(first, replay)
+        self.assertEqual(first["imported_rows"], 2)
+        with self.assertRaises(InjectedStop):
+            engine.execute(plan, "FilteredRecovery", approve_writes=True, inject_stop_after_business=True)
+        self.assertEqual(engine.execute(plan, "FilteredRecovery", approve_writes=True)["imported_rows"], 2)
+
+        with closing(sqlite3.connect(self.root / "filter-business.db")) as con:
+            rows = con.execute(
+                "SELECT row_number,payload_json FROM csv_records WHERE run_id=? ORDER BY row_number",
+                ("FilteredRun",),
+            ).fetchall()
+        self.assertEqual([row[0] for row in rows], [1, 3])
+        self.assertEqual([json.loads(row[1])["id"] for row in rows], ["A", "C"])
+
+        with closing(sqlite3.connect(self.root / "filter-state.db")) as con:
+            receipt = con.execute(
+                "SELECT output_json FROM steps WHERE run_id=? AND step_id='filtered'", ("FilteredRun",)
+            ).fetchone()[0]
+        self.assertEqual(json.loads(receipt)["matched_row_numbers"], [1, 3])
+        self.assertNotIn('"125"', receipt)
+        self.assertNotIn('"matches"', receipt)
+        with closing(sqlite3.connect(self.root / "filter-business.db")) as con:
+            self.assertEqual(
+                con.execute(
+                    "SELECT COUNT(*) FROM csv_records WHERE run_id='FilteredRecovery'"
+                ).fetchone()[0],
+                2,
+            )
+
+    def test_csv_lookup_is_read_only_and_persists_only_match_metadata(self):
+        inputs = self.root / "lookup-input"
+        inputs.mkdir()
+        (inputs / "people.csv").write_text(
+            "id,name\n11,PrivateMarker\n12,OtherFixture\n", encoding="utf-8"
+        )
+        plan = plan_request("이 CSV에서 id가 11인 행을 찾아줘", "people.csv")
+        self.assertFalse(requires_write_approval(plan))
+        business = self.root / "lookup-business.db"
+        state = self.root / "lookup-state.db"
+        result = Engine(state, business, input_root=inputs).execute(plan, "LookupRun")
+        self.assertEqual(result["matched_count"], 1)
+        self.assertEqual(result["matched_row_numbers"], [1])
+        with closing(sqlite3.connect(business)) as con:
+            self.assertEqual(con.execute("SELECT COUNT(*) FROM csv_records").fetchone()[0], 0)
+        with closing(sqlite3.connect(state)) as con:
+            stored = con.execute(
+                "SELECT output_json FROM runs WHERE run_id='LookupRun'"
+            ).fetchone()[0]
+        self.assertNotIn("PrivateMarker", stored)
+        self.assertIn('"matched_count":1', stored)
+
+    def test_conditional_csv_import_writes_only_when_filter_matches(self):
+        inputs = self.root / "conditional-input"
+        inputs.mkdir()
+        (inputs / "sales.csv").write_text(
+            "amount,id\n125,A\n20,B\n125,C\n", encoding="utf-8"
+        )
+        engine = Engine(
+            self.root / "conditional-state.db", self.root / "conditional-business.db", input_root=inputs
+        )
+        matching = plan_request(
+            "이 CSV에서 amount가 100 이상일 때만 로컬 SQLite에 저장해줘", "sales.csv"
+        )
+        skipped = plan_request(
+            "이 CSV에서 amount가 500 이상일 때만 로컬 SQLite에 저장해줘", "sales.csv"
+        )
+        self.assertEqual(engine.execute(matching, "ConditionalMatch", approve_writes=True)["imported_rows"], 2)
+        self.assertEqual(engine.execute(skipped, "ConditionalEmpty", approve_writes=True)["imported_rows"], 0)
+        with closing(sqlite3.connect(self.root / "conditional-business.db")) as con:
+            self.assertEqual(
+                con.execute("SELECT COUNT(*) FROM csv_records WHERE run_id='ConditionalMatch'").fetchone()[0], 2
+            )
+            self.assertEqual(
+                con.execute("SELECT COUNT(*) FROM csv_records WHERE run_id='ConditionalEmpty'").fetchone()[0], 0
+            )
+        self.assertEqual(inspect_run(self.root / "conditional-state.db", "ConditionalEmpty")["status"], "completed")
+
+    def test_csv_filter_rejects_unbounded_or_compound_requests(self):
+        invalid = {"version": "axflow.ir.v0", "steps": [
+            {"id": "input", "op": "csv_read", "path": "sales.csv"},
+            {"id": "filter", "op": "csv_filter", "from": "input", "field": "amount",
+             "operator": "contains", "value": 100, "transform": "number"},
+        ]}
+        with self.assertRaises(PlanError):
+            validate(invalid)
+        with self.assertRaises(PlanError):
+            plan_request(
+                "Find rows in this CSV where amount >= 100 and id = A", "sales.csv"
+            )
 
     def test_engine_rejects_path_like_run_ids_and_unsafe_database_paths(self):
         with self.assertRaises(PlanError):

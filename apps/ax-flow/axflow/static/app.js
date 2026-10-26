@@ -12,8 +12,10 @@ const resultTitle = document.querySelector("#result-title");
 const resultCopy = document.querySelector("#result-copy");
 const runIdOutput = document.querySelector("#run-id");
 const rowCountOutput = document.querySelector("#row-count");
+const rowCountLabel = document.querySelector("#row-count-label");
 const stepCountOutput = document.querySelector("#step-count");
 const refreshButton = document.querySelector("#refresh-status");
+const approvalSection = document.querySelector("#approval-section");
 const dbvoraStatus = document.querySelector("#dbvora-status");
 const dbvoraMeta = document.querySelector("#dbvora-meta");
 const dbvoraTables = document.querySelector("#dbvora-tables");
@@ -23,6 +25,7 @@ const dbvoraRefreshButton = document.querySelector("#refresh-dbvora");
 let previewKey = "";
 let currentRunId = "";
 let previewId = "";
+let requiresApproval = true;
 
 function requestKey() {
   return JSON.stringify([taskInput.value, csvInput.value]);
@@ -34,7 +37,8 @@ function setMessage(text, state = "") {
 }
 
 function updateRunButton() {
-  runButton.disabled = !previewKey || previewKey !== requestKey() || !approvalInput.checked;
+  approvalSection.hidden = !requiresApproval;
+  runButton.disabled = !previewKey || previewKey !== requestKey() || (requiresApproval && !approvalInput.checked);
 }
 
 async function api(path, options = {}) {
@@ -150,6 +154,7 @@ previewButton.addEventListener("click", async () => {
   setMessage("지원 범위와 IR을 검증하고 있습니다…");
   previewKey = "";
   previewId = "";
+  requiresApproval = true;
   updateRunButton();
   try {
     const response = await api("/api/preview", {
@@ -159,7 +164,14 @@ previewButton.addEventListener("click", async () => {
     planOutput.textContent = JSON.stringify(response.plan, null, 2);
     previewKey = requestKey();
     previewId = response.preview_id;
-    setMessage("지원되는 CSV → SQLite 흐름입니다. 파일 검사는 실행 시 수행합니다.", "success");
+    requiresApproval = response.requires_approval;
+    const descriptions = {
+      csv_to_sqlite: "CSV 전체를 로컬 SQLite에 저장하는 흐름입니다.",
+      csv_filtered_import: "조건에 맞는 CSV 행만 로컬 SQLite에 저장합니다.",
+      csv_conditional_import: "조건이 맞을 때만 CSV 행을 로컬 SQLite에 저장합니다.",
+      csv_lookup: "읽기 전용으로 일치 행 수와 원본 행 번호만 확인합니다.",
+    };
+    setMessage(descriptions[response.workflow] || "지원되는 CSV 흐름입니다.", "success");
   } catch (error) {
     planOutput.textContent = "요청을 IR로 변환할 수 없습니다.";
     setMessage(error.message, "error");
@@ -171,6 +183,9 @@ previewButton.addEventListener("click", async () => {
 
 for (const input of [taskInput, csvInput]) {
   input.addEventListener("input", () => {
+    previewKey = "";
+    previewId = "";
+    requiresApproval = true;
     updateRunButton();
     resultCard.hidden = true;
   });
@@ -186,13 +201,28 @@ runButton.addEventListener("click", async () => {
       method: "POST",
       body: JSON.stringify({
         task: taskInput.value, csv_path: csvInput.value,
-        preview_id: previewId, approve_writes: true,
+        preview_id: previewId, approve_writes: requiresApproval && approvalInput.checked,
       }),
     });
     currentRunId = response.run_id;
     showStatus(response.status);
-    rowCountOutput.textContent = String(response.result.imported_rows);
-    resultCopy.textContent = response.result.imported_rows + "개 행을 이 PC의 선택된 합성 데이터 SQLite 파일에 저장했습니다.";
+    if (Number.isInteger(response.result.imported_rows)) {
+      rowCountLabel.textContent = "저장 행";
+      rowCountOutput.textContent = String(response.result.imported_rows);
+      resultCopy.textContent = response.result.imported_rows + "개 행을 이 PC의 선택된 합성 데이터 SQLite 파일에 저장했습니다.";
+    } else if (Number.isInteger(response.result.matched_count)) {
+      rowCountLabel.textContent = "일치 행";
+      rowCountOutput.textContent = String(response.result.matched_count);
+      const lines = Array.isArray(response.result.matched_row_numbers)
+        ? " (원본 데이터 행 " + response.result.matched_row_numbers.join(", ") + ")"
+        : "";
+      resultCopy.textContent = response.result.matched_count + "개 행이 조건과 일치했습니다." + lines +
+        ". 원본 행 데이터는 실행 기록이나 화면 응답에 포함하지 않습니다.";
+    } else {
+      rowCountLabel.textContent = "처리 행";
+      rowCountOutput.textContent = "0";
+      resultCopy.textContent = "조건에 맞는 행이 없어 저장을 건너뛰었습니다.";
+    }
     setMessage("실행 영수증을 만들었습니다.", "success");
   } catch (error) {
     if (error.detail && error.detail.status && error.detail.run_id) {
