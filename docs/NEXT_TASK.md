@@ -43,7 +43,7 @@ Verification on synthetic fixtures: `python -m unittest discover -s tools/rea-ap
 
 ## 2026-10-27 KST — REA_APP 0.3.0 / Blueprint A closeout
 
-The REA_APP Blueprint A acceptance audit is complete for the stated synthetic JS/TS scope. Code commit `991fe3d908377a70a451013262449a8ad001d0d2` adds exported function signature contracts: explicit parameter/return annotations, optional/rest/default-presence flags, export aliases, and definition/export path+line evidence. ESM and CommonJS cases pass. Reports omit function bodies and actual default values; ambiguous source bindings are omitted. Tool version is `0.3.0`.
+The REA_APP Blueprint A acceptance audit is complete for the stated synthetic JS/TS scope. Feature commit `991fe3d908377a70a451013262449a8ad001d0d2` adds exported function signature contracts: explicit parameter/return annotations, optional/rest/default-presence flags, export aliases, and definition/export path+line evidence. Corrective UTF-8 commit `0a4b446bda6b78c3e5c7cbda2865cf061a64b6b9` restores `graph.py` after remote verification found that a truncated Base64 output had been included in its content. The corrected full file now matches the local normalized file. ESM and CommonJS cases pass. Reports omit function bodies and actual default values; ambiguous source bindings are omitted. Tool version is `0.3.0`.
 
 Actual verification from `tools/rea-app`:
 
@@ -51,10 +51,13 @@ Actual verification from `tools/rea-app`:
 - `npm run test:parser` — **PASS**.
 - `python -m rea_app --version` — **rea-app 0.3.0**.
 - Python test execution set `NODE_PATH` to the host-installed `@babel/parser@7.29.9`; project-local clean install was unavailable/unverified.
+- After repair, GitHub returned valid UTF-8 for `graph.py`; the fetched full file matches the normalized local file. Tests were rerun after this correction.
 
 The permitted n8n architecture/licensing pass is also complete from official documentation only. Its findings and sources are recorded above and in `STATUS.md`; do not repeat broad research. No n8n source/UI/runtime was inspected or copied.
 
 **Overall Blueprint V1 completion: 20%** under an explicit equal-weight A–E gate count. A passes for bounded synthetic acceptance; B (standalone runner), C (customer UI), D (DBVORA integration), and E (security, Windows and end-to-end release validation) remain unimplemented. This percentage describes the whole AX FLOW target, not REA_APP alone. The independent runner remains on explicit user hold until chief review.
+
+**Failure record:** The first feature commit's `graph.py` blob was corrupted because its large Base64 text exceeded the command-output limit and the truncation warning was accidentally included in the payload. GitHub UTF-8 verification caught the problem. Re-uploading the file in small chunks fixed it. The local test suite did not detect remote blob encoding, so source fetch verification remains part of commit acceptance.
 
 **Unverified environment items:** clean npm install, physical symlink/junction creation (Windows host denied permission; scanner rejection path has test-double coverage), Windows packaging, and authorized non-synthetic source validation. These do not block bounded synthetic A acceptance. No external auth, customer source, paid service or deploy is authorized or needed for the next review gate.
 
