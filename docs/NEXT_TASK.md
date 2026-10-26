@@ -29,7 +29,7 @@ Next work unit: perform bounded n8n architecture and licensing research using of
 
 Completed this docs-only pass against official n8n documentation and the n8n Help Center:
 
-- **Graph execution:** webhook, polling, and other event/time triggers start runs; a single run is started by its eventing trigger. From n8n 1.0, branches finish one at a time in canvas top-to-bottom/left-to-right order.
+- **Graph execution:** webhook, polling, and other event/time triggers start runs; a single run is started by its eventing trigger. Workflows created from n8n 1.0 finish branches one at a time in canvas top-to-bottom/left-to-right order; workflow settings can change the execution order.
 - **Queue architecture:** main intake handles triggers/webhooks and enqueues execution IDs in Redis; workers load workflow data from the shared database, run it, write results/status to the database, and notify main via Redis. Main, workers, and webhook processors share `N8N_ENCRYPTION_KEY`. Queue mode is not a SQLite deployment target.
 - **Recovery:** manual retry is a new execution that reuses results from completed nodes. The failed node receives saved input and processes all its items again, so a partial side effect within that node may duplicate; retrying a sub-workflow node reruns that sub-workflow. Error workflows receive a different payload for trigger activation errors; execution ID/URL require a saved execution.
 - **Persistence:** execution save settings are configurable. Pruning defaults to enabled and removes finished records when they exceed 14 days or 10,000 records; new/running/waiting executions are excluded. The database must be backed up before supported encryption-key rotation.
