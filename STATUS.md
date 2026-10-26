@@ -8,17 +8,17 @@
 ## Product readiness
 | Component | State | Evidence |
 | --- | --- | --- |
-| REA_APP static source analyzer | NOT_STARTED | no code/tests |
-| AX FLOW local runtime | NOT_STARTED | no code/tests |
+| REA_APP static source analyzer | MVP_VERIFIED (BOUNDED SYNTHETIC JS/TS) | `REA_APP@80e8d7aad99c1c40d503848ed620421837b79477`; 10 Python + Node parser tests |
+| AX FLOW local runtime | P0_VERIFIED / P1_IN_PROGRESS (SYNTHETIC ONLY) | `feature/axflow-mvp@5e7e05dac27336e87a02d847316b654e82cacbac`; Windows Python 3.11 full suite 12/12 PASS |
 | Natural-language planner and file input | NOT_STARTED | no code/tests |
 | OAuth, Gmail/Sheets connectors | NOT_STARTED | no account credentials, no auth test |
 | DBVORA integration | NOT_STARTED | separate repository remains unchanged |
-| Recovery, resilience and performance | NOT_STARTED | no observed benchmarks |
+| Recovery, resilience and performance | PARTIAL | handled failure status, resume/idempotent SQLite replay and threaded claims tested; hard-kill recovery and multi-process stress unverified |
 | Windows install, customer tests, security assessment | NOT_STARTED | no releases |
 | Vercel/Production | NOT_APPLICABLE | local-first product, no hosted service |
 
 ## Next
-Follow `docs/NEXT_TASK.md`, starting with REA_APP synthetic-repository source inventory design and code only after reviewing design alternatives/approval. Keep `main` stable and update exact SHAs/test evidence after writes.
+Continue P1 on `feature/axflow-mvp`: implement bounded conditions/branching and pure data transforms with step outcomes, bounded retries/timeouts, then the synthetic CSV→SQLite vertical path. Keep external auth, real customer data, paid services, deployments and DBVORA source changes behind their documented approval gates.
 
 ## Bootstrap verified after GitHub writes (2026-10-27 KST)
 - GitHub repository visibility independently rechecked: **private**.
@@ -58,3 +58,13 @@ Follow `docs/NEXT_TASK.md`, starting with REA_APP synthetic-repository source in
 - LOCAL OBSERVED: 2/2 independent runlog unit tests PASS with temporary synthetic SQLite; CLI status returns expected metadata and missing ID exits 2 against a stubbed Engine import (real Engine not executed in this CLI smoke). GitHub fetched runlog/test blob SHAs match exact local files; updated CLI file also matches local checked copy. Prior original engine slice locally reported 5/5 PASS. **Full combined suite on latest remote branch is NOT YET EXECUTED** and must be first next task.
 - Unfinished: condition/transform/csv path, natural-language/template GUI, read-only DBVORA service, Windows integration, OAuth/customer releases. No new live external calls or customer data. Do not claim hackathon product complete.
 - NEXT: full combined `python -m unittest discover -s tests -v` from apps/ax-flow against cloned/current remote feature branch, fix failures; then branch/transform + CSV→SQLite sample vertical path. Record hashes/CI separately. Protect 0-KRW local mode and frozen original blueprint.
+
+## 2026-10-27 KST — P0 regression gate passed on Windows; P1 authorized path active
+- **Branch/base/code commit:** `hibi89/AX_FLOW`, `feature/axflow-mvp`; verified pre-change head `2b0c2a30ac91d5a4f56de6bf359f6173e2769422`; P0 code commit `5e7e05dac27336e87a02d847316b654e82cacbac`.
+- **Implementation:** SQLite connections now close deterministically; run claims use `BEGIN IMMEDIATE`; conflicting plans cannot reuse a `run_id`; handled exceptions persist `failed` + bounded error type; resume resets the state and replays only missing durable steps; run status remains payload-redacted and read-only. JSON duplicate keys/constants, path-like run IDs, same runtime/business DB path, and missing DB-parent paths are rejected.
+- **Changed paths:** `apps/ax-flow/axflow/engine.py`, `axflow/runlog.py`, `axflow/__main__.py`, `tests/test_engine.py`, `tests/test_runlog.py`, `apps/ax-flow/README.md`.
+- **Executed verification:** On Windows / Python 3.11, from `apps/ax-flow`: `python -m unittest discover -s tests -v` — **12 passed, 0 failed**. The full suite includes CLI validate/run/status/resume; three end-to-end synthetic runs; duplicate sequential and concurrent replay; concurrent different run IDs; conflicting same-ID plans; interrupted write recovery; malformed/ambiguous JSON; path rejection; approval guard; read-only/redacted status.
+- **Failure cause / recovery:** The unmodified baseline suite produced **8 teardown errors** (all tests) because Windows refused to remove temporary SQLite files still held open. Execution used `with sqlite3.Connection`, which commits/rolls back but does not close the connection; `runlog` and test helpers had the same lifecycle issue. Added explicit closing context managers and reran; all 12 tests passed, including from the default Windows temp root.
+- **Concurrency limits:** Same-plan replay with same `run_id` and independent run IDs passed threaded tests; different plans with one `run_id` are rejected under a serialized SQLite claim. Cross-process stress, parallel steps, external side effects, and transaction atomicity across two arbitrary DBs are **UNVERIFIED/UNSUPPORTED**. Hard process termination can leave `running`; operator resume is needed after confirming the old process is stopped.
+- **Product/safety state:** P0 VERIFIED for local synthetic scope, not a customer-ready engine or full Blueprint B pass. Runtime SQLite remains separate from synthetic business SQLite; writes still require `--approve-writes`, and every CLI command remains synthetic-only. No external API, OAuth, real customer data, public host, DBVORA source or paid service used.
+- **Blueprint gaps / next:** P1 remains: branch/condition and transform operators, step-level success/failure records, timeout/retry budgets, and CSV→SQLite data path. Then constrained no-paid template planner and localhost UI; DBVORA service availability and Windows/browser end-to-end remain separate gates.

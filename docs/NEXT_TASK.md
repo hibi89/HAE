@@ -29,8 +29,16 @@ The earlier `USER HOLD` on starting B is now **resolved by chief architecture re
 ## 2026-10-27 — NEW TOP PRIORITY (7-day sprint)
 Supersedes the older 5-week sequencing. Read `docs/SPRINT_7_DAY_HACKATHON.md`. **Target Oct 31 integrated supported-scope MVP, review no later than Nov 2 (subject to actual tests).**
 
-**Now:** On `feature/axflow-mvp`, run complete Python suite including newly committed runlog/status/resume CLI tests from exact latest GitHub SHA. Fix any failures; perform real startup/shutdown and no-duplicate replay with separate runtime/business SQLite. Record commands/results/OS in STATUS. No fake CI/Windows claims. Then implement condition + pure transform + synthetic CSV fixture → business SQLite and verify 3 distinct workflows. Focus on executable code, not more planning. Isolated runlog 2/2 tests already passed; combined latest-suite remains pending.
+**P0 now passes** on Windows / Python 3.11 at `feature/axflow-mvp@5e7e05dac27336e87a02d847316b654e82cacbac`: full `python -m unittest discover -s tests -v` reports 12/12 PASS, including run/resume/status, malformed inputs, threaded duplicate claims and no-duplicate SQLite replay. Continue immediately with P1 condition + pure transform + bounded retry/timeout and per-step outcomes, then the synthetic CSV→SQLite path. Keep CI, cross-process stress, Windows packaging and customer data claims marked UNVERIFIED until actually tested.
 
 **Then D4–D5:** constrained natural-language/template → native IR → auto-config/test and basic local GUI, DBVORA read-only SQLite inventory; supported end-to-end demo must be real. Reuse selectively in KIC/PayPal/UGREEN with their submission constraints; UGREEN Skill ZIP stays Markdown-only, PayPal live financial order path requires actual authorized provider evidence, KIC prelim is PDF-only.
 
 **Do not block on 100% REA_APP completeness**; use approved bounded analyzer and maintain separate follow-up environment tests. Full AX FLOW commercial/product gates remain separate; do not downgrade tests to declare a 7-day commercial release.
+
+## 2026-10-27 KST — P0 passed; P1 implementation is next
+
+The current Windows full-suite baseline had 8 teardown failures from SQLite handles left open when `TemporaryDirectory` removed files. The engine and read-only runlog now close connections deterministically, and the regression tests close their own fixture handles. The latest full suite passes **12/12**. Run claims are serialized with `BEGIN IMMEDIATE`; same-ID/different-plan conflicts are rejected, exact same-plan replay is idempotent, and handled failures persist `failed` plus a bounded error type. Restart/resume after the injected post-business-commit stop passes without a duplicate row.
+
+**P1:** Add safe conditions/IF-ELSE, pure map/transform operators, and step-level completed/failed outcomes. Add explicit bounded retry and timeout budgets; do not retry non-idempotent writes automatically. Define an explicit bounded branch IR so unknown expressions stay rejected. Verify at least three distinct offline workflows, including conditions and data transforms. Then continue into P2 CSV→SQLite. Local CLI/SQLite work requires no website to remain open.
+
+**Limits:** threaded SQLite tests passed, but cross-process stress and parallel step execution remain unverified. Hard process termination may leave a run marked `running`; resume only after the old process is confirmed stopped. Keep the synthetic-only guard and separate runtime/business DB files.
