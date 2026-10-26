@@ -45,6 +45,9 @@ class IntervalTriggerTests(unittest.TestCase):
         with self.assertRaises(PlanError):
             list(interval_ticks({"version": "axflow.ir.v0", "steps": self.plan["steps"]},
                                 self.engine, "NotInterval", max_runs=1))
+        for limit in (0, 1001, True, 1.5):
+            with self.subTest(max_runs=limit), self.assertRaises(PlanError):
+                list(interval_ticks(self.plan, self.engine, "BoundedSchedule", max_runs=limit))
 
     def test_interval_cli_persists_ticks_and_resumes_after_process_restart(self):
         plan_path = self.root / "interval-plan.json"
