@@ -10,6 +10,19 @@ from .engine import ApprovalRequired, Engine, PlanError, validate
 from .runlog import RunLogError, inspect_run
 
 
+def _unique_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    value = {}
+    for key, item in pairs:
+        if key in value:
+            raise ValueError(f"duplicate JSON key: {key}")
+        value[key] = item
+    return value
+
+
+def _reject_json_constant(value: str) -> None:
+    raise ValueError(f"unsupported JSON constant: {value}")
+
+
 def main() -> int:
     p = argparse.ArgumentParser(prog="axflow")
     p.add_argument("command", choices=("validate", "run", "resume", "status"))
@@ -32,7 +45,11 @@ def main() -> int:
             raise PlanError("validate, run and resume require a workflow JSON file")
         if a.plan.stat().st_size > 65536:
             raise PlanError("workflow file exceeds 64 KiB")
-        plan = json.loads(a.plan.read_text(encoding="utf-8"))
+        plan = json.loads(
+            a.plan.read_text(encoding="utf-8"),
+            object_pairs_hook=_unique_object,
+            parse_constant=_reject_json_constant,
+        )
         validate(plan)
         if a.command == "validate":
             print("VALIDATED (synthetic-only)")

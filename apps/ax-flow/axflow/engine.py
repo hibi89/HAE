@@ -5,6 +5,7 @@ import hashlib
 import json
 import re
 import sqlite3
+from contextlib import contextmanager
 from pathlib import Path
 
 VERSION = "axflow.ir.v0"
@@ -74,16 +75,31 @@ class Engine:
         if not self.state_path.parent.is_dir() or not self.business_path.parent.is_dir():
             raise PlanError("both database parent directories must already exist")
         with self._state() as con:
-            con.execute("CREATE TABLE IF NOT EXISTS runs (run_id TEXT PRIMARY KEY, plan_hash TEXT NOT NULL, status TEXT NOT NULL, output_json TEXT)")
+            con.execute("CREATE TABLE IF NOT EXISTS runs (run_id TEXT PRIMARY KEY, plan_hash TEXT NOT NULL, status TEXT NOT NULL, output_json TEXT, error_type TEXT)")
+            columns = {row[1] for row in con.execute("PRAGMA table_info(runs)")}
+            if "error_type" not in columns:
+                con.execute("ALTER TABLE runs ADD COLUMN error_type TEXT")
             con.execute("CREATE TABLE IF NOT EXISTS steps (run_id TEXT NOT NULL, step_id TEXT NOT NULL, output_json TEXT NOT NULL, PRIMARY KEY(run_id,step_id))")
         with self._business() as con:
             con.execute("CREATE TABLE IF NOT EXISTS records (run_id TEXT NOT NULL, step_id TEXT NOT NULL, payload_json TEXT NOT NULL, PRIMARY KEY(run_id,step_id))")
 
+    @contextmanager
     def _state(self):
-        return sqlite3.connect(self.state_path, timeout=5)
+        con = sqlite3.connect(self.state_path, timeout=5)
+        try:
+            with con:
+                yield con
+        finally:
+            con.close()
 
+    @contextmanager
     def _business(self):
-        return sqlite3.connect(self.business_path, timeout=5)
+        con = sqlite3.connect(self.business_path, timeout=5)
+        try:
+            with con:
+                yield con
+        finally:
+            con.close()
 
     def execute(self, plan: object, run_id: str, *, approve_writes: bool = False,
                 inject_stop_after_business: bool = False) -> object:
@@ -94,13 +110,32 @@ class Engine:
             raise ApprovalRequired("explicit --approve-writes required for local SQLite writes")
         digest = hashlib.sha256(canonical_json(plan).encode("utf-8")).hexdigest()
         with self._state() as con:
+            # Reserve the claim transaction before reading so simultaneous processes
+            # cannot both create a fresh run row for the same run_id.
+            con.execute("BEGIN IMMEDIATE")
             existing = con.execute("SELECT plan_hash,status,output_json FROM runs WHERE run_id=?", (run_id,)).fetchone()
             if existing is None:
-                con.execute("INSERT INTO runs VALUES (?,?,?,NULL)", (run_id, digest, "running"))
+                con.execute(
+                    "INSERT INTO runs (run_id,plan_hash,status,output_json,error_type) VALUES (?,?,?,NULL,NULL)",
+                    (run_id, digest, "running"),
+                )
             elif existing[0] != digest:
                 raise PlanError("same run id cannot be reused with a different plan")
             elif existing[1] == "completed":
                 return json.loads(existing[2])
+            else:
+                con.execute("UPDATE runs SET status='running',error_type=NULL WHERE run_id=?", (run_id,))
+        try:
+            return self._execute_steps(plan, run_id, inject_stop_after_business)
+        except Exception as exc:
+            with self._state() as con:
+                con.execute(
+                    "UPDATE runs SET status='failed',error_type=? WHERE run_id=? AND status='running'",
+                    (type(exc).__name__, run_id),
+                )
+            raise
+
+    def _execute_steps(self, plan: dict, run_id: str, inject_stop_after_business: bool) -> object:
         results = {}
         for step in plan["steps"]:
             sid, op = step["id"], step["op"]
@@ -139,5 +174,8 @@ class Engine:
             results[sid] = value
         output = results[plan["steps"][-1]["id"]]
         with self._state() as con:
-            con.execute("UPDATE runs SET status='completed',output_json=? WHERE run_id=?", (canonical_json(output), run_id))
+            con.execute(
+                "UPDATE runs SET status='completed',output_json=?,error_type=NULL WHERE run_id=?",
+                (canonical_json(output), run_id),
+            )
         return output
