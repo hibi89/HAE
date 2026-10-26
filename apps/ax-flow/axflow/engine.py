@@ -47,8 +47,22 @@ def canonical_json(value: object) -> str:
 
 
 def validate(plan: object) -> dict:
-    if not isinstance(plan, dict) or set(plan) != {"version", "steps"} or plan["version"] != VERSION:
-        raise PlanError("expected versioned AX FLOW IR with only version and steps")
+    if (not isinstance(plan, dict) or set(plan) not in ({"version", "steps"}, {"version", "trigger", "steps"})
+            or plan["version"] != VERSION):
+        raise PlanError("expected versioned AX FLOW IR with version, optional trigger and steps")
+    trigger = plan.get("trigger", {"type": "manual"})
+    if not isinstance(trigger, dict) or not isinstance(trigger.get("type"), str):
+        raise PlanError("trigger must be manual or interval")
+    if trigger["type"] == "manual":
+        if set(trigger) != {"type"}:
+            raise PlanError("manual trigger accepts only its type")
+    elif trigger["type"] == "interval":
+        seconds = trigger.get("every_seconds")
+        if (set(trigger) != {"type", "every_seconds"} or isinstance(seconds, bool) or
+                not isinstance(seconds, int) or not 1 <= seconds <= 86400):
+            raise PlanError("interval trigger requires every_seconds from 1 to 86400")
+    else:
+        raise PlanError("unsupported trigger type")
     steps = plan["steps"]
     if not isinstance(steps, list) or not 1 <= len(steps) <= MAX_STEPS:
         raise PlanError("steps must be a list with 1–32 entries")
@@ -241,8 +255,13 @@ class Engine:
             con.close()
 
     def execute(self, plan: object, run_id: str, *, approve_writes: bool = False,
-                inject_stop_after_business: bool = False) -> object:
+                inject_stop_after_business: bool = False, interval_tick: bool = False) -> object:
         validate(plan)
+        trigger = plan.get("trigger", {"type": "manual"})
+        if trigger["type"] == "interval" and not interval_tick:
+            raise PlanError("interval-triggered workflows must be started with the schedule command")
+        if interval_tick and trigger["type"] != "interval":
+            raise PlanError("schedule command requires an interval trigger")
         if not isinstance(run_id, str) or not IDENTIFIER.fullmatch(run_id):
             raise PlanError("run_id must be a safe identifier")
         if any(s["op"] == "csv_read" for s in plan["steps"]) and self.input_root is None:
