@@ -9,7 +9,7 @@
 | Component | State | Evidence |
 | --- | --- | --- |
 | REA_APP static source analyzer | MVP_VERIFIED (BOUNDED SYNTHETIC JS/TS) | `REA_APP@80e8d7aad99c1c40d503848ed620421837b79477`; 10 Python + Node parser tests |
-| AX FLOW local runtime | P8_SYNTHETIC_INTERVAL + ZIPAPP_API_SMOKE_VERIFIED (NOT CUSTOMER READY) | package/UI commit chain ends `c1219d2d55b0ea1cbd195fcdbcb9ec386220e83e`; Windows Python 3.11 full suite 57/57 PASS |
+| AX FLOW local runtime | P9_LOCAL_BOUNDARY_FIXES_VERIFIED (NOT CUSTOMER READY) | DBVORA response fix `30be45331ea71b5a39cd2530764664dd8620d565`; regression tests `2da4b40ebfeec92b0fb589c75392c3e962e5ffb7`; Windows Python 3.11 full suite 59/59 PASS |
 | Natural-language planner and file input | PARTIAL | four bounded Korean/English CSV intents: full import, filtered import, conditional import, read-only lookup; visible browser E2E remains unverified |
 | OAuth, Gmail/Sheets connectors | NOT_STARTED | no account credentials, no auth test |
 | DBVORA integration | P5_SYNTHETIC_READ_ONLY_VERIFIED | selected-file `p0-01.v1` API over loopback; tables/columns/PK/FK/size displayed; customer DB and packaged service deployment unverified |
@@ -18,7 +18,7 @@
 | Vercel/Production | NOT_APPLICABLE | local-first product, no hosted service |
 
 ## Next
-The standard-library Windows zipapp and packaged localhost API smoke pass from outside the source tree. Remaining Blueprint gates are visible browser click/render E2E, independently verified DBVORA restore, security assessment, signed installer, and customer/release evidence. Symlink traversal code exists, but this host denied creation of a symlink fixture, so that case remains unverified. Keep real customer data, OAuth, public deployment and DBVORA writes behind approval gates.
+P9 fixed fail-closed handling for oversized/malformed DBVORA response lengths and deeply nested JSON. Static checks confirm the AX FLOW UI binds to 127.0.0.1, validates Host/Origin, caps requests, and uses textContent for untrusted display fields; the DBVORA client makes only bounded loopback GETs with redirects disabled. This is a limited self-review, not an independent security assessment. Remaining gates: actual browser rendering/click, DBVORA restore, Windows symlink fixture, signed installer, customer/release evidence, and independent security review. Keep customer data, OAuth, public deploy and DBVORA writes behind approval.
 
 ## Bootstrap verified after GitHub writes (2026-10-27 KST)
 - GitHub repository visibility independently rechecked: **private**.
@@ -177,3 +177,14 @@ The standard-library Windows zipapp and packaged localhost API smoke pass from o
 - **Progress estimate:** **76%** by the A–E equal-weight heuristic (A100/B95/C80/D60/E45). This is internal progress only. Product remains PARTIAL, not customer ready.
 - **Website:** no new site is required. Existing tab remains `http://127.0.0.1:8765/` (P6 UI); scheduler is CLI-only. The temporary packaged UI smoke shut down its own test server.
 - **Next:** perform bounded, read-only security review of local bind/origin/path handling, data redaction, and package contents, then implement only defects found with regression tests. External DBVORA restore, visual browser check that the UI helper refuses, signed installer and customer/release gates remain on hold until independently authorized.
+
+
+## 2026-10-27 KST — P9 local API response hardening and boundary review
+- **Branch/commits:** `hibi89/AX_FLOW`, `feature/axflow-mvp`; DBVORA client fix `30be45331ea71b5a39cd2530764664dd8620d565`; regression tests `2da4b40ebfeec92b0fb589c75392c3e962e5ffb7`; latest README `0b0a18a517cd69e8c894cb46c3571abf4b4a7e81`.
+- **Finding/fix:** an extremely long numeric `Content-Length` could make Python's integer conversion raise outside the client's fail-closed contract. Deeply nested JSON could raise `RecursionError` and escape response validation. Length syntax/size is checked without unbounded integer conversion; malformed lengths and nested JSON now return bounded unavailable/error metadata.
+- **Verification:** synthetic loopback DBVORA client tests **9/9 PASS**; full Windows Python 3.11.9 suite **59/59 PASS**; JavaScript syntax and Python compilation pass. No public network, external DBVORA service, credentials or customer data used.
+- **Read-only boundary review:** AX FLOW web server binds literal `127.0.0.1`; checks Host, Origin and loopback client; caps request bodies at 8 KiB and rate at 60/minute; applies CSP/no-store headers. UI output inserts untrusted text through DOM `textContent`; no `innerHTML`/dynamic `eval` usage found in its static code. The only AX FLOW external-client code is the DBVORA GET-only client, restricted to `127.0.0.1`, redirect-disabled and bounded to 2 MiB/5 seconds. Package test validates only zipapp runtime code/assets and refuses overwrite.
+- **Limitations/failure causes:** this is a bounded code review, not an independent security assessment or certification. Windows refused creation of a symlink fixture, leaving that path untested. UI is unauthenticated and intended for local synthetic single-user use only. Visual browser E2E, DBVORA restore, signed installer, customer data validation and release approvals remain open.
+- **Progress estimate:** 77% on the A–E equal-weight tracking heuristic (A100/B95/C80/D60/E50). Product remains PARTIAL and not customer ready.
+- **Website:** no new site needs to be opened. Existing localhost UI `http://127.0.0.1:8765/` is still available; current UI is synthetic and schedule CLI remains separate.
+- **Next:** continue only with permission-free release-quality checks. Do not claim full acceptance until browser-visible UI, DBVORA restore authorization/evidence, independent security review and installer/customer/release gates are satisfied.
