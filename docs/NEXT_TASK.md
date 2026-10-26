@@ -2,7 +2,7 @@
 
 ## Current checkpoint (P6 filtered planner and UI/API verification passed)
 
-On feature/axflow-mvp@7190f5a3c8a238b1f33a948dd9a3df0d5e121b37, Windows Python 3.11.9 full suite is 47/47 PASS; JavaScript syntax and Python compilation pass. The planner supports full import, filtered import, conditional import and read-only match-count/original-row-number lookup. Filtered recovery preserves original row numbers and does not persist matching row payloads in receipts. P5 DBVORA synthetic API smoke remains verified at baseline commit 06ba9f011796090b84e4625bcd65ded848412e34.
+On feature/axflow-mvp@7190f5a3c8a238b1f33a948dd9a3df0d5e121b37, Windows Python 3.11.9 full suite is 47/47 PASS; JavaScript syntax and Python compilation pass. The planner supports full import, filtered import, conditional import and read-only match-count/original-row-number lookup. Filtered recovery preserves original row numbers and does not persist matching row payloads in receipts. P5 DBVORA synthetic API smoke remains verified at baseline commit 06ba9f011796090b84e4625bcd65ded848412e34. Post-commit localhost smoke: page GET 200; Korean read-only lookup preview/run on synthetic ID 42 returned one match on source row 1 and no raw value.
 
 Blueprint A–E progress estimate: 68% heuristic (A 100, B 75, C 70, D 60, E 35; equal weights). Product state remains PARTIAL. The visible browser click/render flow, interval triggers, hard-kill/cross-process runner tests, restore, security review, installer and customer/release gates are still open.
 

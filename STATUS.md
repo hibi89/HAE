@@ -135,3 +135,10 @@ Planner expansion is verified at API level. Next: process-crash recovery and cro
 - **Open gates:** OAuth/connectors, timer trigger, cross-process/hard-kill recovery, visible-browser E2E, backup/restore, security assessment, Windows installer, customer test/release. The UI is synthetic-only and has no authentication.
 - **Failure/rollback:** Reverting commit 7190f5a3c8a238b1f33a948dd9a3df0d5e121b37 returns feature/axflow-mvp to P5 commit 06ba9f011796090b84e4625bcd65ded848412e34. feature/dbvora-integration remains at the P5 head; no main/develop merge.
 - **Next atomic task:** add a real subprocess hard-crash-after-durable-import test and cross-process same-run replay check; fix any product failure before progressing further. Existing official-doc n8n behavior analysis remains the source boundary, with no source/assets copied. Retry visible browser verification only if the UI helper can identify the owner-opened localhost page under its URL-confidence policy.
+
+
+## 2026-10-27 08:20 KST — P6 live localhost availability follow-up
+- After the code/doc commit, restarted the current P6 server on 127.0.0.1:8765 with loopback permission so the owner's desktop browser can connect. curl page probe returned HTTP 200 (5416 bytes).
+- Live API smoke: Korean read-only lookup preview returned csv_lookup and requires_approval=false; run against the selected synthetic contacts.csv ID 42 returned matched_count=1 and source row 1. The JSON response contained no raw CSV value.
+- First server restart from the default sandbox timed out from the host loopback probe; restarting with loopback-only access fixed it. First smoke expected ID 11 while the fixture contains ID 42; using the fixture's actual synthetic ID passed. These were environment/test-input mismatches, not product test failures.
+- This proves HTTP/API availability, not visible browser rendering/click E2E. Owner should refresh the open tab at http://127.0.0.1:8765/. The server is active in the current session; DBVORA side service may show unavailable.

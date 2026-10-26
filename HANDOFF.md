@@ -187,3 +187,9 @@ Recovery: read this latest appended block before older 21-week historical notes.
 8. **Risks/rollback:** Local UI is single-user and unauthenticated; synthetic data only. Revert 7190f5a3c8a238b1f33a948dd9a3df0d5e121b37 to return to P5. No merge to main/develop. Local checkout still presents an unborn REA_APP branch; actual committed source-of-truth is the verified GitHub feature branch.
 9. **Next task:** Test real process termination immediately after durable synthetic import, then same-run recovery and separate-process duplicate replay; record and fix any failure.
 10. **Owner actions/time:** Owner was told to open http://127.0.0.1:8765/; server must be restarted after P6 so its loaded Python module uses the new planner. Restart and verify local page before reporting ready. 2026-10-27 08:15 KST. Overall product remains PARTIAL; progress estimate 68% by the equally weighted A–E tracking rubric.
+
+
+## P6 local-page reachability addendum — 2026-10-27 08:20 KST
+- Latest code server restarted at http://127.0.0.1:8765/ with loopback permission. Host curl GET returned 200. Live preview/run of read-only lookup against contacts.csv ID 42 returned one match on source row 1 and no raw row value.
+- Recovery: default-sandbox server was not reachable from the host and its request timed out; restart under loopback-only permission fixed it. Initial lookup value 11 was absent from fixture (actual synthetic ID 42); corrected smoke passed. No product failure remains.
+- Visual/click browser E2E is still unverified. User can refresh the already-open localhost tab.
