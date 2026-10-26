@@ -71,21 +71,19 @@ def interval_ticks(
     engine: Engine,
     schedule_id: str,
     *,
-    max_runs: int | None = None,
+    max_runs: int,
     approve_writes: bool = False,
     clock=time.time,
     sleeper=time.sleep,
 ) -> Iterator[dict[str, object]]:
     """Run due ticks. Reopening the same schedule resumes its durable tick index."""
     plan = validate(plan)
-    if max_runs is not None and (
-        isinstance(max_runs, bool) or not isinstance(max_runs, int) or not 1 <= max_runs <= MAX_SCHEDULE_RUNS
-    ):
+    if isinstance(max_runs, bool) or not isinstance(max_runs, int) or not 1 <= max_runs <= MAX_SCHEDULE_RUNS:
         raise PlanError(f"max_runs must be from 1 to {MAX_SCHEDULE_RUNS}")
     tick, anchor = _ensure_schedule(engine, plan, schedule_id, clock())
     interval = plan["trigger"]["every_seconds"]
     emitted = 0
-    while max_runs is None or emitted < max_runs:
+    while emitted < max_runs:
         due = anchor + tick * interval
         remaining = due - clock()
         if remaining > 0:
