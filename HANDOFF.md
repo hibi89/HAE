@@ -8,6 +8,11 @@
 5. **Next:** Complete the permitted n8n architecture/behavior analysis from official sources, without copying code/assets or implementing the independent AX FLOW execution engine. Continue with permission-free work; hold gated work for approval.
 6. **Site:** No new page to open; existing synthetic UI `http://127.0.0.1:8765/` remains available.
 
+## P11 — n8n official-source architecture review
+- **Findings:** workflow graph nodes/connections have explicit versioned branch-order rules; the core executor tracks node-stack/execution state and can suspend at node boundaries; retry can use saved-current or original workflow; item pairing preserves lineage; queue mode separates trigger handling from Redis-dispatched DB-backed workers; Code-node execution uses task runners with external isolation recommended; current SUL guidance requires commercial licensing when customers configure embedded n8n automations.
+- **Application:** retain AX FLOW's bounded local/synthetic runtime and durable idempotent receipts. No n8n source/assets, n8n runtime, arbitrary code, distributed queue, or licensing assumption was added. No application tests apply to this research-only unit; no product code changed.
+- **Evidence:** official sources and concise comparison are recorded in `docs/NEXT_TASK.md`. License FAQ last updated 2026-10-06. Progress remains 77%, product PARTIAL. Next: select a small Blueprint gap or offline template and verify it with tests.
+
 
 1. **Goal/requirements/technology:** AX FLOW is a local-first natural-language automation product: file input + safe OAuth onboarding + plan/validate/run/recover with CLI and minimal web UI; optional DBVORA. REA_APP is a distinct app source analysis/reconstruction-assistance tool. Python 3.11+ proposed for initial static analysis and local executor; final technology remains subject to design/approval.
 2. **Completed/change/decision:** GitHub private `hibi89/AX_FLOW` discovered empty; initial README created. Repo intended as private monorepo with separate source directories and branches. No features developed.
