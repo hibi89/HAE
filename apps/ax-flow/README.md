@@ -1,9 +1,37 @@
-# AX FLOW — independently coded customer automation platform
+# AX FLOW independent runner — v0.1.0 (synthetic-only)
 
-Status: planning; no runnable code or customer UI.
+**Status: first executable engine slice, not a customer-ready AX FLOW product.** All work is original Python stdlib code. No n8n source, modified n8n runtime, customer data or remote API access involved.
 
-**Core from first MVP:** validated JSON workflow IR, safe deterministic CLI executor, dedicated private runtime SQLite, separate test-business SQLite adapter, run receipts, idempotency/restart controls, evidence-based dry-run.
+## Selected architecture
+1. Python 3 stdlib `sqlite3` + JSON IR, local CLI: cheap/install-free engine proof and deterministic tests (SELECTED).
+2. Node.js workflow runner: more direct ecosystem integration for JS connectors but more dependency/runtime burden for the very first engine slice. May be revisited for adapters.
 
-**Full product:** natural-language + attachment intake, auth wizard, verified test/repair, Gmail/Sheets adapters, GUI + **mandatory DBVORA integrated DB view** before full-package sign-off. The customer does not manually configure nodes or paste JSON.
+This is the baseline for Blueprint B. REA_APP remains a separate tool in `tools/rea-app/`. DBVORA is a separate process/repository; **no DBVORA connection exists yet**.
 
-Database scope: runtime SQLite stores workflow metadata only. Business data is stored in user-chosen SQLite or authorized external store. DBVORA provides a separate local read-only metadata/backup safety subsystem; adapter is planned under `apps/ax-flow/adapters/dbvora/` on `feature/dbvora-integration`. Refer to docs/DATA_ARCHITECTURE.md, MASTER_SCHEDULE.md and ACCEPTANCE_MATRIX.md. No modified n8n source included.
+## Executable scope
+- Strict `axflow.ir.v0` JSON plan validator; max 32 steps / 64KiB; allowed operations: `literal`, `field`, `sqlite_put`, `sqlite_get`.
+- Runtime SQLite: `runs` and `steps` persistent status/results/receipts. Separate business SQLite: `records`, uniquely indexed by run and step for idempotent local writes.
+- No write operation without explicit `--approve-writes`. Synthetic-only CLI requires `--synthetic` and cannot call real HTTP, shells, browser or external providers.
+- An injected stop **after business DB commit and before runtime receipt** is covered; re-executing the same run won't duplicate the business record. `run_id` reuse with a different IR hash is rejected.
+- This proof does **not** establish concurrent/parallel execution safety, exactly-once behavior for external APIs, transaction atomicity across arbitrary DBs, secure storage of customer data, authentication, schedule triggers, branch expression engine, GUI, OAuth, generic connectors, or Windows packaging.
+
+## Test commands
+From `apps/ax-flow/` with Python 3.11+ (tested here on Linux Python 3.13.5):
+```shell
+python -m unittest discover -s tests -v
+```
+Observed: 5/5 tests PASS locally on the exact source bytes subsequently uploaded and re-read from GitHub. CI, Windows and clean third-party installs were NOT run for this engine.
+
+For a manual synthetic demo, create a JSON file outside the repo:
+```json
+{"version":"axflow.ir.v0","steps":[{"id":"seed","op":"literal","value":{"title":"sample"}},{"id":"store","op":"sqlite_put","from":"seed"},{"id":"read","op":"sqlite_get","from":"store"}]}
+```
+Then, from `apps/ax-flow/` in an existing temporary directory:
+```shell
+python -m axflow validate /path/to/plan.json --synthetic
+python -m axflow run /path/to/plan.json --synthetic --state /path/to/runtime.db --data /path/to/business.db --run-id Demo1 --approve-writes
+```
+Both database parent folders must already exist. This stores test fixture values in SQLite and is **not authorized for confidential/customer data**.
+
+## Next slice
+Fault-injection, concurrent-run lease/locking semantics, explicit plan schema/version migration, retry/timeout policy, conditions/branches, safe HTTP stub. Then validated CLI `test/status/resume` with receipts and Windows proof. Keep runtime and business DB separate and preserve tests. User's 5-week stretch plan remains a target, not evidence of completion.
