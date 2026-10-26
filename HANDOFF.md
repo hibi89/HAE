@@ -42,3 +42,17 @@ Read `HANDOFF.md` → `STATUS.md` → `AGENTS.md` → `REQUIREMENTS.md` → `doc
 10. **KST/checkpoint/test scope:** 2026-10-27 KST; source files and architecture reviewed through GitHub connector, schedule is an **estimate** (21 weeks 445–750 hours, conditional). Document commit SHA cannot self-reference; resolve from GitHub remote main HEAD. Author/committer and branch comparisons must be checked after commit.
 
 **Next chat:** HANDOFF → STATUS → AGENTS → REQUIREMENTS → docs/MASTER_SCHEDULE → docs/DATA_ARCHITECTURE → docs/ACCEPTANCE_MATRIX → docs/NEXT_TASK → actual source. `ㄱ` advances next authorized safe step.
+
+## 2026-10-27 — latest owner correction / FAST-TRACK handoff (authoritative schedule over 21-week history)
+1. **Goal:** REA_APP source analyzer for authorized JS/TS code → n8n functionality study (license checked) → native new-code runner → AX FLOW AI-driven configuration/testing GUI; parallel independently maintained DBVORA integration.
+2. **Decision:** 2 weeks for first two outputs, **another 3 weeks** for AX FLOW+DBVORA integration = **5-week scope-limited v1 target Oct27–Nov30**, no 21-week plan as active. Working MVP by first 2–3 days, then blueprint comparison and gaps.
+3. **Test evidence:** GitHub docs only; **0 runtime/product tests** and no Windows/browser/real OAuth/integrated DBVORA acceptance. No Codex job is already running merely because a task doc exists.
+4. **Progress:** R0 docs complete; REA_APP analyzer/RUNNER/AI/GUI/DBVORA bridge NOT_STARTED. All release acceptance gates still apply.
+5. **Risks:** JS/TS parser integration, n8n license boundaries, n8n feature parity explicitly excluded; live OAuth/DBVORA Windows+restore tests depend on third-party readiness, hackathon KIC/PayPal/UGREEN submission deadlines Nov12/13/16 overlap W3.
+6. **Repo/branch:** hibi89/AX_FLOW private; main for master docs, REA_APP for analyzer, feature/axflow-mvp for native runner and UI, feature/dbvora-integration for bridge, develop review. Confirm actual SHA after writes; no third-party source copying.
+7. **Environment/deploy:** Python 3.11+ and a bounded JS/TS AST parser adapter as candidate; local CLI + SQLite, optional GUI. NO app launch, no customer release or production.
+8. **Originals:** Preserve Git history of 21-week docs; existing main code/docs not rewritten unsafely; never mutate customer source or DBVORA repo. No secrets/API tokens provided.
+9. **Next:** docs/CODEX_EXTRA_HIGH_ORDER.md exact first 72h; blueprint docs/TARGET_BLUEPRINT_V1.md; active dates docs/FAST_TRACK_5_WEEK.md and docs/MASTER_SCHEDULE.md. Chief independent evidence review after each slice; owner approval for real external effects/security costs.
+10. **KST checkpoint:** 2026-10-27; GitHub docs edits only at time of handoff; no live software test numbers to claim. Resolve HEAD and compare branches before Codex acts.
+
+Recovery: read this latest appended block before older 21-week historical notes. Keep all independently tested gates, but time-box features and report PARTIAL rather than falsely claiming universal functionality. User `ㄱ` advances work; no background task implied.
