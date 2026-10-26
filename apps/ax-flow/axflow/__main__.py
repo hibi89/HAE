@@ -1,4 +1,4 @@
-"""CLI entrypoint: python -m axflow validate/run."""
+"""CLI entrypoint: python -m axflow validate/run/serve."""
 from __future__ import annotations
 
 import argparse
@@ -26,7 +26,7 @@ def _reject_json_constant(value: str) -> None:
 
 def main() -> int:
     p = argparse.ArgumentParser(prog="axflow")
-    p.add_argument("command", choices=("validate", "run", "resume", "status", "template"))
+    p.add_argument("command", choices=("validate", "run", "resume", "status", "template", "serve"))
     p.add_argument("plan", type=Path, nargs="?")
     p.add_argument("--name", help="built-in template name (template command)")
     p.add_argument("--csv", dest="csv_path", help="relative CSV path for csv_to_sqlite")
@@ -34,15 +34,34 @@ def main() -> int:
     p.add_argument("--data", type=Path)
     p.add_argument("--input-root", type=Path, help="explicit directory containing allowed synthetic CSV inputs")
     p.add_argument("--run-id")
+    p.add_argument("--port", type=int, default=8765, help="loopback UI port for serve")
     p.add_argument("--approve-writes", action="store_true")
     p.add_argument("--synthetic", action="store_true", help="mandatory: this MVP handles synthetic fixtures only")
     a = p.parse_args()
     try:
         if not a.synthetic:
             raise PlanError("MVP restricted to synthetic fixtures; include --synthetic")
+        if a.command == "serve":
+            if (a.plan is not None or a.name is not None or a.csv_path is not None or a.run_id is not None or
+                    a.approve_writes or a.input_root is None or a.state is None or a.data is None or
+                    not 1 <= a.port <= 65535):
+                raise PlanError(
+                    "serve requires --input-root, --state, --data, --synthetic and port 1–65535; no plan or run options"
+                )
+            from .web import create_server
+
+            server = create_server(a.input_root, a.state, a.data, port=a.port)
+            print(f"AX FLOW local UI ready: http://127.0.0.1:{server.server_port}/", flush=True)
+            try:
+                server.serve_forever(poll_interval=0.2)
+            except KeyboardInterrupt:
+                pass
+            finally:
+                server.server_close()
+            return 0
         if a.command == "template":
             if (a.plan is not None or a.state is not None or a.data is not None or
-                    a.input_root is not None or a.run_id is not None or a.approve_writes):
+                    a.input_root is not None or a.run_id is not None or a.approve_writes or a.port != 8765):
                 raise PlanError("template accepts only --name, --csv and --synthetic")
             plan = build_template(a.name, csv_path=a.csv_path) if a.csv_path is not None else build_template(a.name)
             print(json.dumps(plan, ensure_ascii=False, sort_keys=True, indent=2))

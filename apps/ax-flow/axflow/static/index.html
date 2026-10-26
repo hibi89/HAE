@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <title>AX FLOW · 로컬 자동화</title>
+    <link rel="stylesheet" href="/app.css">
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="AX FLOW 홈">
+          <span class="brand-mark">A</span>
+          <span>AX <b>FLOW</b></span>
+        </a>
+        <span class="local-badge"><span class="pulse"></span> 이 PC에서만 실행</span>
+      </header>
+
+      <section class="hero" aria-labelledby="page-title">
+        <div class="eyebrow">LOCAL AUTOMATION · SYNTHETIC MODE</div>
+        <h1 id="page-title">반복 작업을<br><span>흐름으로 바꿔보세요.</span></h1>
+        <p class="hero-copy">현재 지원하는 작업은 CSV 파일을 로컬 SQLite로 가져오는 흐름입니다. 데이터는 이 PC 밖으로 전송되지 않습니다.</p>
+      </section>
+
+      <section class="workspace" aria-label="CSV 자동화 설정">
+        <div class="section-heading">
+          <div>
+            <div class="step-label">01 · REQUEST</div>
+            <h2>원하는 작업을 적어주세요</h2>
+          </div>
+          <span class="scope-tag">지원 범위 1개</span>
+        </div>
+
+        <label for="task">작업 설명</label>
+        <textarea id="task" rows="2" maxlength="512">이 CSV 파일을 로컬 SQLite에 저장해줘</textarea>
+        <p class="hint">예: “Import this CSV into local SQLite” · 이 MVP는 정해진 CSV 가져오기 요청만 처리합니다.</p>
+
+        <label for="csv-path">CSV 경로 <span class="label-note">서버 실행 때 선택한 폴더 기준</span></label>
+        <div class="path-field">
+          <span class="file-icon" aria-hidden="true">▤</span>
+          <input id="csv-path" type="text" maxlength="512" placeholder="예: contacts.csv" autocomplete="off" spellcheck="false">
+        </div>
+        <p class="hint">상대 경로만 입력할 수 있습니다. 절대 경로와 폴더 이탈 경로는 거부됩니다.</p>
+
+        <div class="action-row">
+          <button id="preview" class="button button-secondary" type="button">흐름 미리보기</button>
+          <span id="connection" class="connection" role="status">로컬 서버에 연결 중…</span>
+        </div>
+
+        <details class="plan-details">
+          <summary>생성된 계획 보기</summary>
+          <pre id="plan" aria-label="생성된 IR 계획">작업을 입력하고 미리보기를 눌러주세요.</pre>
+        </details>
+
+        <div class="divider"></div>
+
+        <div class="section-heading run-heading">
+          <div>
+            <div class="step-label">02 · TEST &amp; RUN</div>
+            <h2>합성 데이터로 실행</h2>
+          </div>
+          <span class="safe-tag">외부 연결 없음</span>
+        </div>
+        <label class="approval" for="approval">
+          <input id="approval" type="checkbox">
+          <span><b>합성 데이터임을 확인하고 로컬 SQLite 쓰기를 승인합니다.</b><small>실제 고객 데이터는 이 MVP에서 사용하지 마세요.</small></span>
+        </label>
+        <button id="run" class="button button-primary" type="button" disabled>검증 후 실행</button>
+        <p id="message" class="message" role="status" aria-live="polite"></p>
+      </section>
+
+      <section id="result-card" class="result-card" hidden aria-live="polite">
+        <div class="result-topline"><span class="step-label">RUN RECEIPT</span><span id="result-status" class="result-status"></span></div>
+        <h2 id="result-title">실행 결과</h2>
+        <p id="result-copy"></p>
+        <div class="receipt-grid">
+          <div><span>실행 ID</span><b id="run-id">—</b></div>
+          <div><span>가져온 행</span><b id="row-count">—</b></div>
+          <div><span>완료 단계</span><b id="step-count">—</b></div>
+        </div>
+        <button id="refresh-status" class="text-button" type="button">상태 새로고침</button>
+      </section>
+
+      <footer><span>AX FLOW</span><span>localhost only · no account · no external API</span></footer>
+    </main>
+  </body>
+</html>

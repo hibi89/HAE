@@ -1,6 +1,6 @@
 # AX FLOW independent runner — v0.1.0 (synthetic-only)
 
-**Status: verified synthetic runner plus deterministic template, not a customer-ready AX FLOW product.** All work is original Python stdlib code. No n8n source, modified n8n runtime, customer data or remote API access involved.
+**Status: verified synthetic runner, bounded request parser and localhost UI, not a customer-ready AX FLOW product.** All work is original Python stdlib code. No n8n source, modified n8n runtime, customer data or remote API access involved.
 
 ## Selected architecture
 1. Python 3 stdlib `sqlite3` + JSON IR, local CLI: cheap/install-free engine proof and deterministic tests (SELECTED).
@@ -18,14 +18,14 @@ This is the baseline for Blueprint B. REA_APP remains a separate tool in `tools/
 - Step outcomes persist as `running`, `completed`, `failed`, or `skipped`; read-only `status` reports aggregate outcomes without step payloads. Existing P0 step receipts migrate to `completed`.
 - No write operation without explicit `--approve-writes`. Synthetic-only CLI requires `--synthetic` and cannot call real HTTP, shells, browser or external providers.
 - An injected stop **after business DB commit and before runtime receipt** is covered; re-executing the same run won't duplicate the business record. `run_id` reuse with a different IR hash is rejected.
-- Same-plan threaded run replay and SQLite idempotent writes are covered, but cross-process stress and parallel step scheduling are not verified. This proof does **not** establish exactly-once behavior for external APIs, transaction atomicity across arbitrary DBs, secure storage of customer data, authentication, schedule triggers, GUI, OAuth, generic connectors, or Windows packaging.
+- Same-plan threaded run replay and SQLite idempotent writes are covered, but cross-process stress and parallel step scheduling are not verified. This proof does **not** establish exactly-once behavior for external APIs, transaction atomicity across arbitrary DBs, secure storage of customer data, authentication, schedule triggers, broad AI planning, OAuth, generic connectors, visible browser E2E, or Windows packaging.
 
 ## Test commands
 From `apps/ax-flow/` with Python 3.11+:
 ```shell
 python -m unittest discover -s tests -v
 ```
-Latest full suite: Windows Python 3.11, **22/22 tests PASS** at P3. This includes P0/P1 CLI/recovery/concurrency checks, both IF/ELSE outcomes, mapping transforms, held-lock retry/timeout/recovery, CSV→SQLite import and replay, and generated-template → validate → actual CLI import. Unsupported templates, unsafe paths, missing `--synthetic`, and unused template command options are rejected. CI and clean third-party installs have not been run.
+Latest full suite: Windows Python 3.11, **33/33 tests PASS** at P4. This includes P0/P1 CLI/recovery/concurrency checks, CSV parsing/import/replay, rule-based English/Korean intent recognition, localhost UI API preview/run/status, explicit write approval, redacted success/failure receipts, and CLI server argument guards. The JavaScript syntax check also passes. The visible browser automation attempt stopped before navigation because the Windows UI helper could not verify the current browser URL; visual browser E2E remains unverified. CI and clean third-party installs have not been run.
 
 For a manual synthetic demo, create a JSON file outside the repo:
 ```json
@@ -55,6 +55,15 @@ The CLI can emit validated native IR for one fixed synthetic workflow without AI
 python -m axflow template --name csv_to_sqlite --csv contacts.csv --synthetic
 ```
 The command writes JSON to stdout only. `--csv` must be a safe relative `.csv` path under the `--input-root` supplied later to `run`; import still requires `--synthetic` and `--approve-writes`. Unsupported templates and extra parameters fail closed. This is a deterministic template, not natural-language planning.
+
+## Local request UI
+The localhost UI adds a narrow, deterministic English/Korean request parser for the single supported “import CSV into local SQLite” workflow. It is rule-based and offline; it is not an LLM or a general-purpose planner. The UI previews validated IR, requires explicit synthetic-data/write approval, runs through the same engine, and displays redacted run receipts and failure status.
+
+Start it with an explicitly selected synthetic fixture folder and separate database paths:
+```shell
+python -m axflow serve --input-root "C:\axflow-demo\input" --state "C:\axflow-demo\state.db" --data "C:\axflow-demo\business.db" --synthetic --port 8765
+```
+Open the printed `http://127.0.0.1:8765/` URL. The input folder and database parent folders must already exist. The server binds only to `127.0.0.1`; HTTP clients cannot change the input/database paths. Preview tokens bind the exact request to one run ID so retried requests do not duplicate rows. Requests are same-origin, bounded to 8 KiB, and limited to 60 per minute. Stop the server with Ctrl+C. Do not use real customer files with this synthetic MVP.
 
 ## Next slice
 Compare this executable MVP against the original Blueprint V1 and close the highest-priority supported-scope gaps, then implement a local GUI and complete browser-to-engine verification. Keep runtime and business DB separate and preserve tests. A 5-week stretch plan is a target, not evidence of completion.

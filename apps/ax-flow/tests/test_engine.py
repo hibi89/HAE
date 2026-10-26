@@ -350,6 +350,19 @@ class TestEngine(unittest.TestCase):
         self.assertEqual(unused_option.returncode, 2)
         self.assertIn("template accepts only", unused_option.stderr)
 
+    def test_serve_cli_requires_explicit_local_paths_and_valid_port(self):
+        base = [sys.executable, "-m", "axflow", "serve", "--synthetic"]
+        missing = subprocess.run(base, capture_output=True, text=True)
+        self.assertEqual(missing.returncode, 2)
+        self.assertIn("serve requires", missing.stderr)
+        invalid_port = subprocess.run(
+            base + ["--input-root", str(self.root), "--state", str(self.root / "state.db"),
+                    "--data", str(self.root / "business.db"), "--port", "0"],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(invalid_port.returncode, 2)
+        self.assertIn("serve requires", invalid_port.stderr)
+
     def test_step_failure_is_recorded_and_legacy_receipts_migrate(self):
         broken = {"version": "axflow.ir.v0", "steps": [
             {"id": "source", "op": "literal", "value": {"name": "ok"}},
