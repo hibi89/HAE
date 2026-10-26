@@ -22,7 +22,9 @@ class RunLogTests(unittest.TestCase):
     def test_readonly_status_and_redaction(self):
         before = self.db.read_bytes()
         got = inspect_run(self.db, "Run1")
-        self.assertEqual(got, {"run_id": "Run1", "status": "running", "steps_recorded": 1, "plan_sha256": "abc123", "error_type": None})
+        self.assertEqual(got, {"run_id": "Run1", "status": "running", "steps_recorded": 1,
+                              "step_outcomes": {"completed": 1, "failed": 0, "running": 0, "skipped": 0},
+                              "plan_sha256": "abc123", "error_type": None})
         self.assertNotIn("secret", str(got))
         self.assertEqual(before, self.db.read_bytes())
 

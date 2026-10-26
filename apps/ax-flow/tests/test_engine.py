@@ -39,13 +39,96 @@ class TestEngine(unittest.TestCase):
         with closing(sqlite3.connect(self.root / "business.db")) as c:
             self.assertEqual(c.execute("SELECT COUNT(*) FROM records").fetchone()[0], 0)
 
+    def test_map_conditions_guards_and_if_else_are_durable(self):
+        def plan_for(age):
+            return {"version": "axflow.ir.v0", "steps": [
+                {"id": "source", "op": "literal", "value": {"name": "  ALICE ", "age": str(age)}},
+                {"id": "mapped", "op": "map", "from": "source", "fields": {
+                    "name": {"field": "name", "transform": "trim"},
+                    "normalized_name": {"field": "name", "transform": "lower"},
+                    "age": {"field": "age", "transform": "number"},
+                }},
+                {"id": "adult", "op": "condition", "from": "mapped", "field": "age",
+                 "operator": "gte", "value": 18},
+                {"id": "adult_store", "op": "sqlite_put", "from": "mapped",
+                 "when": {"condition": "adult", "equals": True}},
+                {"id": "minor_store", "op": "sqlite_put", "from": "source",
+                 "when": {"condition": "adult", "equals": False}},
+                {"id": "route", "op": "branch", "condition": "adult",
+                 "then": "adult_store", "else": "minor_store"},
+            ]}
+
+        adult_output = self.engine.execute(plan_for(21), "AdultRun", approve_writes=True)
+        minor_output = self.engine.execute(plan_for(17), "MinorRun", approve_writes=True)
+        self.assertEqual(adult_output, {"stored_by": "adult_store"})
+        self.assertEqual(minor_output, {"stored_by": "minor_store"})
+        for run_id, store_step, expected in (
+                ("AdultRun", "adult_store", {"age": 21, "name": "ALICE", "normalized_name": "  alice "}),
+                ("MinorRun", "minor_store", {"age": "17", "name": "  ALICE "})):
+            with closing(sqlite3.connect(self.root / "business.db")) as con:
+                payload = con.execute(
+                    "SELECT payload_json FROM records WHERE run_id=? AND step_id=?", (run_id, store_step)
+                ).fetchone()[0]
+            self.assertEqual(json.loads(payload), expected)
+            status = inspect_run(self.root / "state.db", run_id)
+            self.assertEqual(status["step_outcomes"], {"completed": 5, "failed": 0, "running": 0, "skipped": 1})
+
+    def test_contains_operator_and_safe_transform_validation(self):
+        contains = {"version": "axflow.ir.v0", "steps": [
+            {"id": "source", "op": "literal", "value": {"tags": ["approved", "local"]}},
+            {"id": "has_tag", "op": "condition", "from": "source", "field": "tags",
+             "operator": "contains", "value": "approved"},
+        ]}
+        self.assertIs(self.engine.execute(contains, "ContainsRun"), True)
+        invalid_transform = {"version": "axflow.ir.v0", "steps": [
+            {"id": "source", "op": "literal", "value": {"name": "x"}},
+            {"id": "mapped", "op": "map", "from": "source", "fields": {
+                "name": {"field": "name", "transform": "eval"}}},
+        ]}
+        invalid_operator = {"version": "axflow.ir.v0", "steps": [
+            {"id": "source", "op": "literal", "value": {"x": 1}},
+            {"id": "check", "op": "condition", "from": "source", "field": "x",
+             "operator": "exec", "value": 1},
+        ]}
+        invalid_branch = {"version": "axflow.ir.v0", "steps": [
+            {"id": "source", "op": "literal", "value": {}},
+            {"id": "check", "op": "literal", "value": True},
+            {"id": "route", "op": "branch", "condition": "check", "then": "source", "else": "source"},
+        ]}
+        for bad in (invalid_transform, invalid_operator, invalid_branch):
+            with self.assertRaises(PlanError):
+                validate(bad)
+
+    def test_step_failure_is_recorded_and_legacy_receipts_migrate(self):
+        broken = {"version": "axflow.ir.v0", "steps": [
+            {"id": "source", "op": "literal", "value": {"name": "ok"}},
+            {"id": "mapped", "op": "map", "from": "source", "fields": {
+                "missing": {"field": "absent", "transform": "trim"}}},
+        ]}
+        with self.assertRaises(PlanError):
+            self.engine.execute(broken, "BrokenRun")
+        status = inspect_run(self.root / "state.db", "BrokenRun")
+        self.assertEqual(status["step_outcomes"], {"completed": 1, "failed": 1, "running": 0, "skipped": 0})
+
+        state, business = self.root / "legacy.db", self.root / "legacy-business.db"
+        with closing(sqlite3.connect(state)) as con:
+            con.execute("CREATE TABLE runs (run_id TEXT PRIMARY KEY,plan_hash TEXT NOT NULL,status TEXT NOT NULL,output_json TEXT,error_type TEXT)")
+            con.execute("CREATE TABLE steps (run_id TEXT NOT NULL,step_id TEXT NOT NULL,output_json TEXT NOT NULL,PRIMARY KEY(run_id,step_id))")
+            con.execute("INSERT INTO runs VALUES ('OldRun','legacy-hash','running',NULL,NULL)")
+            con.execute("INSERT INTO steps VALUES ('OldRun','old_step','1')")
+            con.commit()
+        Engine(state, business)
+        migrated = inspect_run(state, "OldRun")
+        self.assertEqual(migrated["step_outcomes"], {"completed": 1, "failed": 0, "running": 0, "skipped": 0})
+
     def test_restart_after_committed_write_does_not_duplicate(self):
         with self.assertRaises(InjectedStop):
             self.engine.execute(self.plan, "Crash", approve_writes=True, inject_stop_after_business=True)
         failed = inspect_run(self.root / "state.db", "Crash")
         self.assertEqual(failed["status"], "failed")
         self.assertEqual(failed["error_type"], "InjectedStop")
-        self.assertEqual(failed["steps_recorded"], 2)
+        self.assertEqual(failed["steps_recorded"], 3)
+        self.assertEqual(failed["step_outcomes"], {"completed": 2, "failed": 1, "running": 0, "skipped": 0})
         restarted = Engine(self.root / "state.db", self.root / "business.db")
         self.assertEqual(restarted.execute(self.plan, "Crash", approve_writes=True)["name"], "fixture")
         completed = inspect_run(self.root / "state.db", "Crash")

@@ -30,15 +30,28 @@ def inspect_run(state_path: Path, run_id: str) -> dict[str, object]:
             ).fetchone()
             if row is None:
                 raise RunLogError("run_id not found")
-            step_count = con.execute(
-                "SELECT COUNT(*) FROM steps WHERE run_id=?", (run_id,)
-            ).fetchone()[0]
+            step_columns = {row[1] for row in con.execute("PRAGMA table_info(steps)")}
+            if "status" in step_columns:
+                step_rows = con.execute(
+                    "SELECT status,COUNT(*) FROM steps WHERE run_id=? GROUP BY status", (run_id,)
+                ).fetchall()
+                outcome_counts = {name: 0 for name in ("completed", "failed", "running", "skipped")}
+                for status, count in step_rows:
+                    if status in outcome_counts:
+                        outcome_counts[status] = count
+                step_count = sum(count for _, count in step_rows)
+            else:
+                step_count = con.execute(
+                    "SELECT COUNT(*) FROM steps WHERE run_id=?", (run_id,)
+                ).fetchone()[0]
+                outcome_counts = {"completed": step_count, "failed": 0, "running": 0, "skipped": 0}
     except sqlite3.DatabaseError as exc:
         raise RunLogError("invalid or unreadable runtime ledger") from exc
     return {
         "run_id": run_id,
         "status": row[0],
         "steps_recorded": step_count,
+        "step_outcomes": outcome_counts,
         "plan_sha256": row[1],
         "error_type": row[2],
     }

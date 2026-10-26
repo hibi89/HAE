@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import re
 import sqlite3
 from contextlib import contextmanager
@@ -44,14 +45,63 @@ def validate(plan: object) -> dict:
         ident, op = step["id"], step.get("op")
         if ident in seen:
             raise PlanError("duplicate step id")
-        allowed = {"literal": {"id", "op", "value"}, "field": {"id", "op", "from", "field"},
-                   "sqlite_put": {"id", "op", "from"}, "sqlite_get": {"id", "op", "from"}}
-        if op not in allowed or set(step) != allowed[op]:
+        if not isinstance(op, str):
             raise PlanError(f"unknown operation or invalid fields for {ident}")
-        if op != "literal" and (not isinstance(step["from"], str) or step["from"] not in seen):
+        fields = {
+            "literal": {"id", "op", "value"},
+            "field": {"id", "op", "from", "field"},
+            "map": {"id", "op", "from", "fields"},
+            "condition": {"id", "op", "from", "field", "operator", "value"},
+            "branch": {"id", "op", "condition", "then", "else"},
+            "sqlite_put": {"id", "op", "from"},
+            "sqlite_get": {"id", "op", "from"},
+        }
+        optional_when = {"field", "map", "sqlite_put", "sqlite_get"}
+        allowed = fields.get(op)
+        if allowed is None or not (set(step) == allowed or
+                                   (op in optional_when and set(step) == allowed | {"when"})):
+            raise PlanError(f"unknown operation or invalid fields for {ident}")
+        if op in {"field", "map", "condition", "sqlite_put", "sqlite_get"} and (
+                not isinstance(step["from"], str) or step["from"] not in seen):
             raise PlanError("step source must reference an earlier step")
         if op == "field" and (not isinstance(step["field"], str) or not IDENTIFIER.fullmatch(step["field"])):
             raise PlanError("field name must be a safe identifier")
+        if op == "map":
+            mapping = step["fields"]
+            if not isinstance(mapping, dict) or not 1 <= len(mapping) <= MAX_STEPS:
+                raise PlanError("map fields must contain 1–32 output mappings")
+            for target, spec in mapping.items():
+                if not isinstance(target, str) or not IDENTIFIER.fullmatch(target):
+                    raise PlanError("map output names must be safe identifiers")
+                if (not isinstance(spec, dict) or set(spec) - {"field", "transform"} or
+                        "field" not in spec or not isinstance(spec["field"], str) or
+                        not IDENTIFIER.fullmatch(spec["field"])):
+                    raise PlanError("each map field needs a safe source field and optional transform")
+                transform = spec.get("transform", "identity")
+                if not isinstance(transform, str) or transform not in {
+                        "identity", "trim", "lower", "upper", "number", "string"}:
+                    raise PlanError("unsupported map transform")
+        if op == "condition":
+            if not isinstance(step["field"], str) or not IDENTIFIER.fullmatch(step["field"]):
+                raise PlanError("condition field must be a safe identifier")
+            if not isinstance(step["operator"], str) or step["operator"] not in {"eq", "ne", "gt", "gte", "lt", "lte", "contains"}:
+                raise PlanError("unsupported condition operator")
+        if op == "branch":
+            condition = step["condition"]
+            then_step, else_step = step["then"], step["else"]
+            if (not isinstance(condition, str) or condition not in seen or
+                    step_ops.get(condition) != "condition"):
+                raise PlanError("branch condition must reference an earlier condition step")
+            if (not isinstance(then_step, str) or then_step not in seen or
+                    not isinstance(else_step, str) or else_step not in seen):
+                raise PlanError("branch outputs must reference earlier steps")
+        if "when" in step:
+            guard = step["when"]
+            if (not isinstance(guard, dict) or set(guard) != {"condition", "equals"} or
+                    not isinstance(guard["condition"], str) or guard["condition"] not in seen or
+                    step_ops.get(guard["condition"]) != "condition" or
+                    not isinstance(guard["equals"], bool)):
+                raise PlanError("when must reference an earlier condition and a boolean equals value")
         if op == "sqlite_get" and step_ops.get(step["from"]) != "sqlite_put":
             raise PlanError("sqlite_get source must be a sqlite_put step")
         seen.add(ident)
@@ -79,7 +129,12 @@ class Engine:
             columns = {row[1] for row in con.execute("PRAGMA table_info(runs)")}
             if "error_type" not in columns:
                 con.execute("ALTER TABLE runs ADD COLUMN error_type TEXT")
-            con.execute("CREATE TABLE IF NOT EXISTS steps (run_id TEXT NOT NULL, step_id TEXT NOT NULL, output_json TEXT NOT NULL, PRIMARY KEY(run_id,step_id))")
+            con.execute("CREATE TABLE IF NOT EXISTS steps (run_id TEXT NOT NULL, step_id TEXT NOT NULL, output_json TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'completed', error_type TEXT, PRIMARY KEY(run_id,step_id))")
+            step_columns = {row[1] for row in con.execute("PRAGMA table_info(steps)")}
+            if "status" not in step_columns:
+                con.execute("ALTER TABLE steps ADD COLUMN status TEXT NOT NULL DEFAULT 'completed'")
+            if "error_type" not in step_columns:
+                con.execute("ALTER TABLE steps ADD COLUMN error_type TEXT")
         with self._business() as con:
             con.execute("CREATE TABLE IF NOT EXISTS records (run_id TEXT NOT NULL, step_id TEXT NOT NULL, payload_json TEXT NOT NULL, PRIMARY KEY(run_id,step_id))")
 
@@ -137,41 +192,51 @@ class Engine:
 
     def _execute_steps(self, plan: dict, run_id: str, inject_stop_after_business: bool) -> object:
         results = {}
+        outcomes = {}
         for step in plan["steps"]:
             sid, op = step["id"], step["op"]
             with self._state() as con:
-                saved = con.execute("SELECT output_json FROM steps WHERE run_id=? AND step_id=?", (run_id, sid)).fetchone()
-            if saved is not None:
-                results[sid] = json.loads(saved[0]); continue
-            if op == "literal":
-                value = step["value"]
-            elif op == "field":
-                source = results[step["from"]]
-                if not isinstance(source, dict) or step["field"] not in source:
-                    raise PlanError(f"field {step['field']} not found in {step['from']}")
-                value = source[step["field"]]
-            elif op == "sqlite_put":
-                value = {"stored_by": sid}
-                payload = canonical_json(results[step["from"]])
-                with self._business() as con:
-                    con.execute("INSERT OR IGNORE INTO records VALUES (?,?,?)", (run_id, sid, payload))
-                    stored = con.execute("SELECT payload_json FROM records WHERE run_id=? AND step_id=?", (run_id, sid)).fetchone()[0]
-                    if stored != payload:
-                        raise PlanError("replayed business write does not match original payload")
-                if inject_stop_after_business:
-                    raise InjectedStop("after durable business write, before runtime receipt")
-            else:  # sqlite_get
-                store = step["from"]
-                if not isinstance(results[store], dict) or "stored_by" not in results[store]:
-                    raise PlanError("sqlite_get requires preceding sqlite_put receipt")
-                with self._business() as con:
-                    row = con.execute("SELECT payload_json FROM records WHERE run_id=? AND step_id=?", (run_id, results[store]["stored_by"])).fetchone()
-                if row is None:
-                    raise PlanError("record not found")
-                value = json.loads(row[0])
+                saved = con.execute(
+                    "SELECT output_json,status FROM steps WHERE run_id=? AND step_id=?", (run_id, sid)
+                ).fetchone()
+            if saved is not None and saved[1] in {"completed", "skipped"}:
+                results[sid] = json.loads(saved[0])
+                outcomes[sid] = saved[1]
+                continue
+
             with self._state() as con:
-                con.execute("INSERT OR IGNORE INTO steps VALUES (?,?,?)", (run_id, sid, canonical_json(value)))
-            results[sid] = value
+                if saved is None:
+                    con.execute(
+                        "INSERT OR IGNORE INTO steps(run_id,step_id,output_json,status,error_type) VALUES (?,?,?,'running',NULL)",
+                        (run_id, sid, "null"),
+                    )
+                else:
+                    con.execute(
+                        "UPDATE steps SET status='running',error_type=NULL WHERE run_id=? AND step_id=?",
+                        (run_id, sid),
+                    )
+            try:
+                guard = step.get("when")
+                if guard is not None and results[guard["condition"]] is not guard["equals"]:
+                    value = None
+                    status = "skipped"
+                else:
+                    value = self._evaluate_step(step, results, outcomes, run_id, inject_stop_after_business)
+                    status = "completed"
+                with self._state() as con:
+                    con.execute(
+                        "UPDATE steps SET output_json=?,status=?,error_type=NULL WHERE run_id=? AND step_id=?",
+                        (canonical_json(value), status, run_id, sid),
+                    )
+                results[sid], outcomes[sid] = value, status
+            except Exception as exc:
+                with self._state() as con:
+                    con.execute(
+                        "UPDATE steps SET status='failed',error_type=? WHERE run_id=? AND step_id=?",
+                        (type(exc).__name__, run_id, sid),
+                    )
+                raise
+
         output = results[plan["steps"][-1]["id"]]
         with self._state() as con:
             con.execute(
@@ -179,3 +244,108 @@ class Engine:
                 (canonical_json(output), run_id),
             )
         return output
+
+    def _evaluate_step(self, step: dict, results: dict, outcomes: dict, run_id: str,
+                       inject_stop_after_business: bool) -> object:
+        sid, op = step["id"], step["op"]
+        if op == "literal":
+            return step["value"]
+        if op in {"field", "map", "condition"}:
+            source = results[step["from"]]
+            if not isinstance(source, dict):
+                raise PlanError(f"step {sid} requires an object from {step['from']}")
+            if op == "field":
+                if step["field"] not in source:
+                    raise PlanError(f"field {step['field']} not found in {step['from']}")
+                return source[step["field"]]
+            if op == "map":
+                mapped = {}
+                for target, spec in step["fields"].items():
+                    source_field = spec["field"]
+                    if source_field not in source:
+                        raise PlanError(f"field {source_field} not found in {step['from']}")
+                    mapped[target] = self._transform(source[source_field], spec.get("transform", "identity"))
+                return mapped
+            if step["field"] not in source:
+                raise PlanError(f"field {step['field']} not found in {step['from']}")
+            return self._compare(source[step["field"]], step["operator"], step["value"])
+        if op == "branch":
+            selected = step["then"] if results[step["condition"]] else step["else"]
+            if outcomes.get(selected) == "skipped":
+                raise PlanError("selected branch output was skipped")
+            return results[selected]
+        if op == "sqlite_put":
+            value = {"stored_by": sid}
+            payload = canonical_json(results[step["from"]])
+            with self._business() as con:
+                con.execute("INSERT OR IGNORE INTO records VALUES (?,?,?)", (run_id, sid, payload))
+                stored = con.execute(
+                    "SELECT payload_json FROM records WHERE run_id=? AND step_id=?", (run_id, sid)
+                ).fetchone()[0]
+                if stored != payload:
+                    raise PlanError("replayed business write does not match original payload")
+            if inject_stop_after_business:
+                raise InjectedStop("after durable business write, before runtime receipt")
+            return value
+        # sqlite_get
+        store = step["from"]
+        if outcomes.get(store) == "skipped":
+            raise PlanError("sqlite_get source write was skipped")
+        if not isinstance(results[store], dict) or "stored_by" not in results[store]:
+            raise PlanError("sqlite_get requires preceding sqlite_put receipt")
+        with self._business() as con:
+            row = con.execute(
+                "SELECT payload_json FROM records WHERE run_id=? AND step_id=?",
+                (run_id, results[store]["stored_by"]),
+            ).fetchone()
+        if row is None:
+            raise PlanError("record not found")
+        return json.loads(row[0])
+
+    @staticmethod
+    def _transform(value: object, transform: str) -> object:
+        if transform == "identity":
+            return value
+        if transform in {"trim", "lower", "upper"}:
+            if not isinstance(value, str):
+                raise PlanError(f"{transform} transform requires a string")
+            if transform == "trim":
+                return value.strip()
+            return value.lower() if transform == "lower" else value.upper()
+        if transform == "string":
+            if isinstance(value, (dict, list)):
+                raise PlanError("string transform accepts only scalar values")
+            return str(value)
+        if isinstance(value, bool) or not isinstance(value, (int, float, str)):
+            raise PlanError("number transform requires a numeric scalar")
+        try:
+            number = float(value)
+        except (ValueError, OverflowError) as exc:
+            raise PlanError("number transform received an invalid number") from exc
+        if not math.isfinite(number):
+            raise PlanError("number transform received a non-finite number")
+        return int(number) if number.is_integer() else number
+
+    @staticmethod
+    def _compare(left: object, operator: str, right: object) -> bool:
+        if operator == "eq":
+            return type(left) is type(right) and left == right
+        if operator == "ne":
+            return type(left) is not type(right) or left != right
+        if operator == "contains":
+            if not isinstance(left, (str, list)):
+                raise PlanError("contains requires a string or list field")
+            try:
+                return right in left
+            except (TypeError, ValueError) as exc:
+                raise PlanError("contains value is incompatible with field") from exc
+        numeric = (int, float)
+        if (isinstance(left, bool) or isinstance(right, bool) or
+                not ((isinstance(left, numeric) and isinstance(right, numeric)) or
+                     (isinstance(left, str) and isinstance(right, str)))):
+            raise PlanError("ordered comparison requires two strings or two numbers")
+        try:
+            return {"gt": left > right, "gte": left >= right,
+                    "lt": left < right, "lte": left <= right}[operator]
+        except (TypeError, ValueError) as exc:
+            raise PlanError("condition values are not comparable") from exc
