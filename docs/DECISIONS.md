@@ -18,3 +18,11 @@ None of these are claims of completed software functionality; technical architec
 - ADR-007 SAFETY: no automatic full source-data mirroring, no raw user data in workflow logs or GitHub, no backup/restore until source integrity and separate restore are verified; all data operations opt-in with least privilege.
 - ADR-008 SCHEDULE BASELINE: 21 engineering weeks / 445–750 focused implementation-test hours as **planning estimate**, 2026-10-27 to 2027-03-22 if work proceeds continuously, plus 2–6 week risk buffer where needed; see master schedule. External Google approval/pilot availability is not under direct control.
 - No paid cloud/third-party transmission, customer DB changes, changes to DBVORA repository, or commercial release approved.
+
+## 2026-10-27 — owner-driven FAST TRACK supersedes 21-week baseline
+
+Owner clarified hard planning intent: **REA_APP + n8n-inspired wholly independent runner in up to 2 weeks, then AX FLOW + concurrent DBVORA completion and supported integration testing in another 3 weeks, total 5 weeks**. This overrides prior 21-week planning *for scheduled work*, not the complete safety/product acceptance requirements. “n8n modification” must be interpreted as research of permissible architecture and new independent implementation, not copying/forking n8n customer source. Owner prefers working 2–3-day MVP before progressive feature-gap closure and later broader hardening.
+
+ADR-009: freeze a scope-limited v1 blueprint; Codex GPT-6 Extra-High is implementation/test agent while chief GPT-6 owns architecture/acceptance; feature growth deferred if W1/W2 fails. Both programs remain distinct tools. The 2026 3-hackathon deadlines overlap W3, and available coding hours/provider gates can invalidate the stretch deadline. No Codex session/background work is started by publishing docs.
+
+Active master schedule: docs/MASTER_SCHEDULE.md (v2). Detailed day/week work: docs/FAST_TRACK_5_WEEK.md; frozen target: docs/TARGET_BLUEPRINT_V1.md; Codex: docs/CODEX_EXTRA_HIGH_ORDER.md. Original 21-week baseline retained in Git history.
