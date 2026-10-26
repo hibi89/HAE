@@ -8,7 +8,7 @@
 ## Product readiness
 | Component | State | Evidence |
 | --- | --- | --- |
-| REA_APP static source analyzer | NOT_STARTED | no code/tests |
+| REA_APP static source analyzer | MVP_VERIFIED (PARTIAL) | `23bbc979657ccb25bcbba5ddfe2c647476dc0051`, gap slice `52c7860b67dd6dc991c46141b2e841bde74d858f`; 8 Python tests + Node parser assertions pass |
 | AX FLOW local runtime | NOT_STARTED | no code/tests |
 | Natural-language planner and file input | NOT_STARTED | no code/tests |
 | OAuth, Gmail/Sheets connectors | NOT_STARTED | no account credentials, no auth test |
@@ -18,7 +18,7 @@
 | Vercel/Production | NOT_APPLICABLE | local-first product, no hosted service |
 
 ## Next
-Follow `docs/NEXT_TASK.md`, starting with REA_APP synthetic-repository source inventory design and code only after reviewing design alternatives/approval. Keep `main` stable and update exact SHAs/test evidence after writes.
+Use the bounded n8n notes and remaining REA_APP blueprint gaps in `docs/NEXT_TASK.md` for chief review. Keep the independent AX FLOW runner/engine on hold until that review. Update exact SHAs/test evidence after writes.
 
 ## Bootstrap verified after GitHub writes (2026-10-27 KST)
 - GitHub repository visibility independently rechecked: **private**.
@@ -60,3 +60,13 @@ Follow `docs/NEXT_TASK.md`, starting with REA_APP synthetic-repository source in
 - Test failures and fixes: first gap run selected the package `answer` edge before `add` because output was sorted; the assertion now selects the named `add` symbol. A multiline call is on line 4, not line 5; the evidence assertion was corrected. No product-code defect remained; rerun passed all tests.
 - Remaining gaps: value/data-flow analysis, Python AST, physical symlink/junction creation (host denied), npm clean-install due offline registry/cache, Windows packaging, and verification against an authorized real repository. Ambiguous or dynamic calls remain syntactic references.
 - Next: bounded n8n functionality/architecture research from official licensing and product documentation, producing only independent behavior notes/contracts. No n8n source, UI, node code or AX FLOW execution engine will be copied or implemented in this stage.
+
+## 2026-10-27 KST — bounded n8n documentation analysis
+- Scope/evidence: official n8n product docs and Help Center only; no n8n repository/package source, runtime, UI, or node code inspected or copied. Research covers trigger types and branch order, execution persistence/retries/errors, queue workers, credential encryption, retention, and SUL use boundaries.
+- Independent behavior findings: triggers are webhook, polling, and other event/time triggers; one trigger starts each run. Since n8n 1.0, branches complete one at a time in canvas top-to-bottom/left-to-right order. Queue mode separates main trigger/webhook intake from workers; Redis carries execution IDs while the shared database stores workflow/execution state, and all processes share the instance encryption key. Queue mode is not a SQLite deployment target.
+- Recovery/persistence findings: manual retry is a new execution that reuses completed-node results and replays the failed node's saved inputs; partial external effects within that failed node may repeat, and a failed sub-workflow action reruns its whole child flow. Error workflows receive execution identifiers only when saved; trigger activation failures use a different payload. Execution retention is configurable and pruning defaults to 14 days or 10,000 finished records, whichever threshold is reached first; running/waiting/new executions are excluded.
+- Security/licensing findings: treat the instance encryption key as deployment secret shared by main/workers and back up the database before supported key rotation. The self-hosted Community edition uses SUL; n8n's current FAQ says internal organization authoring is covered, while exposing customer workflow authoring/configuration or hosting/white-labeling requires a commercial license. No product/license conclusion was sought beyond this docs-only study.
+- Documentation sources: [execution order](https://docs.n8n.io/build/flow-logic/understand-execution-order.md), [triggers/actions](https://docs.n8n.io/connect/create-nodes/plan-your-node/choose-a-node-type.md), [retry behavior](https://docs.n8n.io/build/understand-workflows/understand-executions/view-all-executions.md), [errors](https://docs.n8n.io/build/flow-logic/handle-errors-gracefully.md), [queue mode](https://docs.n8n.io/deploy/host-n8n/configure-n8n/scaling/enable-queue-mode.md), [execution data](https://docs.n8n.io/deploy/host-n8n/configure-n8n/scaling/manage-execution-data.md), [key rotation](https://docs.n8n.io/deploy/host-n8n/configure-n8n/security/rotate-encryption-keys.md), [license FAQ](https://support.n8n.io/article/can-i-use-your-license-for-my-use-case).
+- Verification: `python -m unittest discover -s tools/rea-app/tests -v` — **8 passed**; `npm --prefix tools/rea-app run test:parser` — **PASS**. First Python run failed 3 tests because this shell did not set `NODE_PATH` for the globally installed parser; reran with `NODE_PATH=$APPDATA/npm/node_modules/n8n/node_modules`, resolved `@babel/parser@7.29.9`, and all tests passed. No product-code defect.
+- Research limitation/failure: direct access to the standalone credentials environment-variable page failed in the docs browser; key-sharing and encryption behavior were cross-checked against the official queue-mode and key-rotation pages. No external n8n test instance or licensing counsel was available/used.
+- Remaining REA_APP blueprint limits: Python AST, value/data-flow analysis, real symlink/junction and clean npm-install verification, Windows packaging, and authorized real-repository validation remain open. They are recorded as limits, not regressions. No standalone AX FLOW execution engine has been implemented.
