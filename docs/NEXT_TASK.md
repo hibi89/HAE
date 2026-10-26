@@ -17,3 +17,8 @@ AX FLOW-side feature/dbvora-integration branch only. Check independent DBVORA so
 
 ## Safety
 The active 2026 hackathon deadlines overlap Week 3; don't override submission priorities. 5-week target is conditional, no automatic background execution. Update STATUS/HANDOFF when actual implementation/test results change.
+
+## 2026-10-27 KST — MVP checkpoint
+The first REA_APP CLI MVP is implemented and its 8 Python integration tests plus the Node parser-adapter assertions pass on synthetic input. The physical symlink/junction test is limited by this Windows sandbox's link-creation permissions; the scanner's link branch is covered with a test double. The clone/DNS and local `.git` write failures, parser version adjustment, output-write workaround and exact GitHub commit SHA are recorded in `STATUS.md` and `HANDOFF.md`.
+
+Next work unit: resolve direct imported calls only when a static module edge and matching export are observed; add multiline ESM evidence; run the same complete test suite and update the frozen-blueprint gap list. Then continue to the permitted n8n architecture study. The standalone AX FLOW engine stays on hold.
