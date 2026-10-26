@@ -199,6 +199,25 @@ class DbvoraClientTests(unittest.TestCase):
         self.assertFalse(result["available"])
         self.assertEqual(result["error_code"], "RESPONSE_TOO_LARGE")
 
+    def test_extremely_long_content_length_fails_closed(self):
+        server, origin = self.start_server()
+        server.responses["/api/inventory"] = (
+            200, {"Content-Type": "application/json", "Content-Length": "9" * 5000}, b"{}"
+        )
+        result = DbvoraClient(origin).fetch_inventory()
+        self.assertFalse(result["available"])
+        self.assertEqual(result["error_code"], "RESPONSE_TOO_LARGE")
+
+    def test_deeply_nested_json_fails_closed(self):
+        server, origin = self.start_server()
+        nested = b"[" * 2000 + b"0" + b"]" * 2000
+        server.responses["/api/inventory"] = (
+            200, {"Content-Type": "application/json"}, nested
+        )
+        result = DbvoraClient(origin).fetch_inventory()
+        self.assertFalse(result["available"])
+        self.assertEqual(result["error_code"], "INVALID_RESPONSE")
+
 
 if __name__ == "__main__":
     unittest.main()
