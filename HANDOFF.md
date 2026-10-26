@@ -1,5 +1,14 @@
 # HANDOFF — AX FLOW + REA_APP (bootstrap, 2026-10-27 KST)
 
+## Latest checkpoint — P10 interval hard-crash recovery
+1. **Change:** Added a subprocess test that kills the interval runner via `os._exit(73)` immediately after the business write commits. Normal CLI restart replays tick 0 with the same deterministic run ID, finishes the receipt, advances `next_tick` once, and leaves one business row.
+2. **Evidence:** scheduler tests 6/6; Windows Python 3.11 full suite 60/60; JS syntax and compilation of 17 Python files pass. Commits: code `a2a7c9ce5915c86f0de0dce754e7fdac450d68f5`, README `c952fcfdfc9f8cabf25c9656ed4f18c0c6319ac3`.
+3. **Failures and resolution:** Wrong unittest cwd caused `ModuleNotFoundError: axflow`; sandbox loopback denial caused 8 failures and 10 errors (WinError 10013); PowerShell did not expand `*.py` for py_compile. Correct cwd, permitted synthetic loopback, and pathlib enumeration resolved them. An initial test insertion misplaced prior replay assertions; moved them back and reran scheduler tests successfully.
+4. **State/progress:** Product remains PARTIAL, 77% by existing A–E heuristic. Browser render/click E2E, separately approved restore, independent security review, signed installer, and customer/release evidence remain open.
+5. **Next:** Complete the permitted n8n architecture/behavior analysis from official sources, without copying code/assets or implementing the independent AX FLOW execution engine. Continue with permission-free work; hold gated work for approval.
+6. **Site:** No new page to open; existing synthetic UI `http://127.0.0.1:8765/` remains available.
+
+
 1. **Goal/requirements/technology:** AX FLOW is a local-first natural-language automation product: file input + safe OAuth onboarding + plan/validate/run/recover with CLI and minimal web UI; optional DBVORA. REA_APP is a distinct app source analysis/reconstruction-assistance tool. Python 3.11+ proposed for initial static analysis and local executor; final technology remains subject to design/approval.
 2. **Completed/change/decision:** GitHub private `hibi89/AX_FLOW` discovered empty; initial README created. Repo intended as private monorepo with separate source directories and branches. No features developed.
 3. **Tests:** 0 executed / 0 passed / 0 failed; GitHub content/branches may be re-read to verify docs/bootstrap only. No Windows, browsers, OAuth, Gmail or production validation.
