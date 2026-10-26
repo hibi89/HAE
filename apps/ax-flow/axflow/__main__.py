@@ -93,9 +93,9 @@ def main() -> int:
             print("VALIDATED (synthetic-only)")
             return 0
         if a.command == "schedule":
-            if (a.state is None or a.data is None or a.schedule_id is None or a.run_id is not None or
+            if (a.state is None or a.data is None or a.schedule_id is None or a.max_runs is None or a.run_id is not None or
                     a.name is not None or a.csv_path is not None):
-                raise PlanError("schedule requires a workflow, --state, --data and --schedule-id")
+                raise PlanError("schedule requires a workflow, --state, --data, --schedule-id and --max-runs")
             engine = Engine(a.state, a.data, input_root=a.input_root)
             try:
                 for tick in interval_ticks(
