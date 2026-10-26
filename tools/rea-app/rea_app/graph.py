@@ -247,6 +247,29 @@ def _resolve_entrypoint(entrypoint: dict[str, Any], package_root: str, source_pa
     entrypoint["resolved_path"] = resolved
 
 
+def _call_import_binding(callee: str, bindings: list[dict[str, Any]]) -> tuple[dict[str, Any] | None, str | None]:
+    direct = re.fullmatch(r"([A-Za-z_$][\w$]*)", callee)
+    member = re.fullmatch(r"([A-Za-z_$][\w$]*)\.([A-Za-z_$][\w$]*)", callee)
+    if direct:
+        local = direct.group(1)
+        matches = [binding for binding in bindings if binding.get("local") == local]
+        if len(matches) != 1:
+            return None, None
+        binding = matches[0]
+        imported = binding.get("imported")
+        if imported == "*":
+            if binding.get("kind") == "require":
+                return binding, "default"
+            return None, None
+        return binding, imported if isinstance(imported, str) else None
+    if member:
+        local, symbol = member.groups()
+        matches = [binding for binding in bindings if binding.get("local") == local and binding.get("imported") == "*"]
+        if len(matches) == 1:
+            return matches[0], symbol
+    return None, None
+
+
 def build_report(scan: ScanResult, parser_timeout: int) -> dict[str, Any]:
     files = {item.path: item for item in scan.files}
     parsed = _parse_with_typescript(scan, parser_timeout)
@@ -262,6 +285,8 @@ def build_report(scan: ScanResult, parser_timeout: int) -> dict[str, Any]:
     dependency_edges: list[dict[str, Any]] = []
     exports: list[dict[str, Any]] = []
     calls: list[dict[str, Any]] = []
+    resolved_call_edges: list[dict[str, Any]] = []
+    resolved_edges_by_file: dict[str, dict[int, dict[str, Any]]] = {}
     parse_error_count = 0
     parser_files = {item["path"]: item for item in parsed.get("files", [])}
 
@@ -271,12 +296,12 @@ def build_report(scan: ScanResult, parser_timeout: int) -> dict[str, Any]:
             parse_error_count += 1
             diagnostics.append({"path": path, "line": error.get("line", 1), "kind": "syntax_error", "message": error.get("message", "syntax could not be parsed")})
         from_package = _package_for(path, packages)
-        for edge in parse_result.get("edges", []):
+        for edge_index, edge in enumerate(parse_result.get("edges", [])):
             resolution = _resolve_module(edge["specifier"], path, tsconfigs, source_paths)
             target_package = _package_for(resolution["to_path"], packages) if resolution["to_path"] else None
             if resolution["package_name"] and from_package:
                 resolution["declared_dependency"] = resolution["package_name"] in from_package["_dependency_names"]
-            dependency_edges.append({
+            dependency_edge = {
                 "from_path": path,
                 "to_path": resolution["to_path"],
                 "kind": edge["kind"],
@@ -286,7 +311,9 @@ def build_report(scan: ScanResult, parser_timeout: int) -> dict[str, Any]:
                 "to_package": target_package.get("name") if target_package else resolution["package_name"],
                 "declared_dependency": resolution["declared_dependency"],
                 "evidence": {"path": path, "line": edge["line"]},
-            })
+            }
+            dependency_edges.append(dependency_edge)
+            resolved_edges_by_file.setdefault(path, {})[edge_index] = dependency_edge
         for item in parse_result.get("exports", []):
             exports.append({
                 "path": path,
@@ -302,6 +329,42 @@ def build_report(scan: ScanResult, parser_timeout: int) -> dict[str, Any]:
                 "caller": item.get("caller", "<module>"),
                 "evidence": {"path": path, "line": item["line"]},
                 "resolution": "syntactic_reference",
+            })
+
+    exports_by_path: dict[str, list[dict[str, Any]]] = {}
+    for item in exports:
+        exports_by_path.setdefault(item["path"], []).append(item)
+    for path in sorted(source_paths):
+        parse_result = parser_files.get(path, {})
+        bindings = parse_result.get("bindings", [])
+        edge_map = resolved_edges_by_file.get(path, {})
+        for call in parse_result.get("calls", []):
+            binding, target_symbol = _call_import_binding(call["callee"], bindings)
+            if binding is None or target_symbol is None or binding.get("kind") == "type_import":
+                continue
+            imported_edge = edge_map.get(binding.get("edge_index"))
+            if not imported_edge or imported_edge["resolution"] not in {"internal", "internal_alias"} or not imported_edge["to_path"]:
+                continue
+            target_path = imported_edge["to_path"]
+            target_exports = [
+                item for item in exports_by_path.get(target_path, [])
+                if item["name"] in {target_symbol, "*"}
+            ]
+            if len(target_exports) != 1:
+                continue
+            target_export = target_exports[0]
+            resolved_call_edges.append({
+                "from_path": path,
+                "to_path": target_path,
+                "caller": call.get("caller", "<module>"),
+                "callee": call["callee"],
+                "target_symbol": target_symbol,
+                "resolution": "static_import_binding",
+                "evidence": {
+                    "call_site": {"path": path, "line": call["line"]},
+                    "import_binding": imported_edge["evidence"],
+                    "target_export": target_export["evidence"],
+                },
             })
 
     for package in packages:
@@ -321,6 +384,7 @@ def build_report(scan: ScanResult, parser_timeout: int) -> dict[str, Any]:
     dependency_edges.sort(key=lambda edge: (edge["from_path"], edge["evidence"]["line"], edge["kind"], edge["specifier"], edge["to_path"] or ""))
     exports.sort(key=lambda item: (item["path"], item["evidence"]["line"], item["name"], item["kind"]))
     calls.sort(key=lambda item: (item["path"], item["evidence"]["line"], item["callee"]))
+    resolved_call_edges.sort(key=lambda item: (item["from_path"], item["evidence"]["call_site"]["line"], item["to_path"], item["target_symbol"]))
     diagnostics.sort(key=lambda item: (item["path"], item["line"], item["kind"], item["message"]))
 
     file_records = []
@@ -351,6 +415,7 @@ def build_report(scan: ScanResult, parser_timeout: int) -> dict[str, Any]:
             "internal_edges": sum(edge["resolution"] in {"internal", "internal_alias"} for edge in dependency_edges),
             "external_edges": sum(edge["resolution"] == "external" for edge in dependency_edges),
             "exports": len(exports), "call_sites": len(calls), "syntax_errors": parse_error_count,
+            "resolved_call_edges": len(resolved_call_edges),
             "diagnostics": len(diagnostics), "skipped_paths": len(scan.skipped_files),
         },
         "files": file_records,
@@ -358,13 +423,15 @@ def build_report(scan: ScanResult, parser_timeout: int) -> dict[str, Any]:
         "dependency_edges": dependency_edges,
         "exports": exports,
         "calls": calls,
+        "resolved_call_edges": resolved_call_edges,
         "skipped_files": scan.skipped_files,
         "diagnostics": diagnostics,
         "coverage": {
             "javascript_typescript": "TypeScript AST parser; import, export, require, dynamic import and syntactic call references",
             "python": "inventory only",
             "other_languages": "inventory only",
-            "call_resolution": "syntactic references only; cross-module call targets are not inferred",
+            "call_resolution": "direct imported calls with a unique in-root module edge and matching export are linked; other calls remain syntactic references",
+            "data_flow": "not analyzed",
         },
     }
 
@@ -380,11 +447,13 @@ def render_markdown(report: dict[str, Any]) -> str:
         f"- Packages: {summary['packages']}",
         f"- Dependency edges: {summary['dependency_edges']} ({summary['internal_edges']} internal, {summary['external_edges']} external)",
         f"- Exports: {summary['exports']}; syntactic call sites: {summary['call_sites']}",
+        f"- Statically linked imported calls: {summary['resolved_call_edges']}",
         f"- Parse errors: {summary['syntax_errors']}; skipped paths: {summary['skipped_paths']}", "",
         "## Coverage and limits", "",
         f"- JS/TS: {report['coverage']['javascript_typescript']}.",
         f"- Python: {report['coverage']['python']}; other languages: {report['coverage']['other_languages']}.",
         f"- Calls: {report['coverage']['call_resolution']}.",
+        f"- Value/data flow: {report['coverage']['data_flow']}.",
         f"- File cap: {report['limits']['max_files']}; per-file cap: {report['limits']['max_file_bytes']} bytes; total cap: {report['limits']['max_total_bytes']} bytes.", "",
         "## Packages", "",
     ]
@@ -410,6 +479,16 @@ def render_markdown(report: dict[str, Any]) -> str:
             lines.append(f"- `{edge['evidence']['path']}:{edge['evidence']['line']}` — {edge['kind']} `{edge['specifier']}` → {target} [{edge['resolution']}{declared}]")
     else:
         lines.append("No import or re-export edges were observed.")
+    lines.extend(["", "## Cross-module calls", ""])
+    for item in report["resolved_call_edges"]:
+        lines.append(
+            f"- `{item['evidence']['call_site']['path']}:{item['evidence']['call_site']['line']}` — "
+            f"`{item['caller']}.{item['callee']}` → `{item['to_path']}::{item['target_symbol']}`; "
+            f"import evidence `{item['evidence']['import_binding']['path']}:{item['evidence']['import_binding']['line']}`, "
+            f"export evidence `{item['evidence']['target_export']['path']}:{item['evidence']['target_export']['line']}`."
+        )
+    if not report["resolved_call_edges"]:
+        lines.append("No statically imported calls met the supported binding and export checks.")
     lines.extend(["", "## Exports and call sites", ""])
     for item in report["exports"]:
         lines.append(f"- Export `{item['name']}` in `{item['path']}:{item['evidence']['line']}` ({item['kind']}).")

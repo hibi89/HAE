@@ -80,12 +80,22 @@ class ReaAppCliTests(unittest.TestCase):
             'import React from "react";\n'
             'import { value } from "./cycle.js";\n'
             'import bridge from "./bridge.cjs";\n'
-            'export const run = (config: Config) => sum(value) + React + bridge;\n'
+            'import { answer } from "../packages/lib/src/index";\n'
+            'export const run = (config: Config) => sum(value) + React + bridge + answer();\n'
             'run({ enabled: true });\n',
         )
-        self.write("src/cycle.ts", 'import { run } from "./main";\nexport const value = run;\n')
+        self.write("src/cycle.ts", 'import { run } from "./main";\nexport function value() { return run(); }\n')
+        self.write(
+            "src/multiline.ts",
+            'import {\n'
+            '  value as aliasValue,\n'
+            '} from "./cycle";\n'
+            'export const read = () => aliasValue();\n',
+        )
         self.write("src/math.ts", "export function add(a: number, b: number) { return a + b; }\n")
         self.write("src/types.ts", "export interface Config { enabled: boolean }\n")
+        self.write("packages/lib/package.json", '{"name":"fixture-lib","version":"2.0.0","main":"./src/index.ts"}\n')
+        self.write("packages/lib/src/index.ts", "export function answer() { return 42; }\n")
         self.write(
             "src/bridge.cjs",
             'const { createRequire } = require(\n'
@@ -127,7 +137,8 @@ class ReaAppCliTests(unittest.TestCase):
 
         self.assertEqual(report["schema_version"], "rea-app-source-map/v1")
         self.assertEqual(report["parser"], "@babel/parser@7.29.9")
-        self.assertGreaterEqual(report["summary"]["dependency_edges"], 8)
+        self.assertEqual(report["summary"]["packages"], 2)
+        self.assertGreaterEqual(report["summary"]["dependency_edges"], 9)
         edges = report["dependency_edges"]
         alias = next(edge for edge in edges if edge["specifier"] == "@/math")
         self.assertEqual(alias["resolution"], "internal_alias")
@@ -139,8 +150,24 @@ class ReaAppCliTests(unittest.TestCase):
         cjs = next(edge for edge in edges if edge["specifier"] == "../vendor/dep.cjs")
         self.assertEqual(cjs["resolution"], "internal")
         self.assertEqual(cjs["evidence"]["line"], 4)
+        cross_package = next(edge for edge in edges if edge["specifier"] == "../packages/lib/src/index")
+        self.assertEqual(cross_package["from_package"], "fixture-app")
+        self.assertEqual(cross_package["to_package"], "fixture-lib")
         self.assertTrue(any(edge["from_path"] == "src/main.ts" and edge["to_path"] == "src/cycle.ts" for edge in edges))
         self.assertTrue(any(edge["from_path"] == "src/cycle.ts" and edge["to_path"] == "src/main.ts" for edge in edges))
+        multiline = next(edge for edge in edges if edge["from_path"] == "src/multiline.ts")
+        self.assertEqual(multiline["evidence"]["line"], 1)
+        self.assertEqual(multiline["to_path"], "src/cycle.ts")
+        imported_call = next(edge for edge in report["resolved_call_edges"] if edge["target_symbol"] == "add")
+        self.assertEqual(imported_call["to_path"], "src/math.ts")
+        self.assertEqual(imported_call["target_symbol"], "add")
+        self.assertEqual(imported_call["evidence"]["import_binding"], {"path": "src/main.ts", "line": 1})
+        self.assertEqual(imported_call["evidence"]["target_export"], {"path": "src/math.ts", "line": 1})
+        multiline_call = next(edge for edge in report["resolved_call_edges"] if edge["from_path"] == "src/multiline.ts")
+        self.assertEqual(multiline_call["target_symbol"], "value")
+        self.assertEqual(multiline_call["evidence"]["call_site"]["line"], 4)
+        package_call = next(edge for edge in report["resolved_call_edges"] if edge["target_symbol"] == "answer")
+        self.assertEqual(package_call["to_path"], "packages/lib/src/index.ts")
         self.assertTrue(any(item["name"] == "default" and item["kind"] == "commonjs_export" for item in report["exports"]))
         self.assertTrue(any(item["kind"] == "commonjs_export" and item["name"] == "named" for item in report["exports"]))
         self.assertTrue(any(entry["resolved_path"] == "src/main.ts" for entry in report["packages"][0]["entrypoints"]))

@@ -27,8 +27,10 @@ boundaries, declared dependencies, package entry points, JS/TS imports/re-export
 CommonJS `require`, exports and syntactic call sites include relative path and
 line evidence. `tsconfig` path aliases are resolved when their targets are inside
 the selected root. External package calls are classified from the import syntax
-and package manifest only. Call sites are reported as syntax observations; the
-MVP does not claim a resolved whole-program call or data-flow graph.
+and package manifest only. A direct imported call is linked only when its static
+module edge and matching target export are both observed. Other call sites remain
+syntactic observations; the analyzer does not claim whole-program or value/data-flow
+analysis.
 
 ## Verification
 

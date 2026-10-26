@@ -21,4 +21,6 @@ The active 2026 hackathon deadlines overlap Week 3; don't override submission pr
 ## 2026-10-27 KST — MVP checkpoint
 The first REA_APP CLI MVP is implemented and its 8 Python integration tests plus the Node parser-adapter assertions pass on synthetic input. The physical symlink/junction test is limited by this Windows sandbox's link-creation permissions; the scanner's link branch is covered with a test double. The clone/DNS and local `.git` write failures, parser version adjustment, output-write workaround and exact GitHub commit SHA are recorded in `STATUS.md` and `HANDOFF.md`.
 
-Next work unit: resolve direct imported calls only when a static module edge and matching export are observed; add multiline ESM evidence; run the same complete test suite and update the frozen-blueprint gap list. Then continue to the permitted n8n architecture study. The standalone AX FLOW engine stays on hold.
+The blueprint call-evidence gap is closed for a supported subset: direct imported calls are linked only with a unique in-root module edge and matching export. Multiline ESM and nested package boundaries pass in synthetic tests. Remaining coverage limits are recorded in `STATUS.md` and `HANDOFF.md`.
+
+Next work unit: perform bounded n8n architecture and licensing research using official product documentation, then summarize independent behavior contracts for trigger/step execution, persistence, credentials, retries and errors. Do not copy n8n source/UI/node code or implement the standalone AX FLOW engine during this stage.
