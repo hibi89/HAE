@@ -25,3 +25,12 @@ The earlier `USER HOLD` on starting B is now **resolved by chief architecture re
 **NEXT ATOMIC TASK (feature/axflow-mvp):** implement status/resume CLI for current synthetic SQLite ledger and safe failure-state reporting; add tests for staged interruption, unknown run IDs, double-call/concurrent same-run collisions and malicious IR inputs. Do not start new SaaS integrations. Preserve synthetic-only test guard, state/data DB separation and local idempotency proof. Require exact git blob SHA checks after every remote upload because REA_APP past transport truncated one large blob.
 
 **After next gate:** add condition/transform, rate/retry/time budget, restricted HTTP test stub; then connect planner/GUI and DBVORA only after supported interface validations. No full Blueprint B completion claimed.
+
+## 2026-10-27 — NEW TOP PRIORITY (7-day sprint)
+Supersedes the older 5-week sequencing. Read `docs/SPRINT_7_DAY_HACKATHON.md`. **Target Oct 31 integrated supported-scope MVP, review no later than Nov 2 (subject to actual tests).**
+
+**Now:** On `feature/axflow-mvp`, run complete Python suite including newly committed runlog/status/resume CLI tests from exact latest GitHub SHA. Fix any failures; perform real startup/shutdown and no-duplicate replay with separate runtime/business SQLite. Record commands/results/OS in STATUS. No fake CI/Windows claims. Then implement condition + pure transform + synthetic CSV fixture → business SQLite and verify 3 distinct workflows. Focus on executable code, not more planning. Isolated runlog 2/2 tests already passed; combined latest-suite remains pending.
+
+**Then D4–D5:** constrained natural-language/template → native IR → auto-config/test and basic local GUI, DBVORA read-only SQLite inventory; supported end-to-end demo must be real. Reuse selectively in KIC/PayPal/UGREEN with their submission constraints; UGREEN Skill ZIP stays Markdown-only, PayPal live financial order path requires actual authorized provider evidence, KIC prelim is PDF-only.
+
+**Do not block on 100% REA_APP completeness**; use approved bounded analyzer and maintain separate follow-up environment tests. Full AX FLOW commercial/product gates remain separate; do not downgrade tests to declare a 7-day commercial release.
