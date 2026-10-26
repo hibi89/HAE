@@ -1,5 +1,14 @@
 # STATUS — 2026-10-27 KST
 
+## P10 — scheduler hard-process crash recovery verified (2026-10-27 KST)
+- Interval tick now has a subprocess `os._exit(73)` regression after durable business SQLite commit and before the runtime receipt/tick advance. Normal CLI restart reuses the same tick/run ID, completes it, advances once, and preserves exactly one business row.
+- Tests: scheduler 6/6 PASS; complete Windows Python 3.11 suite 60/60 PASS with authorized synthetic loopback fixtures; `node --check` PASS; Python compilation PASS for 17 files.
+- Resolved failures: running unittest from `tests/` failed to import `axflow` (rerun from `apps/ax-flow`); sandbox denied synthetic loopback with WinError 10013 (authorized loopback rerun passed); PowerShell did not expand the Python compile wildcard (replaced with pathlib enumeration). A first scheduler-test insertion misplaced existing replay assertions; corrected, then 6/6 passed.
+- Commits: crash regression `a2a7c9ce5915c86f0de0dce754e7fdac450d68f5`; README verification update `c952fcfdfc9f8cabf25c9656ed4f18c0c6319ac3`.
+- Progress remains **77%** on the established A–E heuristic; this adds recovery evidence but does not close browser E2E, restore/security, installer or customer/release gates. Product remains PARTIAL.
+- No new site needed; existing synthetic localhost UI at `http://127.0.0.1:8765/` remains open.
+
+
 ## Verified by GitHub at start of bootstrap
 - Repository `hibi89/AX_FLOW`: **Private** (renamed from user-created REA_APP), default branch `main`, read/write admin available.
 - Initial state was **empty repository**, zero branches, zero product code. Bootstrap README initialized main commit `8d528821097fcf6b983e52d9de804613cd8d8c3d`.
