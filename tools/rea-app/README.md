@@ -29,8 +29,11 @@ line evidence. `tsconfig` path aliases are resolved when their targets are insid
 the selected root. External package calls are classified from the import syntax
 and package manifest only. A direct imported call is linked only when its static
 module edge and matching target export are both observed. Other call sites remain
-syntactic observations; the analyzer does not claim whole-program or value/data-flow
-analysis.
+syntactic observations. Within one function or module scope, the analyzer also
+reports simple identifier aliases, values returned from direct calls, identifiers
+passed as direct call arguments, and direct identifier returns. It omits duplicate
+or reassigned bindings. These are syntax-level observations, not control-flow-aware
+taint analysis or cross-module value-flow claims; the tool does not execute code.
 
 ## Verification
 
@@ -44,4 +47,5 @@ npm run test:parser
 The synthetic tests cover deterministic output, ESM and CommonJS references,
 alias/external resolution, cyclic imports, entry points, syntax errors, binary and
 secret exclusions, symlink handling where the host allows symlink creation,
-empty repositories, scan caps, missing-parser behavior and source-tree integrity.
+empty repositories, scan caps, missing-parser behavior, local value-flow evidence,
+ambiguous/reassigned binding exclusions and source-tree integrity.

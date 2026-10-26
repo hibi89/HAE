@@ -286,12 +286,13 @@ def build_report(scan: ScanResult, parser_timeout: int) -> dict[str, Any]:
     exports: list[dict[str, Any]] = []
     calls: list[dict[str, Any]] = []
     resolved_call_edges: list[dict[str, Any]] = []
+    value_flow_edges: list[dict[str, Any]] = []
     resolved_edges_by_file: dict[str, dict[int, dict[str, Any]]] = {}
     parse_error_count = 0
     parser_files = {item["path"]: item for item in parsed.get("files", [])}
 
     for path in sorted(source_paths):
-        parse_result = parser_files.get(path, {"parse_errors": [], "edges": [], "exports": [], "calls": []})
+        parse_result = parser_files.get(path, {"parse_errors": [], "edges": [], "exports": [], "calls": [], "value_flows": []})
         for error in parse_result.get("parse_errors", []):
             parse_error_count += 1
             diagnostics.append({"path": path, "line": error.get("line", 1), "kind": "syntax_error", "message": error.get("message", "syntax could not be parsed")})
@@ -330,6 +331,7 @@ def build_report(scan: ScanResult, parser_timeout: int) -> dict[str, Any]:
                 "evidence": {"path": path, "line": item["line"]},
                 "resolution": "syntactic_reference",
             })
+        value_flow_edges.extend(parse_result.get("value_flows", []))
 
     exports_by_path: dict[str, list[dict[str, Any]]] = {}
     for item in exports:
@@ -385,6 +387,10 @@ def build_report(scan: ScanResult, parser_timeout: int) -> dict[str, Any]:
     exports.sort(key=lambda item: (item["path"], item["evidence"]["line"], item["name"], item["kind"]))
     calls.sort(key=lambda item: (item["path"], item["evidence"]["line"], item["callee"]))
     resolved_call_edges.sort(key=lambda item: (item["from_path"], item["evidence"]["call_site"]["line"], item["to_path"], item["target_symbol"]))
+    value_flow_edges.sort(key=lambda item: (
+        item["evidence"].get("source_use", item["evidence"].get("producer", item["evidence"].get("target_binding", {}))).get("line", 0),
+        item["scope"], item["kind"], item.get("from_symbol", item.get("from_callee", "")), item.get("to_symbol", item.get("to_callee", "")),
+    ))
     diagnostics.sort(key=lambda item: (item["path"], item["line"], item["kind"], item["message"]))
 
     file_records = []
@@ -401,7 +407,7 @@ def build_report(scan: ScanResult, parser_timeout: int) -> dict[str, Any]:
     total_edges = len(dependency_edges)
     return {
         "schema_version": "rea-app-source-map/v1",
-        "tool_version": "0.1.0",
+        "tool_version": "0.2.0",
         "parser": parsed.get("parser", "unknown"),
         "limits": {
             "max_files": scan.limits.max_files,
@@ -416,6 +422,7 @@ def build_report(scan: ScanResult, parser_timeout: int) -> dict[str, Any]:
             "external_edges": sum(edge["resolution"] == "external" for edge in dependency_edges),
             "exports": len(exports), "call_sites": len(calls), "syntax_errors": parse_error_count,
             "resolved_call_edges": len(resolved_call_edges),
+            "value_flow_edges": len(value_flow_edges),
             "diagnostics": len(diagnostics), "skipped_paths": len(scan.skipped_files),
         },
         "files": file_records,
@@ -424,6 +431,7 @@ def build_report(scan: ScanResult, parser_timeout: int) -> dict[str, Any]:
         "exports": exports,
         "calls": calls,
         "resolved_call_edges": resolved_call_edges,
+        "value_flow_edges": value_flow_edges,
         "skipped_files": scan.skipped_files,
         "diagnostics": diagnostics,
         "coverage": {
@@ -431,7 +439,7 @@ def build_report(scan: ScanResult, parser_timeout: int) -> dict[str, Any]:
             "python": "inventory only",
             "other_languages": "inventory only",
             "call_resolution": "direct imported calls with a unique in-root module edge and matching export are linked; other calls remain syntactic references",
-            "data_flow": "not analyzed",
+            "data_flow": "same-scope simple identifier aliases, call results, direct call arguments and returns; duplicate or reassigned bindings are omitted; control flow and cross-module value flow are not analyzed",
         },
     }
 
@@ -448,6 +456,7 @@ def render_markdown(report: dict[str, Any]) -> str:
         f"- Dependency edges: {summary['dependency_edges']} ({summary['internal_edges']} internal, {summary['external_edges']} external)",
         f"- Exports: {summary['exports']}; syntactic call sites: {summary['call_sites']}",
         f"- Statically linked imported calls: {summary['resolved_call_edges']}",
+        f"- Local value-flow observations: {summary['value_flow_edges']}",
         f"- Parse errors: {summary['syntax_errors']}; skipped paths: {summary['skipped_paths']}", "",
         "## Coverage and limits", "",
         f"- JS/TS: {report['coverage']['javascript_typescript']}.",
@@ -489,6 +498,35 @@ def render_markdown(report: dict[str, Any]) -> str:
         )
     if not report["resolved_call_edges"]:
         lines.append("No statically imported calls met the supported binding and export checks.")
+    lines.extend(["", "## Local value-flow observations", ""])
+    for item in report["value_flow_edges"]:
+        if item["kind"] == "alias":
+            lines.append(
+                f"- `{item['evidence']['source_reference']['path']}:{item['evidence']['source_reference']['line']}` — "
+                f"`{item['scope']}: {item['from_symbol']} → {item['to_symbol']}` (direct identifier alias; "
+                f"bindings `{item['evidence']['source_binding']['line']}` → `{item['evidence']['target_binding']['line']}`)."
+            )
+        elif item["kind"] == "call_result":
+            lines.append(
+                f"- `{item['evidence']['producer']['path']}:{item['evidence']['producer']['line']}` — "
+                f"`{item['scope']}: {item['from_callee']}()` → `{item['to_symbol']}` (call result assigned to a local binding)."
+            )
+        elif item["kind"] == "call_argument":
+            callee = item["to_callee"] or "<dynamic call>"
+            lines.append(
+                f"- `{item['evidence']['source_use']['path']}:{item['evidence']['source_use']['line']}` — "
+                f"`{item['scope']}: {item['from_symbol']} → {callee} argument {item['argument_index'] + 1}` "
+                f"(call at `{item['evidence']['call_site']['line']}`)."
+            )
+        elif item["kind"] == "return":
+            lines.append(
+                f"- `{item['evidence']['source_use']['path']}:{item['evidence']['source_use']['line']}` — "
+                f"`{item['scope']}: {item['from_symbol']} → return` "
+                f"(return at `{item['evidence']['return_site']['line']}`)."
+            )
+    if not report["value_flow_edges"]:
+        lines.append("No direct local identifier flows met the supported binding checks.")
+    lines.append("These are syntactic observations; control-flow conditions, reassignment, cross-module value flow, and runtime values are not inferred.")
     lines.extend(["", "## Exports and call sites", ""])
     for item in report["exports"]:
         lines.append(f"- Export `{item['name']}` in `{item['path']}:{item['evidence']['line']}` ({item['kind']}).")

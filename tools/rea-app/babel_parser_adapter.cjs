@@ -45,150 +45,7 @@ function configValue(node) {
   if (node.type === 'ObjectExpression') {
     const value = {};
     for (const property of node.properties) {
-      if (property.type !== 'ObjectProperty' || property.computed) continue;
-      const key = nodeName(property.key);
-      if (key !== null) value[key] = configValue(property.value);
-    }
-    return value;
-  }
-  return undefined;
-}
-
-function sourceString(node) {
-  return node && node.type === 'StringLiteral' ? node.value : null;
-}
-
-function collectDeclarationExports(declaration, out) {
-  if (!declaration) return;
-  if (declaration.type === 'VariableDeclaration') {
-    for (const item of declaration.declarations) {
-      const names = namesFromPattern(item.id, '*').map((binding) => binding.local);
-      for (const name of names) out.push({ name, source_name: name, kind: 'export', line: lineOf(declaration) });
-    }
-  } else if (declaration.id && declaration.id.name) {
-    out.push({ name: declaration.id.name, source_name: declaration.id.name, kind: 'export', line: lineOf(declaration) });
-  }
-}
-
-function functionName(node, parent) {
-  if (node.type === 'FunctionDeclaration' && node.id) return node.id.name;
-  if (["ClassMethod", "ClassPrivateMethod", "ObjectMethod"].includes(node.type)) return nodeName(node.key) || '<method>';
-  if (["FunctionExpression", "ArrowFunctionExpression"].includes(node.type)) {
-    if (parent && parent.type === 'VariableDeclarator') return nodeName(parent.id) || '<anonymous>';
-    if (parent && parent.type === 'AssignmentExpression') return nodeName(parent.left) || '<anonymous>';
-    if (parent && parent.type === 'ObjectProperty') return nodeName(parent.key) || '<anonymous>';
-  }
-  return null;
-}
-
-function parseSource(file) {
-  const lower = file.path.toLowerCase();
-  const isTypeScript = /\.(?:ts|tsx|mts|cts)$/.test(lower);
-  const isTsx = lower.endsWith('.tsx');
-  const plugins = ['decorators-legacy', 'importAttributes'];
-  if (isTypeScript) plugins.push(['typescript', { isTSX: isTsx }]);
-  if (isTsx || lower.endsWith('.jsx')) plugins.push('jsx');
-  const edges = [];
-  const bindings = [];
-  const exports = [];
-  const calls = [];
-  let ast;
-
-  try {
-    ast = babelParser.parse(file.content, {
-      sourceType: 'unambiguous',
-      sourceFilename: file.path,
-      errorRecovery: true,
-      plugins,
-    });
-  } catch (error) {
-    return {
-      path: file.path,
-      parse_errors: [{ line: error.loc && error.loc.line ? error.loc.line : 1, message: error.message }],
-      edges,
-      bindings,
-      exports,
-      calls,
-    };
-  }
-
-  function addEdge(kind, specifier, node, importBindings = []) {
-    if (typeof specifier !== 'string') return;
-    const edgeIndex = edges.length;
-    edges.push({ kind, specifier, line: lineOf(node) });
-    for (const binding of importBindings) bindings.push({ ...binding, edge_index: edgeIndex, kind });
-  }
-
-  for (const statement of ast.program.body) {
-    if (statement.type === 'ImportDeclaration') {
-      const foundBindings = [];
-      for (const specifier of statement.specifiers) {
-        if (specifier.type === 'ImportDefaultSpecifier') foundBindings.push({ local: specifier.local.name, imported: 'default' });
-        else if (specifier.type === 'ImportNamespaceSpecifier') foundBindings.push({ local: specifier.local.name, imported: '*' });
-        else foundBindings.push({ local: specifier.local.name, imported: nodeName(specifier.imported) || specifier.imported.value });
-      }
-      addEdge(statement.importKind === 'type' ? 'type_import' : 'import', sourceString(statement.source), statement, foundBindings);
-    } else if (statement.type === 'ExportNamedDeclaration') {
-      if (statement.source) addEdge('reexport', sourceString(statement.source), statement);
-      if (statement.specifiers.length) {
-        for (const specifier of statement.specifiers) {
-          exports.push({
-            name: nodeName(specifier.exported),
-            source_name: nodeName(specifier.local),
-            kind: statement.source ? 'reexport' : 'export',
-            line: lineOf(statement),
-          });
-        }
-      } else {
-        collectDeclarationExports(statement.declaration, exports);
-      }
-    } else if (statement.type === 'ExportAllDeclaration') {
-      addEdge('reexport', sourceString(statement.source), statement);
-      exports.push({ name: nodeName(statement.exported) || '*', kind: 'reexport_all', line: lineOf(statement) });
-    } else if (statement.type === 'ExportDefaultDeclaration') {
-      exports.push({ name: 'default', source_name: 'default', kind: 'default_export', line: lineOf(statement) });
-    } else if (statement.type === 'TSExportAssignment') {
-      exports.push({ name: 'default', source_name: 'default', kind: 'export_assignment', line: lineOf(statement) });
-    } else if (statement.type === 'TSImportEqualsDeclaration') {
-      const reference = statement.moduleReference;
-      if (reference && reference.expression) addEdge('require', sourceString(reference.expression), statement, [{ local: statement.id.name, imported: '*' }]);
-    }
-  }
-
-  function visit(node, parent = null, currentCaller = '<module>') {
-    if (!node || typeof node !== 'object') return;
-    const namedFunction = functionName(node, parent);
-    const caller = namedFunction || currentCaller;
-
-    if (node.type === 'CallExpression') {
-      const callee = node.callee;
-      const isRequire = callee && callee.type === 'Identifier' && callee.name === 'require';
-      const isDynamicImport = (callee && callee.type === 'Import') || node.type === 'ImportExpression';
-      if (isRequire && node.arguments.length && node.arguments[0].type === 'StringLiteral') {
-        const foundBindings = parent && parent.type === 'VariableDeclarator'
-          ? namesFromPattern(parent.id, '*')
-          : [];
-        addEdge('require', sourceString(node.arguments[0]), node, foundBindings);
-      } else if (isDynamicImport && node.arguments.length && node.arguments[0].type === 'StringLiteral') {
-        addEdge('dynamic_import', sourceString(node.arguments[0]), node);
-      }
-      calls.push({
-        callee: file.content.slice(callee.start, callee.end).slice(0, 160),
-        caller,
-        line: lineOf(node),
-      });
-    } else if (node.type === 'ImportExpression' && node.source && node.source.type === 'StringLiteral') {
-      addEdge('dynamic_import', sourceString(node.source), node);
-    } else if (node.type === 'TSImportType' && node.argument && node.argument.type === 'TSLiteralType') {
-      addEdge('type_import', sourceString(node.argument.literal), node);
-    }
-
-    if (node.type === 'AssignmentExpression' && node.operator === '=') {
-      const left = node.left;
-      if (left && left.type === 'MemberExpression') {
-        const objectName = nodeName(left.object);
-        const member = left.computed ? nodeName(left.property) : nodeName(left.property);
-        if (objectName === 'exports' && member) {
+      if (property.type !== 'ObjectProperty' }¸Ó[h‘éì¶»§q«^uember) {
           exports.push({ name: member, source_name: member, kind: 'commonjs_export', line: lineOf(node) });
         } else if (objectName === 'module' && member === 'exports') {
           exports.push({ name: 'default', source_name: 'default', kind: 'commonjs_export', line: lineOf(node) });
@@ -213,11 +70,152 @@ function parseSource(file) {
   }
   visit(ast.program);
 
+  function collectValueFlows(scopeRoot, scopeParent, isModule = false) {
+    const declarations = [];
+    const aliases = [];
+    const callResults = [];
+    const callArguments = [];
+    const returns = [];
+    const writes = new Set();
+    const nestedFunctions = [];
+    const scope = isModule ? '<module>' : functionName(scopeRoot, scopeParent) || '<anonymous>';
+    const body = isModule ? scopeRoot : scopeRoot.body;
+
+    if (!isModule) {
+      for (const parameter of scopeRoot.params || []) {
+        if (parameter && parameter.type === 'Identifier') {
+          declarations.push({ name: parameter.name, kind: 'parameter', line: lineOf(parameter) });
+        }
+      }
+    }
+
+    function walk(node, parent = null) {
+      if (!node || typeof node.type !== 'string') return;
+      if (node !== body && FUNCTION_TYPES.has(node.type)) {
+        nestedFunctions.push({ node, parent });
+        return;
+      }
+
+      if (node.type === 'VariableDeclarator' && node.id && node.id.type === 'Identifier') {
+        declarations.push({ name: node.id.name, kind: 'local', line: lineOf(node.id), init: node.init });
+        if (node.init && node.init.type === 'Identifier') {
+          aliases.push({ from: node.init.name, to: node.id.name, line: lineOf(node.init) });
+        } else if (node.init && node.init.type === 'CallExpression') {
+          const callee = simpleCalleeName(node.init.callee);
+          if (callee) callResults.push({ callee, to: node.id.name, line: lineOf(node.init) });
+        }
+      } else if (node.type === 'AssignmentExpression' && node.left && node.left.type === 'Identifier') {
+        writes.add(node.left.name);
+      } else if (node.type === 'UpdateExpression' && node.argument && node.argument.type === 'Identifier') {
+        writes.add(node.argument.name);
+      }
+
+      if (node.type === 'CallExpression') {
+        const callee = simpleCalleeName(node.callee);
+        node.arguments.forEach((argument, argumentIndex) => {
+          if (argument && argument.type === 'Identifier') {
+            callArguments.push({ from: argument.name, callee, argument_index: argumentIndex, line: lineOf(argument), call_line: lineOf(node) });
+          }
+        });
+      } else if (node.type === 'ReturnStatement' && node.argument && node.argument.type === 'Identifier') {
+        returns.push({ from: node.argument.name, line: lineOf(node.argument), return_line: lineOf(node) });
+      }
+
+      for (const key of Object.keys(node)) {
+        if (["loc", "start", "end", "extra", "comments", "tokens", "errors", "leadingComments", "trailingComments", "innerComments"].includes(key)) continue;
+        const value = node[key];
+        if (Array.isArray(value)) {
+          for (const child of value) if (child && typeof child.type === 'string') walk(child, node);
+        } else if (value && typeof value.type === 'string') {
+          walk(value, node);
+        }
+      }
+    }
+
+    walk(body);
+    const declarationCounts = new Map();
+    for (const declaration of declarations) {
+      declarationCounts.set(declaration.name, (declarationCounts.get(declaration.name) || 0) + 1);
+    }
+    const eligible = new Map(
+      declarations
+        .filter((declaration) => declarationCounts.get(declaration.name) === 1 && !writes.has(declaration.name))
+        .map((declaration) => [declaration.name, declaration]),
+    );
+    const evidence = (line) => ({ path: file.path, line });
+
+    for (const alias of aliases) {
+      const source = eligible.get(alias.from);
+      const target = eligible.get(alias.to);
+      if (!source || !target) continue;
+      valueFlows.push({
+        scope,
+        kind: 'alias',
+        from_symbol: alias.from,
+        to_symbol: alias.to,
+        evidence: {
+          source_binding: evidence(source.line),
+          source_reference: evidence(alias.line),
+          target_binding: evidence(target.line),
+        },
+      });
+    }
+    for (const callResult of callResults) {
+      const target = eligible.get(callResult.to);
+      if (!target) continue;
+      valueFlows.push({
+        scope,
+        kind: 'call_result',
+        from_callee: callResult.callee,
+        to_symbol: callResult.to,
+        evidence: { producer: evidence(callResult.line), target_binding: evidence(target.line) },
+      });
+    }
+    for (const callArgument of callArguments) {
+      const source = eligible.get(callArgument.from);
+      if (!source) continue;
+      valueFlows.push({
+        scope,
+        kind: 'call_argument',
+        from_symbol: callArgument.from,
+        to_callee: callArgument.callee,
+        argument_index: callArgument.argument_index,
+        evidence: {
+          source_binding: evidence(source.line),
+          source_use: evidence(callArgument.line),
+          call_site: evidence(callArgument.call_line),
+        },
+      });
+    }
+    for (const returned of returns) {
+      const source = eligible.get(returned.from);
+      if (!source) continue;
+      valueFlows.push({
+        scope,
+        kind: 'return',
+        from_symbol: returned.from,
+        evidence: {
+          source_binding: evidence(source.line),
+          source_use: evidence(returned.line),
+          return_site: evidence(returned.return_line),
+        },
+      });
+    }
+    return nestedFunctions;
+  }
+
+  const pendingScopes = [{ node: ast.program, parent: null, isModule: true }];
+  while (pendingScopes.length) {
+    const current = pendingScopes.pop();
+    const nested = collectValueFlows(current.node, current.parent, current.isModule);
+    for (const child of nested) pendingScopes.push({ ...child, isModule: false });
+  }
+
   const parseErrors = (ast.errors || []).map((error) => ({
     line: error.loc && error.loc.line ? error.loc.line : 1,
     message: error.message,
   }));
-  return { path: file.path, parse_errors: parseErrors, edges, bindings, exports, calls };
+  return { path: file.path, parse_errors: parseErrors, edges, bindings, exports, calls, value_flows: valueFlows };
 }
 
 function parseTsConfig(file) {

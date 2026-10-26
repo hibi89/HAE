@@ -136,6 +136,7 @@ class ReaAppCliTests(unittest.TestCase):
         report = json.loads(first_json)
 
         self.assertEqual(report["schema_version"], "rea-app-source-map/v1")
+        self.assertEqual(report["tool_version"], "0.2.0")
         self.assertEqual(report["parser"], "@babel/parser@7.29.9")
         self.assertEqual(report["summary"]["packages"], 2)
         self.assertGreaterEqual(report["summary"]["dependency_edges"], 9)
@@ -191,6 +192,71 @@ class ReaAppCliTests(unittest.TestCase):
         report = json.loads((self.output / "source-map.json").read_text(encoding="utf-8"))
         self.assertEqual(report["summary"]["files_indexed"], 0)
         self.assertEqual(report["dependency_edges"], [])
+
+    def test_value_flow_reports_simple_aliases_and_uses_without_guessing_mutations(self) -> None:
+        self.write(
+            "src/flows.ts",
+            "export function relay(input: string) {\n"
+            "  const copy = input;\n"
+            "  const cleaned = sanitize(copy);\n"
+            "  deliver(\n"
+            "    cleaned,\n"
+            "  );\n"
+            "  return (\n"
+            "    cleaned\n"
+            "  );\n"
+            "}\n"
+            "export function shadow(value: string) {\n"
+            "  const safe = value;\n"
+            "  { const value = 'local'; consume(value); }\n"
+            "  publish(safe);\n"
+            "}\n"
+            "export function reassigned(initial: string) {\n"
+            "  let current = initial;\n"
+            "  current = normalize(current);\n"
+            "  consume(current);\n"
+            "}\n",
+        )
+        before = snapshot(self.source)
+        result = self.run_scan()
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        json_path = self.output / "source-map.json"
+        markdown_path = self.output / "source-map.md"
+        first_json = json_path.read_bytes()
+        first_markdown = markdown_path.read_bytes()
+        report = json.loads(first_json)
+        flows = report["value_flow_edges"]
+
+        alias = next(item for item in flows if item["kind"] == "alias")
+        self.assertEqual((alias["scope"], alias["from_symbol"], alias["to_symbol"]), ("relay", "input", "copy"))
+        self.assertEqual(alias["evidence"]["source_binding"], {"path": "src/flows.ts", "line": 1})
+        self.assertEqual(alias["evidence"]["source_reference"], {"path": "src/flows.ts", "line": 2})
+        self.assertEqual(alias["evidence"]["target_binding"], {"path": "src/flows.ts", "line": 2})
+
+        call_result = next(item for item in flows if item["kind"] == "call_result")
+        self.assertEqual((call_result["from_callee"], call_result["to_symbol"]), ("sanitize", "cleaned"))
+        self.assertEqual(call_result["evidence"]["producer"], {"path": "src/flows.ts", "line": 3})
+
+        sink = next(item for item in flows if item["kind"] == "call_argument" and item["to_callee"] == "deliver")
+        self.assertEqual((sink["from_symbol"], sink["argument_index"]), ("cleaned", 0))
+        self.assertEqual(sink["evidence"]["source_use"], {"path": "src/flows.ts", "line": 5})
+        self.assertEqual(sink["evidence"]["call_site"], {"path": "src/flows.ts", "line": 4})
+        returned = next(item for item in flows if item["kind"] == "return")
+        self.assertEqual(returned["from_symbol"], "cleaned")
+        self.assertEqual(returned["evidence"]["source_use"]["line"], 8)
+        self.assertEqual(returned["evidence"]["return_site"]["line"], 7)
+
+        self.assertFalse(any(item.get("from_symbol") == "value" for item in flows))
+        self.assertFalse(any(item.get("from_symbol") == "current" or item.get("to_symbol") == "current" for item in flows))
+        self.assertEqual(report["summary"]["value_flow_edges"], len(flows))
+        self.assertIn("Local value-flow observations", first_markdown.decode("utf-8"))
+        self.assertNotIn('"local"', first_json.decode("utf-8"))
+
+        repeat = self.run_scan()
+        self.assertEqual(repeat.returncode, 0, repeat.stderr + repeat.stdout)
+        self.assertEqual(json_path.read_bytes(), first_json)
+        self.assertEqual(markdown_path.read_bytes(), first_markdown)
+        self.assertEqual(snapshot(self.source), before)
 
     def test_file_count_cap_fails_closed_without_partial_reports(self) -> None:
         self.write("a.ts", "export const a = 1;\n")
