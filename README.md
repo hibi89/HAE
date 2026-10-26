@@ -27,3 +27,6 @@ Master engineering plan: [docs/MASTER_SCHEDULE.md](docs/MASTER_SCHEDULE.md). Dat
 
 ## Handoff
 Read `HANDOFF.md` → `STATUS.md` → `AGENTS.md` → `REQUIREMENTS.md` → `docs/NEXT_TASK.md` → actual source. `ㄱ` means continue with next safe work unit. No paid service, credentials, public deployment, customer data or third-party uploads without explicit approval.
+
+## ACTIVE 5-week schedule (owner correction 2026-10-27 KST)
+**REA_APP + independently written n8n-like runner in first 2 weeks, then AX FLOW customer front-end + parallel DBVORA integration and real supported-path test in next 3 weeks.** First working MVP in 2–3 days, followed by blueprint gap closure then broad hardening. **n8n is research reference only, not the source of AX FLOW runtime code.** See docs/FAST_TRACK_5_WEEK.md, docs/TARGET_BLUEPRINT_V1.md and docs/CODEX_EXTRA_HIGH_ORDER.md; prior 21-week plan is historical.
