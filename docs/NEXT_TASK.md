@@ -1,3 +1,13 @@
+## Current checkpoint (P7 interval trigger passed — 2026-10-27 KST)
+
+Code/test chain on `feature/axflow-mvp` ends at `bef87cce42960cb31daaeb10b8e2ede0698a5748`; hard-crash test commit `ce1316c430fe90c67a76bdd29c63ec7e82687889`. Windows Python 3.11.9: scheduler tests 5/5; complete suite 54/54; JS syntax and Python compile pass. IR supports bounded manual/interval triggers; local schedule state pins plan hash and due tick. Restart replays the same deterministic tick; concurrent workers do not duplicate its SQLite write. Every schedule call requires `--max-runs 1..1000`; writes require explicit approval.
+
+A–E heuristic: **72%** (A100/B95/C70/D60/E35); product remains PARTIAL. Remaining: visual browser click/render E2E, source-preserving DBVORA restore, security assessment, Windows package/install review, customer/release gates. The existing `http://127.0.0.1:8765/` page remains the P6 UI; no new site needs opening and it has no schedule controls. DBVORA service is stopped.
+
+**NEXT ATOMIC TASK:** build a standard-library-only Windows `.pyz` package outside the source tree. Make UI assets load through `importlib.resources`; test the packaged CLI and localhost page GET without installing dependencies. Treat this as a package smoke only, not a signed installer or release.
+
+---
+
 ## Current checkpoint (P6 process-crash and cross-process replay passed — 2026-10-27 KST)
 
 Branch `feature/axflow-mvp`: P6 code `7190f5a3c8a238b1f33a948dd9a3df0d5e121b37`, process-recovery regression tests `d90644e28ab46c48091a1b0fb0329af0b1d15eb9`. Windows Python 3.11.9 engine tests 27/27 and full suite 49/49 pass. A child process was terminated with `os._exit(73)` after the synthetic CSV business commit but before the runtime receipt; resume completed with no duplicate rows. Two independent processes replaying one run produced one durable write. First test invocation and helper failed due test harness import paths; both corrected and fully rerun.
