@@ -35,3 +35,15 @@ Both database parent folders must already exist. This stores test fixture values
 
 ## Next slice
 Fault-injection, concurrent-run lease/locking semantics, explicit plan schema/version migration, retry/timeout policy, conditions/branches, safe HTTP stub. Then validated CLI `test/status/resume` with receipts and Windows proof. Keep runtime and business DB separate and preserve tests. User's 5-week stretch plan remains a target, not evidence of completion.
+
+## 2026-10-27 — fast hackathon sprint / status-resume increment
+Active user target: **3–5 days** (Oct 31 preferred), max **7-day verification** (Nov 2), limited scope; see `../../docs/SPRINT_7_DAY_HACKATHON.md`. Older plans superseded.
+
+New supported synthetic CLI operations:
+```sh
+python -m axflow status --state /path/to/runtime.db --run-id Demo1 --synthetic
+python -m axflow resume /path/to/plan.json --state /path/to/runtime.db --data /path/to/business.db --run-id Demo1 --approve-writes --synthetic
+```
+The `status` command reads the existing SQLite ledger in `mode=ro` and returns only run ID/status, recorded step count and plan hash, not input/output payload. The `resume` command reuses the existing deterministic `Engine.execute` recovery behavior and requires explicit write approval again. Both remain synthetic-only. Concurrent-run claiming, real external effects and full workflow retry semantics are **not yet tested**.
+
+Evidence: `axflow/runlog.py` and `tests/test_runlog.py` were exercised in an isolated local SQLite fixture, **2/2 Python unittest PASS** and CLI `status`/missing-ID smoke passes. New combined CLI end-to-end test was committed but **combined suite on updated GitHub head PENDING**. Exact new source file Git blob identities were checked against locally executed copies.
