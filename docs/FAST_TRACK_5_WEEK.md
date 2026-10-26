@@ -1,3 +1,5 @@
+> **ACTIVE OVERRIDE — 2026-10-27 KST:** user shortened AX FLOW core for hackathon reuse to **3–5 days preferred (Oct31), 7-day review target (Nov02)**. The older 5-week dates in this file are superseded for the supported-scope reusable integration MVP. Execute `docs/SPRINT_7_DAY_HACKATHON.md` first. Full commercial gates and third-party permissions remain unchanged. No guaranteed completion claim.
+
 # AX FLOW — 5-week accelerated delivery baseline v2
 Decision: 2026-10-27 KST. **This file supersedes the older 21-week master schedule.**
 
