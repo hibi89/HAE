@@ -9,16 +9,17 @@
 | Component | State | Evidence |
 | --- | --- | --- |
 | REA_APP static source analyzer | MVP_VERIFIED (BOUNDED SYNTHETIC JS/TS) | `REA_APP@80e8d7aad99c1c40d503848ed620421837b79477`; 10 Python + Node parser tests |
-| AX FLOW local runtime | P6_SYNTHETIC_FILTER_LOOKUP_VERIFIED (NOT CUSTOMER READY) | `feature/axflow-mvp@7190f5a3c8a238b1f33a948dd9a3df0d5e121b37`; Windows Python 3.11 full suite 47/47 PASS; P5 DBVORA smoke retained |
+| AX FLOW local runtime | P6_SYNTHETIC_FILTER_LOOKUP + PROCESS_RECOVERY_VERIFIED (NOT CUSTOMER READY) | code `7190f5a3c8a238b1f33a948dd9a3df0d5e121b37`; crash/replay tests `d90644e28ab46c48091a1b0fb0329af0b1d15eb9`; Windows Python 3.11 full suite 49/49 PASS |
 | Natural-language planner and file input | PARTIAL | four bounded Korean/English CSV intents: full import, filtered import, conditional import, read-only lookup; visible browser E2E remains unverified |
 | OAuth, Gmail/Sheets connectors | NOT_STARTED | no account credentials, no auth test |
 | DBVORA integration | P5_SYNTHETIC_READ_ONLY_VERIFIED | selected-file `p0-01.v1` API over loopback; tables/columns/PK/FK/size displayed; customer DB and packaged service deployment unverified |
-| Recovery, resilience and performance | PARTIAL | handled failure status, resume/idempotent SQLite replay and threaded claims tested; hard-kill recovery and multi-process stress unverified |
+| Recovery, resilience and performance | PARTIAL | a real process exit after durable import resumes without duplicate rows; two independent processes replaying the same run produce one durable write; interval trigger, restore and load bounds remain open |
 | Windows install, customer tests, security assessment | NOT_STARTED | no releases |
 | Vercel/Production | NOT_APPLICABLE | local-first product, no hosted service |
 
 ## Next
-Planner expansion is verified at API level. Next: process-crash recovery and cross-process replay testing. The permitted n8n behavior review is already recorded from official documentation only; do not copy source or assets. Keep customer data, OAuth, deployments and DBVORA source changes gated. Visible browser E2E and Windows installer/security review remain unverified.
+Subprocess hard-kill recovery and cross-process same-run replay are now verified; interval triggers, visible browser click/render E2E, DBVORA restore verification, security review, Windows installer and customer/release gates remain. The n8n behavior review is recorded from official documentation only; no source/assets were copied. Keep customer data, OAuth, public deployment and DBVORA writes behind approval gates.
+
 ## Bootstrap verified after GitHub writes (2026-10-27 KST)
 - GitHub repository visibility independently rechecked: **private**.
 - Branches independently rechecked: `main`, `develop`, `REA_APP`, `feature/axflow-mvp`.
@@ -142,3 +143,15 @@ Planner expansion is verified at API level. Next: process-crash recovery and cro
 - Live API smoke: Korean read-only lookup preview returned csv_lookup and requires_approval=false; run against the selected synthetic contacts.csv ID 42 returned matched_count=1 and source row 1. The JSON response contained no raw CSV value.
 - First server restart from the default sandbox timed out from the host loopback probe; restarting with loopback-only access fixed it. First smoke expected ID 11 while the fixture contains ID 42; using the fixture's actual synthetic ID passed. These were environment/test-input mismatches, not product test failures.
 - This proves HTTP/API availability, not visible browser rendering/click E2E. Owner should refresh the open tab at http://127.0.0.1:8765/. The server is active in the current session; DBVORA side service may show unavailable.
+
+
+## 2026-10-27 KST — P6 process-crash recovery and cross-process replay passed
+- **Branch/evidence:** `hibi89/AX_FLOW`, `feature/axflow-mvp`; implementation `7190f5a3c8a238b1f33a948dd9a3df0d5e121b37`; regression-test commit `d90644e28ab46c48091a1b0fb0329af0b1d15eb9`.
+- **Real process-crash check:** a subprocess calls `os._exit(73)` after the CSV business transaction is durable but before the runtime step receipt is saved. The run was `running`, two synthetic business rows were durable, and resume completed with exactly those two rows and original row numbers 1–2.
+- **Cross-process check:** two independent CLI processes resume the same synthetic run after a held runtime DB lock; both return the same output and the business DB contains one `(run_id, step_id)` write.
+- **Executed tests:** Windows Python 3.11.9, `python -m unittest discover -s tests -p test_engine.py -v` — 27/27 PASS; full `python -m unittest discover -s tests -v` — 49/49 PASS. The full suite required loopback-only socket permission for local API tests.
+- **Harness failures and fixes:** the first targeted unittest command ran from `tests/` and could not import `axflow`; rerunning from `apps/ax-flow` passed. The first crash subprocess could not import the package because Python used the temporary helper's directory; the helper now prepends its inherited application working directory to `sys.path`. No engine defect was found in either failure.
+- **Blueprint comparison:** B runner now verifies receipts/replay, branch, write/read, bounded retries and cross-process hard-crash resume. Still missing: interval trigger and wider load/performance bounds. A remains bounded synthetic analyzer only; C still lacks visible browser-render/click proof; D lacks independently verified restore; E lacks security review, installer and release evidence. Product status remains PARTIAL.
+- **Progress estimate:** 70% by the existing equally weighted A–E heuristic (A 100, B 85, C 70, D 60, E 35). This is an internal progress indicator, not Blueprint acceptance or customer readiness.
+- **Current UI:** P6 localhost page remains on `http://127.0.0.1:8765/`; refresh the open tab. HTTP/API synthetic lookup smoke passed. Visible browser rendering/click E2E was not performed. The DBVORA side service is stopped, so that panel can show unavailable.
+- **Next atomic task:** implement and test the Blueprint's bounded local interval trigger using synthetic workflows, persisted due ticks and duplicate-run protection. Keep scheduling local and explicit; no external event services.
