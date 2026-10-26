@@ -159,3 +159,17 @@ Recovery: read this latest appended block before older 21-week historical notes.
 8. **Risks/rollback:** Synthetic inputs and local SQLite only; localhost UI is single-user with no auth. Code rollback is commit `d21753d0f7401cefce0285458680238d007ffb38`; no customer data, public service or DBVORA source modified.
 9. **Next atomic task:** On `feature/dbvora-integration`, implement/test only the AX FLOW-side read-only DBVORA client using actual `/health` and `/api/inventory` API contract; no DBVORA source changes.
 10. **Time/owner actions:** 2026-10-27 KST. UI preview URL `http://127.0.0.1:8765/`; current server session was still active at checkpoint. External site or login is not required. Full product is PARTIAL.
+
+
+## 2026-10-27 KST — P5 AX FLOW–DBVORA read-only synthetic E2E
+
+1. **Task/goal:** Connect the AX FLOW local UI to DBVORA's actual selected-file SQLite inventory API with loopback-only, read-only metadata transfer.
+2. **Branch/base/commits:** `hibi89/AX_FLOW`, `feature/dbvora-integration`; P5 code `56f75104e0f07a5b89e179709f9169e600c9c98a` from `5acc4abfa8c0bd93c31c8e54ecd76133b1ecb9cc`; resource-close fix `54b4c9336dc9a0dee0cd0418364b89fc1f34dc59`.
+3. **Changed paths:** `apps/ax-flow/axflow/dbvora_client.py`, `web.py`, `__main__.py`, `static/{index.html,app.js,app.css}`, `tests/test_dbvora_client.py`, `tests/test_web.py`, and README.
+4. **Executed tests:** Windows Python 3.11, `python -m unittest discover -s tests -v` in `apps/ax-flow` — **42 passed, 0 failed** after the follow-up; `node --check apps/ax-flow/axflow/static/app.js` passed. Actual loopback service smoke used DBVORA's unchanged source commit `31b8257468d28743fb2d3767d1caa56938df756c` with a synthetic SQLite file and real AX FLOW UI APIs.
+5. **Failure/recovery:** Initial default-sandbox run had seven socket-permission errors (`WinError 10013`); enabling loopback for 127.0.0.1 only produced 42/42. The first integrated smoke helper parsed HTML as JSON; this harness issue was fixed, then full UI→DBVORA smoke passed. The DB file's SHA-256 and mtime were identical before/after inventory.
+6. **Implemented/tested state:** GET-only `/health` and `/api/inventory` client; loopback literal IP; no redirects; 1.5-second request timeout; 2 MiB max response; strict JSON and `p0-01.v1` metadata contract; unavailable state; visible schema panel; explicit `--dbvora-url`. No table row payload or database path is forwarded.
+7. **Remaining gaps:** Browser click/render E2E remains blocked by the computer-use helper's URL-confidence stop. Only one workflow family is planned; the API exposes one service-selected database, no in-app source listing. Cross-process runner stress, customer security review, Windows installer, OAuth and release checks remain.
+8. **Risks/rollback:** Only synthetic DB used; no DBVORA changes. Roll back both P5 commits to `5acc4abfa8c0bd93c31c8e54ecd76133b1ecb9cc` to remove this adapter/panel.
+9. **Next atomic task:** Expand planner support for CSV filter→SQLite, read-only lookup and conditional flow as distinct safe tasks; add real UI preview/run tests and retain fail-closed behavior. Do not introduce customer data.
+10. **Time/owner actions:** 2026-10-27 KST. Local preview remains `http://127.0.0.1:8765/`; service must be started separately on a selected synthetic SQLite file/loopback port for DBVORA panel to show connected. Overall product remains PARTIAL.

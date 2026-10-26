@@ -1,12 +1,12 @@
 # Next work unit — 2026-10-27 KST (ACTIVE fast-track)
 
-## Current checkpoint (P4 API flow passed)
+## Current checkpoint (P5 synthetic DBVORA integration passed)
 
-The synthetic CSV→SQLite runner, bounded Korean/English planner, and localhost request UI are implemented on `feature/axflow-mvp@d21753d0f7401cefce0285458680238d007ffb38`. Windows Python 3.11 full suite **33/33 PASS** with loopback permission; JavaScript syntax and a live Korean preview→approved synthetic run→status smoke also passed. n8n behavior review is complete from official docs only; no n8n code or assets were copied.
+On `feature/dbvora-integration@54b4c9336dc9a0dee0cd0418364b89fc1f34dc59`, AX FLOW's bounded local UI now reads the actual DBVORA `p0-01.v1` API over `127.0.0.1` only and displays measured file size, tables, columns, PKs, FKs and declared relationships. Windows Python 3.11 suite **42/42 PASS** and JavaScript syntax check passes. A live synthetic smoke using DBVORA source at `feature/p0-db-map@31b8257468d28743fb2d3767d1caa56938df756c` completed the Korean request→preview→approved CSV import→status→DBVORA inventory path and verified the business SQLite file stayed unchanged during inventory.
 
-Target Blueprint V1 comparison: A is previously verified for bounded synthetic REA_APP scope; B is a limited synthetic runner slice; C is partial (one workflow family, API-level E2E but visible-browser flow unverified); D/E remain incomplete because the AX FLOW–DBVORA bridge, browser E2E, customer-data security review, Windows packaging and release gates are absent. Overall completion is **PARTIAL**, not 100%.
+Target Blueprint V1 remains **PARTIAL** overall: A bounded synthetic analyzer previously passed; B runner features have synthetic evidence but no interval trigger/cross-process claim; C supports one workflow family and has no visible-browser E2E; D has read-only synthetic integration but no in-app DB listing/customer data; E lacks customer security review, installer and release gates. No customer data or DBVORA source was used.
 
-**Next:** on existing `feature/dbvora-integration`, implement an AX FLOW-side read-only client for DBVORA's actually inspected single-file `/health` and `/api/inventory` contract, including offline/unavailable behavior. Build synthetic contract tests. Do not modify the independent DBVORA repo, access customer files, or claim a live integration without a service smoke.
+**Next:** implement several distinct no-JSON tasks that reuse the existing safe engine: CSV threshold filtering before import, read-only lookup, and conditional behavior. Run UI preview/execute tests for each; unsupported input must still fail clearly. Visible browser automation remains a separate gate because the computer-use helper stopped on URL-confidence policy.
 
 ## Codex first authorized implementation unit (MVP D1–D3, REA_APP branch)
 1. Verify hibi89/AX_FLOW current HEAD and read HANDOFF/STATUS/AGENTS/REQUIREMENTS/docs + actual code.
