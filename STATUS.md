@@ -54,6 +54,7 @@ Follow `docs/NEXT_TASK.md`, starting with REA_APP synthetic-repository source in
 - Next: resolve unambiguous imported function calls and strengthen multiline ESM fixtures, then rerun the complete suite, commit and compare against `TARGET_BLUEPRINT_V1.md`. Only after core analyzer validation, perform bounded n8n architecture research; do not implement the standalone AX FLOW engine.
 
 ## 2026-10-27 KST — blueprint call-evidence gap closed
+- Gap-slice code commit: `52c7860b67dd6dc991c46141b2e841bde74d858f` (parent checkpoint `aee0ab1f1a35af70b89fd66bbf905cb25c97dcb7`).
 - Blueprint comparison: added `resolved_call_edges` for direct imported calls only when a unique import binding, in-root module edge, and matching export are observed. Each edge cites call, import, and target-export path/line evidence. Multiline ESM and nested package boundaries are included in fixtures.
 - Verification: `python -m unittest discover -s tools/rea-app/tests -v` — **8 passed, 0 failed**; `npm --prefix tools/rea-app run test:parser` — **PASS**. Synthetic fixture confirms deterministic reports and source-tree bytes unchanged.
 - Test failures and fixes: first gap run selected the package `answer` edge before `add` because output was sorted; the assertion now selects the named `add` symbol. A multiline call is on line 4, not line 5; the evidence assertion was corrected. No product-code defect remained; rerun passed all tests.

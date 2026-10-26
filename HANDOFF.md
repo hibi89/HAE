@@ -71,7 +71,7 @@ Recovery: read this latest appended block before older 21-week historical notes.
 
 ## 2026-10-27 KST — blueprint call-evidence slice
 1. **Task/goal:** Compare the passing REA_APP MVP with blueprint A and close the highest-value supported call-evidence gap without expanding into a workflow executor.
-2. **Branch/commit:** `hibi89/AX_FLOW`, `REA_APP`; prior verified code commit `23bbc979657ccb25bcbba5ddfe2c647476dc0051`; blueprint-gap code commit SHA is recorded in the next metadata checkpoint.
+2. **Branch/commit:** `hibi89/AX_FLOW`, `REA_APP`; prior verified code commit `23bbc979657ccb25bcbba5ddfe2c647476dc0051`; blueprint-gap commit `52c7860b67dd6dc991c46141b2e841bde74d858f` (parent `aee0ab1f1a35af70b89fd66bbf905cb25c97dcb7`).
 3. **Changes:** `tools/rea-app/rea_app/graph.py` adds static import-bound call edges; `tests/test_cli.py` adds multiline ESM and nested package coverage; README, STATUS, HANDOFF and NEXT_TASK reflect supported precision and remaining gaps.
 4. **Executed checks:** `python -m unittest discover -s tools/rea-app/tests -v` — 8 passed; `npm --prefix tools/rea-app run test:parser` — passed. Edges require unique in-root import binding and matching target export; evidence cites call/import/export source lines.
 5. **Failures and recovery:** The first test assertion selected a different valid sorted edge (`answer` before `add`); narrowed selection to the target symbol. The multiline fixture's call is on line 4; corrected an erroneous line-5 expectation. The full suite then passed.
