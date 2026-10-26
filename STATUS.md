@@ -9,16 +9,16 @@
 | Component | State | Evidence |
 | --- | --- | --- |
 | REA_APP static source analyzer | MVP_VERIFIED (BOUNDED SYNTHETIC JS/TS) | `REA_APP@80e8d7aad99c1c40d503848ed620421837b79477`; 10 Python + Node parser tests |
-| AX FLOW local runtime | P6_SYNTHETIC_FILTER_LOOKUP + PROCESS_RECOVERY_VERIFIED (NOT CUSTOMER READY) | code `7190f5a3c8a238b1f33a948dd9a3df0d5e121b37`; crash/replay tests `d90644e28ab46c48091a1b0fb0329af0b1d15eb9`; Windows Python 3.11 full suite 49/49 PASS |
+| AX FLOW local runtime | P7_SYNTHETIC_INTERVAL_TRIGGER_VERIFIED (NOT CUSTOMER READY) | interval scheduler/tests/docs commits `e16d39dbd962b093b39fed0176261364154a41e3` → `bef87cce42960cb31daaeb10b8e2ede0698a5748`; Windows Python 3.11 full suite 54/54 PASS |
 | Natural-language planner and file input | PARTIAL | four bounded Korean/English CSV intents: full import, filtered import, conditional import, read-only lookup; visible browser E2E remains unverified |
 | OAuth, Gmail/Sheets connectors | NOT_STARTED | no account credentials, no auth test |
 | DBVORA integration | P5_SYNTHETIC_READ_ONLY_VERIFIED | selected-file `p0-01.v1` API over loopback; tables/columns/PK/FK/size displayed; customer DB and packaged service deployment unverified |
-| Recovery, resilience and performance | PARTIAL | a real process exit after durable import resumes without duplicate rows; two independent processes replaying the same run produce one durable write; interval trigger, restore and load bounds remain open |
+| Recovery, resilience and performance | PARTIAL | real process crash resume, cross-process same-run replay, persisted interval due ticks, crash replay and concurrent tick deduplication are tested; DBVORA restore and broader load bounds remain open |
 | Windows install, customer tests, security assessment | NOT_STARTED | no releases |
 | Vercel/Production | NOT_APPLICABLE | local-first product, no hosted service |
 
 ## Next
-Subprocess hard-kill recovery and cross-process same-run replay are now verified; interval triggers, visible browser click/render E2E, DBVORA restore verification, security review, Windows installer and customer/release gates remain. The n8n behavior review is recorded from official documentation only; no source/assets were copied. Keep customer data, OAuth, public deployment and DBVORA writes behind approval gates.
+The local interval trigger now passes bounded synthetic CLI, persistence, crash-replay and concurrency tests. Remaining Blueprint gates: visible browser click/render E2E, independently verified DBVORA restore, security review, Windows installation/package smoke, and customer/release evidence. The n8n behavior review is recorded from official documentation only; no source/assets were copied. Keep customer data, OAuth, public deployment and DBVORA writes behind approval gates.
 
 ## Bootstrap verified after GitHub writes (2026-10-27 KST)
 - GitHub repository visibility independently rechecked: **private**.
@@ -155,3 +155,14 @@ Subprocess hard-kill recovery and cross-process same-run replay are now verified
 - **Progress estimate:** 70% by the existing equally weighted A–E heuristic (A 100, B 85, C 70, D 60, E 35). This is an internal progress indicator, not Blueprint acceptance or customer readiness.
 - **Current UI:** P6 localhost page remains on `http://127.0.0.1:8765/`; refresh the open tab. HTTP/API synthetic lookup smoke passed. Visible browser rendering/click E2E was not performed. The DBVORA side service is stopped, so that panel can show unavailable.
 - **Next atomic task:** implement and test the Blueprint's bounded local interval trigger using synthetic workflows, persisted due ticks and duplicate-run protection. Keep scheduling local and explicit; no external event services.
+
+
+## 2026-10-27 KST — P7 bounded local interval trigger verified
+- **Branch/commits:** `hibi89/AX_FLOW`, `feature/axflow-mvp`; typed trigger validation `e16d39dbd962b093b39fed0176261364154a41e3`; CLI/scheduler/test/readme chain ends `bef87cce42960cb31daaeb10b8e2ede0698a5748`. Process crash regression tests remain at `ce1316c430fe90c67a76bdd29c63ec7e82687889`.
+- **Implemented:** versioned IR now accepts strict manual or interval triggers; interval is bounded 1–86400 seconds. The local foreground `schedule` CLI persists a plan-hash-pinned anchor and tick counter in runtime SQLite. A schedule ID cannot be reused with changed plan/interval. Deterministic tick run IDs let a pending tick resume. `--max-runs` is mandatory and capped at 1000; business writes still require `--approve-writes`.
+- **Executed tests:** five interval tests and complete Windows Python 3.11.9 suite — **54/54 PASS**. Coverage includes invalid bounds, direct-run guard, three ticks across separate CLI invocations, durable next-tick state, interruption after business commit with same-tick retry/no duplicate row, concurrent workers for one due tick, and plan-pinned schedule IDs. `node --check axflow/static/app.js` and `python -m py_compile` for changed Python/test modules passed. The full suite required loopback-only permission for its localhost API tests.
+- **Failure/recovery:** no failure in the final interval or complete suite. A test fixture mistake in a prior edit placed crash-replay assertions in the concurrency test; inspection caught it before execution, the assertions were put back in the crash-replay test, and all five interval tests passed.
+- **Blueprint comparison:** B's manual and local interval trigger paths, fixture runs, write/read, branching, receipts, bounded retries, real process crash recovery and cross-process same-run replay now have evidence. Remaining B limits include broader throughput/parallel-step scope. C still lacks visible-browser render/click proof. D inventory is synthetic verified, but source-preserving restore is unverified. E lacks security assessment, safe install/package smoke and customer/release evidence.
+- **Progress estimate:** 72% by the A–E equal-weight heuristic (A100/B95/C70/D60/E35). This is progress tracking only; product remains PARTIAL and is not customer ready.
+- **UI/site:** existing local page is `http://127.0.0.1:8765/`; it remains the P6 UI and does not expose schedule editing. No additional site needs to be opened. DBVORA service is separate and currently unavailable.
+- **Next atomic task:** produce a standard-library-only Windows `.pyz` package smoke from this branch, including zip-safe UI assets, and run its CLI plus local page GET from outside the source tree. This is a package proof, not a signed installer or release.
