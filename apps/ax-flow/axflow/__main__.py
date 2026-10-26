@@ -8,6 +8,7 @@ from pathlib import Path
 
 from .engine import ApprovalRequired, Engine, PlanError, StepRetryExhausted, StepTimeout, validate
 from .runlog import RunLogError, inspect_run
+from .scheduler import interval_ticks
 from .templates import build_template
 
 
@@ -26,7 +27,7 @@ def _reject_json_constant(value: str) -> None:
 
 def main() -> int:
     p = argparse.ArgumentParser(prog="axflow")
-    p.add_argument("command", choices=("validate", "run", "resume", "status", "template", "serve"))
+    p.add_argument("command", choices=("validate", "run", "resume", "status", "template", "serve", "schedule"))
     p.add_argument("plan", type=Path, nargs="?")
     p.add_argument("--name", help="built-in template name (template command)")
     p.add_argument("--csv", dest="csv_path", help="relative CSV path for csv_to_sqlite")
@@ -34,6 +35,8 @@ def main() -> int:
     p.add_argument("--data", type=Path)
     p.add_argument("--input-root", type=Path, help="explicit directory containing allowed synthetic CSV inputs")
     p.add_argument("--run-id")
+    p.add_argument("--schedule-id", help="durable identifier for an interval-triggered synthetic workflow")
+    p.add_argument("--max-runs", type=int, help="stop after this many due interval ticks (1–1000)")
     p.add_argument("--port", type=int, default=8765, help="loopback UI port for serve")
     p.add_argument("--dbvora-url", help="optional DBVORA loopback API origin, e.g. http://127.0.0.1:8766")
     p.add_argument("--approve-writes", action="store_true")
@@ -46,6 +49,7 @@ def main() -> int:
             raise PlanError("--dbvora-url is only valid with serve")
         if a.command == "serve":
             if (a.plan is not None or a.name is not None or a.csv_path is not None or a.run_id is not None or
+                    a.schedule_id is not None or a.max_runs is not None or
                     a.approve_writes or a.input_root is None or a.state is None or a.data is None or
                     not 1 <= a.port <= 65535):
                 raise PlanError(
@@ -64,13 +68,14 @@ def main() -> int:
             return 0
         if a.command == "template":
             if (a.plan is not None or a.state is not None or a.data is not None or
-                    a.input_root is not None or a.run_id is not None or a.approve_writes or a.port != 8765):
+                    a.input_root is not None or a.run_id is not None or a.schedule_id is not None or
+                    a.max_runs is not None or a.approve_writes or a.port != 8765):
                 raise PlanError("template accepts only --name, --csv and --synthetic")
             plan = build_template(a.name, csv_path=a.csv_path) if a.csv_path is not None else build_template(a.name)
             print(json.dumps(plan, ensure_ascii=False, sort_keys=True, indent=2))
             return 0
         if a.command == "status":
-            if a.state is None or a.run_id is None:
+            if a.state is None or a.run_id is None or a.schedule_id is not None or a.max_runs is not None:
                 raise PlanError("status requires --state and --run-id")
             print(json.dumps(inspect_run(a.state, a.run_id), ensure_ascii=False, sort_keys=True))
             return 0
@@ -87,6 +92,22 @@ def main() -> int:
         if a.command == "validate":
             print("VALIDATED (synthetic-only)")
             return 0
+        if a.command == "schedule":
+            if (a.state is None or a.data is None or a.schedule_id is None or a.run_id is not None or
+                    a.name is not None or a.csv_path is not None):
+                raise PlanError("schedule requires a workflow, --state, --data and --schedule-id")
+            engine = Engine(a.state, a.data, input_root=a.input_root)
+            try:
+                for tick in interval_ticks(
+                    plan, engine, a.schedule_id, max_runs=a.max_runs,
+                    approve_writes=a.approve_writes,
+                ):
+                    print(json.dumps({"schedule_id": a.schedule_id, **tick}, ensure_ascii=False, sort_keys=True), flush=True)
+            except KeyboardInterrupt:
+                print(json.dumps({"schedule_id": a.schedule_id, "status": "stopped"}), flush=True)
+            return 0
+        if a.schedule_id is not None or a.max_runs is not None:
+            raise PlanError("--schedule-id and --max-runs are only valid with schedule")
         if a.state is None or a.data is None or a.run_id is None:
             raise PlanError("run requires --state, --data and --run-id")
         result = Engine(a.state, a.data, input_root=a.input_root).execute(
