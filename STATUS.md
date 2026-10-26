@@ -9,7 +9,7 @@
 | Component | State | Evidence |
 | --- | --- | --- |
 | REA_APP static source analyzer | MVP_VERIFIED (BOUNDED SYNTHETIC JS/TS) | `REA_APP@80e8d7aad99c1c40d503848ed620421837b79477`; 10 Python + Node parser tests |
-| AX FLOW local runtime | P1_CONDITIONS_TRANSFORMS_VERIFIED / P1_RETRY_TIMEOUT_NEXT (SYNTHETIC ONLY) | `feature/axflow-mvp@e0dd9959dd624ee58321fac34761f9525445ee42`; Windows Python 3.11 full suite 15/15 PASS |
+| AX FLOW local runtime | P1_CONDITIONS_TRANSFORMS_RETRY_TIMEOUT_VERIFIED / P2_CSV_NEXT (SYNTHETIC ONLY) | `feature/axflow-mvp@767d2ad49a31f5849775fb1a1a61ca5966381f0f`; Windows Python 3.11 full suite 17/17 PASS |
 | Natural-language planner and file input | NOT_STARTED | no code/tests |
 | OAuth, Gmail/Sheets connectors | NOT_STARTED | no account credentials, no auth test |
 | DBVORA integration | NOT_STARTED | separate repository remains unchanged |
@@ -18,7 +18,7 @@
 | Vercel/Production | NOT_APPLICABLE | local-first product, no hosted service |
 
 ## Next
-Continue P1 on `feature/axflow-mvp`: add bounded SQLite lock-wait retry/timeout policy, then build and verify the synthetic CSV→SQLite vertical path. Keep external auth, real customer data, paid services, deployments and DBVORA source changes behind their documented approval gates.
+Continue P2 on `feature/axflow-mvp`: build and verify the synthetic CSV→SQLite vertical path. Keep external auth, real customer data, paid services, deployments and DBVORA source changes behind their documented approval gates.
 
 ## Bootstrap verified after GitHub writes (2026-10-27 KST)
 - GitHub repository visibility independently rechecked: **private**.
@@ -77,3 +77,11 @@ Continue P1 on `feature/axflow-mvp`: add bounded SQLite lock-wait retry/timeout 
 - **Not done:** bounded retry/SQLite lock timeout, CSV import, GUI, planner, DBVORA adapter, n8n study. No external credentials, customer data, browser, paid service, or external DB was used.
 - **Limits:** same-plan/threaded replay remains verified; cross-process stress and parallel step scheduling remain unverified. Hard kills may leave a run `running`; resume only after confirming the old process stopped. Runtime and business SQLite remain separate and all writes require explicit approval.
 - **Next atomic task:** bounded retry and SQLite lock-wait timeout with a deterministic held-lock test; then CSV→SQLite synthetic vertical test. Preserve `--synthetic`, explicit local write approval, and no arbitrary code expressions.
+
+## 2026-10-27 KST — P1 retry/timeout verified
+- **Branch/commit:** `feature/axflow-mvp@767d2ad49a31f5849775fb1a1a61ca5966381f0f` (`feat(ax-flow): bound SQLite lock retries and step timeouts`), parent `63af7323341b12d83805570587ed533f656b541b`.
+- **Scope completed:** `sqlite_put` and `sqlite_get` accept strict `max_attempts` 1–3 and `timeout_ms` 1–5000. Only transient SQLite busy/locked errors retry. Attempt counters persist. Retry exhaustion and deadline expiry have distinct bounded error types; resuming after lock release succeeds.
+- **Verification:** Windows Python 3.11 full suite — **17/17 PASS**. A real exclusive business DB lock forced three attempts and a separate short-deadline failure; after releasing the lock the same failed run resumed and wrote/read one row. Invalid attempt/time bounds and options on non-SQLite operators are rejected. Uploaded engine/test/README blob SHAs matched the commit.
+- **Observed failure and fix:** an initial test assumed `sqlite3.connect(timeout=0.1)` strictly returns after 100 ms. On this Windows environment, an exclusive lock test measured about 0.48 s for that setting, so the first attempt could exceed the whole deadline. The implementation now uses zero SQLite busy wait and owns retry delays/deadline in its bounded loop; the revised held-lock tests pass and distinguish `StepRetryExhausted` from `StepTimeout`.
+- **Remaining:** CSV→SQLite, planner/templates, local GUI, lawful n8n reference study, DBVORA read-only adapter, browser/Windows packaging, and cross-process stress remain unverified. No customer data, external APIs, auth, paid services or DBVORA source changes were used.
+- **Next atomic task:** synthetic CSV parser/validation → deterministic business SQLite writes with idempotent run/row keys, malformed/oversized/header/duplicate cases and end-to-end CLI test. Announce before opening a browser for GUI verification.
