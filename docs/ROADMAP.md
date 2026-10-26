@@ -1,20 +1,14 @@
-# Roadmap (gated, not a completed release)
+# AX FLOW milestone roadmap — accelerated v2
 
-See [MASTER_SCHEDULE.md](MASTER_SCHEDULE.md) for detailed calendar, engineering-hours estimates, dependencies, contingency and completion gates.
+**User priority: REA_APP → learn n8n and build our own new core (within 2 weeks) → AX FLOW UI/AI + concurrently DBVORA completion and integration (another 3 weeks). Total target 5 weeks.** Not a request to modify or commercially redistribute n8n source.
 
-| Gate | Outcome | Main work track |
+| Gate | Expected date | Acceptance |
 |---|---|---|
-| R0 (done docs only) | private repository, role boundaries, initial docs/branches | main |
-| R1 | REA_APP static source analyzer and synthetic corpus tests | REA_APP |
-| R2 | n8n permissible functionality mapping and independent specifications | REA_APP |
-| F1 | AX FLOW typed IR, deterministic CLI runner, separate state SQLite and business data SQLite | feature/axflow-mvp |
-| F2 | natural language / template / local file intake, automatic setup and verified dry-run | feature/axflow-mvp |
-| F3 | OAuth broker, Gmail send / Sheets adapters with explicit permissions | feature/axflow-mvp |
-| D1 | DBVORA metadata-only bridge, graph view, version/health, backup/restore verification (supported DB) | feature/dbvora-integration |
-| F4 | local customer dashboard without node assembly and approval wizard | feature/axflow-mvp |
-| F5 | security, crash recovery, benchmarks, Windows package and E2E | develop |
-| F6 | customer-style pilots, support-cost evidence, commercial/license/privacy sign-off | develop → main |
+| A0 | 2026-10-27–29 | REA_APP practical JS/TS analyzer MVP with actual safe CLI regression |
+| A1 | by 2026-11-02 | n8n permitted architecture research, original independent workflow contracts |
+| E1 | by 2026-11-09 | new native runner executes three fixture workflows with versioned IR + SQLite and restart safeguards |
+| U1 | by 2026-11-16 | natural-language→workflow and local UI, templates, auto-config/tests for supported cases |
+| D1 | by 2026-11-23 | DBVORA approved read-only SQLite inventory adapter; authorized connector(s) |
+| R1 | by 2026-11-30 | AX FLOW + DBVORA integrated scope-limited v1 candidate, Windows/GUI/security/recovery E2E, verified supported-source restore where permitted |
 
-**Full product cannot be called complete until D1 + F5 pass**, even if automation engine and AI work. REA_APP is a development tool and DBVORA remains its own repository. Earlier single-workflow runner success is a partial milestone only.
-
-Proposed assisted implementation price 590,000 KRW remains a hypothesis; no purchases or willingness-to-pay proof. External OAuth verification and third-party approvals may extend schedule without a reliable fixed date.
+Dates are targets; provider authorization, hackathon conflicts, DBVORA independent release and test evidence can delay. The legacy 21-week plan is superseded. Exact process: [FAST_TRACK_5_WEEK.md](FAST_TRACK_5_WEEK.md); blueprint: [TARGET_BLUEPRINT_V1.md](TARGET_BLUEPRINT_V1.md); tests: [ACCEPTANCE_MATRIX.md](ACCEPTANCE_MATRIX.md).
