@@ -68,3 +68,15 @@ Recovery: read this latest appended block before older 21-week historical notes.
 8. **Originals/security:** No n8n source copied, no customer secrets/data/external accounts read/written; original main unaffected, feature branch isolated. Synthetic data saved locally with step outputs; **do not use real customer data**.
 9. **NEXT:** Add run status and explicit safe resume CLI, retry/error statuses, richer pure transforms/conditions; test concurrent claims and crash/restart; no general API/OAuth before approved scoped credentials. DBVORA adapter remains separate branch. Follow `docs/FAST_TRACK_5_WEEK.md`.
 10. **Time/approval:** 2026-10-27 KST. User need not run any commands now. Engineering progress measured by actual test evidence; this is not a fully usable AX FLOW product. No schedule or percentage claim changed.
+
+## 2026-10-27 — sprint acceleration / CLI status and resume
+1. **Goal:** 3–5-day preferred, 7-day maximum requested review for reusable, *scope-limited* AX FLOW vertical slice (own engine, natural-language/template, SQLite, DBVORA read-only view), not full universal commercial system.
+2. **Completed:** feature/axflow-mvp added read-only ledger `axflow/runlog.py`, optional CLI `status` and `resume`, tests/test_runlog.py, extra CLI integration test. Original `axflow.ir.v0` runner preserved. docs/SPRINT_7_DAY_HACKATHON.md, MASTER_SCHEDULE and ROADMAP updated.
+3. **Executed tests:** isolated runlog unittest **2/2 PASS**, stubbed-engine CLI status + missing-id smoke PASS. Source blobs from GitHub byte-identical to locally exercised copies. **Combined full runner test suite on latest remote head still PENDING**; prior 5/5 engine tests were on older slice.
+4. **Progress:** D1 first engine code + status/resume integrated, not a completed D5 full product. REA_APP is a separate 0.3.0 bounded analyzer; natural language/DBVORA/GUI/external auth not implemented.
+5. **Failures/risk:** no new failing runlog tests; concurrent claims, cross-DB transaction generalization, Windows clean install remain unverified. Real outgoing actions/payments require separate user approval; avoid exposing step payloads in status.
+6. **Repo/branch:** hibi89/AX_FLOW private, active branch feature/axflow-mvp. Re-read remote HEAD and test code to establish final SHA. main contains matching active schedule but does not receive unverified engine code.
+7. **Environment:** local Python stdlib, synthetic SQLite fixture. No deploy, Windows or real provider tested. CLI supports validate/run/resume/status with synthetic flag.
+8. **Source/privacy:** no third-party n8n code or live customer data/credentials; source is in isolated branch. Separate runtime and business SQLite paths.
+9. **Next task:** execute full latest test suite and verify real CLI status/resume; then condition/data transform/CSV→SQLite step and natural-language template; then DBVORA readonly integration and Windows E2E. Follow daily release gates in docs/SPRINT_7_DAY_HACKATHON.md.
+10. **KST:** 2026-10-27. The user 7-day calendar is a sprint aim, not a guarantee. Flag PARTIAL if any mandatory demo gate remains red.
