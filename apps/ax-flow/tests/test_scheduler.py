@@ -110,6 +110,66 @@ class IntervalTriggerTests(unittest.TestCase):
         with closing(sqlite3.connect(self.business)) as con:
             self.assertEqual(con.execute("SELECT COUNT(*) FROM records").fetchone()[0], 1)
 
+    def test_hard_process_exit_after_interval_business_commit_resumes_same_tick(self):
+        plan_path = self.root / "hard-crash-interval-plan.json"
+        plan_path.write_text(json.dumps(self.plan), encoding="utf-8")
+        helper = self.root / "hard_crash_interval_tick.py"
+        helper.write_text(
+            "import json, os, sys\n"
+            "from pathlib import Path\n"
+            "sys.path.insert(0, str(Path.cwd()))\n"
+            "from axflow.engine import Engine\n"
+            "from axflow.scheduler import interval_ticks\n"
+            "class CrashEngine(Engine):\n"
+            " def _evaluate_step(self, step, results, outcomes, run_id, inject_stop_after_business, **kwargs):\n"
+            "  value = super()._evaluate_step(step, results, outcomes, run_id, False, **kwargs)\n"
+            "  if step['op'] == 'sqlite_put': os._exit(73)\n"
+            "  return value\n"
+            "state,business,plan_path,schedule_id=sys.argv[1:]\n"
+            "plan=json.loads(Path(plan_path).read_text(encoding='utf-8'))\n"
+            "list(interval_ticks(plan, CrashEngine(state,business), schedule_id, max_runs=1, approve_writes=True))\n",
+            encoding="utf-8",
+        )
+        cwd = Path(__file__).resolve().parents[1]
+        schedule_id = "HardCrashSchedule"
+        crashed = subprocess.run(
+            [sys.executable, str(helper), str(self.state), str(self.business), str(plan_path), schedule_id],
+            cwd=cwd, capture_output=True, text=True, timeout=15,
+        )
+        self.assertEqual(crashed.returncode, 73, crashed.stderr)
+        with closing(sqlite3.connect(self.state)) as con:
+            tick, = con.execute(
+                "SELECT next_tick FROM interval_schedules WHERE schedule_id=?", (schedule_id,)
+            ).fetchone()
+            run_id, status = con.execute("SELECT run_id,status FROM runs").fetchone()
+        self.assertEqual(tick, 0)
+        self.assertEqual(status, "running")
+        with closing(sqlite3.connect(self.business)) as con:
+            self.assertEqual(
+                con.execute("SELECT COUNT(*) FROM records WHERE run_id=?", (run_id,)).fetchone()[0], 1
+            )
+
+        resumed = subprocess.run(
+            [sys.executable, "-m", "axflow", "schedule", str(plan_path),
+             "--state", str(self.state), "--data", str(self.business),
+             "--schedule-id", schedule_id, "--max-runs", "1", "--synthetic", "--approve-writes"],
+            cwd=cwd, capture_output=True, text=True, timeout=15,
+        )
+        self.assertEqual(resumed.returncode, 0, resumed.stderr)
+        tick_result = json.loads(resumed.stdout)
+        self.assertEqual(tick_result["tick"], 0)
+        self.assertEqual(tick_result["run_id"], run_id)
+        self.assertTrue(tick_result["advanced"])
+        self.assertEqual(inspect_run(self.state, run_id)["status"], "completed")
+        with closing(sqlite3.connect(self.state)) as con:
+            self.assertEqual(con.execute(
+                "SELECT next_tick FROM interval_schedules WHERE schedule_id=?", (schedule_id,)
+            ).fetchone()[0], 1)
+        with closing(sqlite3.connect(self.business)) as con:
+            self.assertEqual(
+                con.execute("SELECT COUNT(*) FROM records WHERE run_id=?", (run_id,)).fetchone()[0], 1
+            )
+
     def test_concurrent_interval_workers_do_not_duplicate_the_due_tick_write(self):
         barrier = threading.Barrier(2)
 
