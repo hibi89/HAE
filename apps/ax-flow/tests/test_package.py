@@ -115,6 +115,30 @@ class ZipappSmokeTests(unittest.TestCase):
                 with opener.open(base + asset, timeout=2) as response:
                     self.assertEqual(response.status, 200)
                     self.assertGreater(len(response.read()), 100)
+
+            def post_json(route, payload):
+                request = urllib.request.Request(
+                    base + route,
+                    data=json.dumps(payload).encode("utf-8"),
+                    headers={"Content-Type": "application/json", "Origin": base},
+                    method="POST",
+                )
+                with opener.open(request, timeout=2) as response:
+                    return json.loads(response.read().decode("utf-8"))
+
+            task = "이 CSV를 로컬 SQLite에 저장해줘"
+            preview = post_json("/api/preview", {"task": task, "csv_path": "contacts.csv"})
+            self.assertEqual(preview["workflow"], "csv_to_sqlite")
+            self.assertTrue(preview["requires_approval"])
+            result = post_json("/api/run", {
+                "task": task, "csv_path": "contacts.csv", "preview_id": preview["preview_id"],
+                "approve_writes": True,
+            })
+            self.assertEqual(result["status"]["status"], "completed")
+            self.assertEqual(result["result"]["imported_rows"], 1)
+            self.assertNotIn("Fixture", json.dumps(result))
+            with closing(sqlite3.connect(business)) as con:
+                self.assertEqual(con.execute("SELECT COUNT(*) FROM csv_records").fetchone()[0], 1)
         finally:
             if process.poll() is None:
                 process.terminate()
