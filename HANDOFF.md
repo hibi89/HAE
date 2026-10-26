@@ -206,3 +206,16 @@ Recovery: read this latest appended block before older 21-week historical notes.
 7. **Safety/rollback:** synthetic local files/SQLite only; no external account/API, customer source, DBVORA write, public deployment or credential used. Reverting `d90644e28ab46c48091a1b0fb0329af0b1d15eb9` removes these test cases.
 8. **Next task:** implement the narrow local interval trigger with persisted schedule ticks and duplicate-run protection, then test schedule recovery and a bounded run count before claiming trigger support.
 9. **Owner actions:** localhost preview already open at `http://127.0.0.1:8765/`; refresh it for the P6 page. DBVORA service is separate and currently unavailable. Overall product remains PARTIAL, estimated 70% by the unchanged A–E tracking heuristic.
+
+
+## 2026-10-27 08:34 KST — P7 interval trigger verified
+
+1. **Goal:** Add the frozen Blueprint's bounded local interval trigger and prove persistence, replay and duplicate suppression using synthetic workflows.
+2. **Branch/commit chain:** `hibi89/AX_FLOW`, `feature/axflow-mvp`; trigger validation `e16d39dbd962b093b39fed0176261364154a41e3`, schedule CLI `5d575c279d620811fba01180d3201f38704242a7`, scheduler `14f37c904fa0f0b0a09fdc1f2a63e284452a3aea`, bounded run-count follow-ups through README `bef87cce42960cb31daaeb10b8e2ede0698a5748`. Hard-crash tests are committed at `ce1316c430fe90c67a76bdd29c63ec7e82687889`.
+3. **Changed paths:** `apps/ax-flow/axflow/engine.py`, `__main__.py`, new `scheduler.py`, new `tests/test_scheduler.py`, and README.
+4. **Verification:** Windows Python 3.11.9, `python -m unittest discover -s tests -p test_scheduler.py -v` — 5/5; full `python -m unittest discover -s tests -v` — 54/54. Node syntax and Python compilation passed. Full suite used loopback-only access for local API tests.
+5. **Behavior:** strict `manual`/bounded `interval` trigger; interval 1–86400 seconds; first tick immediate; persistent schedule id/plan hash/anchor/next tick; deterministic tick run IDs; required `--max-runs 1..1000`; explicit write approval. Restart retries the same due tick. Concurrent workers on one due tick yield one durable write.
+6. **Failure/recovery:** final test runs had no product failures. A transient test-file placement mistake was corrected before running tests. In the previous hard-crash test, Python package import failed because the helper was in a temp directory; explicit app cwd fixed the harness and the 49-test baseline passed. Latest full suite now passes 54/54.
+7. **Blueprint gaps:** interval scheduling is a local foreground command, no OS/cloud service or UI schedule editor. C visible-browser rendering/click remains unverified; D restore is unverified and tied to separately approved DBVORA capability; E security assessment, Windows package/install review, customer/release checks remain. No customer data, OAuth, external service or DBVORA write was used.
+8. **Next:** package the stdlib app as a zip-safe `.pyz`, prove CLI and page GET from outside source checkout, retain synthetic-only and loopback checks. Do not call this a signed installer.
+9. **Owner action/site:** keep the existing `http://127.0.0.1:8765/` tab if useful; no new site is needed. It shows the P6 UI and no schedule controls. Overall product PARTIAL, 72% heuristic.
