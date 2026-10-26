@@ -8,8 +8,9 @@
 ## Product readiness
 | Component | State | Evidence |
 | --- | --- | --- |
-| REA_APP static source analyzer | MVP_VERIFIED (BOUNDED SCOPE) | code `1e43893146bdbd46b030e56e84e1d4959c07ab35`; 9 Python tests + Node parser assertions pass |
-| AX FLOW local runtime | NOT_STARTED | no code/tests |
+| REA_APP static source analyzer | MVP_VERIFIED (BLUEPRINT A, BOUNDED SYNTHETIC SCOPE) | code `991fe3d908377a70a451013262449a8ad001d0d2`; 10 Python tests + Node parser assertions pass; tool 0.3.0 |
+| n8n architecture study | COMPLETE (DOCS ONLY) | official docs and Help Center evidence recorded below; no n8n source/runtime used |
+| AX FLOW local runtime | NOT_STARTED (USER HOLD) | independent engine explicitly held for chief review |
 | Natural-language planner and file input | NOT_STARTED | no code/tests |
 | OAuth, Gmail/Sheets connectors | NOT_STARTED | no account credentials, no auth test |
 | DBVORA integration | NOT_STARTED | separate repository remains unchanged |
@@ -18,7 +19,7 @@
 | Vercel/Production | NOT_APPLICABLE | local-first product, no hosted service |
 
 ## Next
-Run the final acceptance audit for REA_APP blueprint A using the current synthetic CLI evidence and recorded limits. Keep the independent AX FLOW runner/engine on hold until chief review. Update exact SHAs/test evidence after writes.
+Blueprint A's synthetic, bounded acceptance and the permitted n8n documentation study are complete. The full-product score is 20% using five equally weighted blueprint gates (A–E): A passed at the stated synthetic scope; B–E are not implemented. Keep the independent AX FLOW runner/engine on hold until chief review; clean install, physical link creation, Windows packaging and authorized real-source validation need a suitable approved environment.
 
 ## Bootstrap verified after GitHub writes (2026-10-27 KST)
 - GitHub repository visibility independently rechecked: **private**.
@@ -82,3 +83,16 @@ Run the final acceptance audit for REA_APP blueprint A using the current synthet
 - Environmental limits still unverified: a clean parser install from the project manifest, physical symlink/junction creation on this Windows sandbox, Windows packaging, and an explicitly authorized non-synthetic source scan. Python and other languages remain inventory-only; value-flow scope is conservative by design.
 - Changed paths: `tools/rea-app/rea_app/__init__.py`, `rea_app/graph.py`, `babel_parser_adapter.cjs`, `package.json`, `README.md`, `tests/test_cli.py`, and `tests/parser_adapter.test.cjs`. No external service, customer data, credentials, n8n source or AX FLOW runtime used.
 - Rollback: revert code commit `1e43893146bdbd46b030e56e84e1d4959c07ab35` to return to the prior passing analyzer state at `f25abdc6d7424677ead023e445a3baa401e19f63`.
+
+## 2026-10-27 KST — exported function contracts and Blueprint A closeout
+- **Task:** Finish the highest-value remaining Blueprint A item by emitting evidence-linked callable export contracts; keep the standalone AX FLOW engine out of scope.
+- **Branch and commits:** `hibi89/AX_FLOW`, `REA_APP`; verified parent `dd2a914071c32e3c3f542398b1cf21de26e1ac26`; code commit `991fe3d908377a70a451013262449a8ad001d0d2`. Status/handoff metadata is committed immediately afterward; re-read the branch and checkpoint files to confirm the final head.
+- **Changed code paths:** `tools/rea-app/babel_parser_adapter.cjs`, `tools/rea-app/rea_app/graph.py`, `tools/rea-app/tests/test_cli.py`, `tools/rea-app/tests/parser_adapter.test.cjs`, `tools/rea-app/README.md`, `tools/rea-app/package.json`, `tools/rea-app/rea_app/__init__.py`.
+- **Feature:** Report unambiguous exported JS/TS function signatures for ESM and CommonJS, including symbol/export name, callable kind, async/generator flags, parameter names/patterns and explicit type annotations, optional/rest/default-presence flags, explicit return annotations, and definition/export path+line evidence. Never serialize function bodies or actual default values. The report does not infer types or behavior; ambiguous candidates are omitted.
+- **Verification (from `tools/rea-app`):** `python -m unittest discover -s tests -v` — **10 passed**; `npm run test:parser` — **PASS**; `python -m rea_app --version` — `rea-app 0.3.0`. Tests cover ESM aliased/default exports, CommonJS exports, exact evidence, explicit types, omitted default/body literals, deterministic output and unchanged synthetic source.
+- **Failure causes / recovery:** No failing tests in this slice. Python integration tests require `NODE_PATH` to the host's global `@babel/parser@7.29.9` because a clean project install was not available in this environment. Earlier documented issues remain: Windows link creation is permission-blocked, and clean npm install/Windows packaging/authorized real-source validation were not verified. These are environment or approval gaps, not product-code failures.
+- **Blueprint A result:** PASS for the bounded synthetic JS/TS scope: real CLI scan, exact import/entrypoint/call/local-flow/export-contract evidence, deterministic JSON/Markdown, resource caps, and source-tree immutability. Python and other languages remain inventory-only; there is no universal reconstruction claim.
+- **Overall product progress:** **20%** by five equally weighted Blueprint V1 gates A–E: A is complete for bounded synthetic acceptance; B (independent runner), C (customer UI), D (DBVORA), and E (security/Windows/end-to-end release validation) remain unimplemented. The user explicitly holds B's standalone engine until chief review. n8n research is a completed research milestone, not product runtime functionality.
+- **n8n / safety:** The bounded official-docs analysis is complete and recorded above and in `docs/NEXT_TASK.md`. No n8n source, UI, runtime, credentials, external customer data, or independent runner was used.
+- **Rollback:** Revert code commit `991fe3d908377a70a451013262449a8ad001d0d2` to restore the previous passing 0.2.0 analyzer state. No new package dependency was added.
+- **Next:** Await chief review before any standalone engine. If continuing REA_APP first, work only on a separately prioritized bounded gap or perform verification in a host that permits a clean dependency install and physical link tests.

@@ -41,6 +41,25 @@ Verification on synthetic fixtures: `python -m unittest discover -s tools/rea-ap
 
 **Hold point:** before any independent AX FLOW runner/engine work, chief review must compare the passing REA_APP scope and remaining blueprint gaps. Current REA_APP limits: Python AST, value/data-flow, physical symlink/junction and clean npm install validation, Windows packaging, and authorized real-source validation. The next task is to decide which of these merit a bounded follow-up; do not start the standalone engine before review.
 
+## 2026-10-27 KST — REA_APP 0.3.0 / Blueprint A closeout
+
+The REA_APP Blueprint A acceptance audit is complete for the stated synthetic JS/TS scope. Code commit `991fe3d908377a70a451013262449a8ad001d0d2` adds exported function signature contracts: explicit parameter/return annotations, optional/rest/default-presence flags, export aliases, and definition/export path+line evidence. ESM and CommonJS cases pass. Reports omit function bodies and actual default values; ambiguous source bindings are omitted. Tool version is `0.3.0`.
+
+Actual verification from `tools/rea-app`:
+
+- `python -m unittest discover -s tests -v` — **10 passed**.
+- `npm run test:parser` — **PASS**.
+- `python -m rea_app --version` — **rea-app 0.3.0**.
+- Python test execution set `NODE_PATH` to the host-installed `@babel/parser@7.29.9`; project-local clean install was unavailable/unverified.
+
+The permitted n8n architecture/licensing pass is also complete from official documentation only. Its findings and sources are recorded above and in `STATUS.md`; do not repeat broad research. No n8n source/UI/runtime was inspected or copied.
+
+**Overall Blueprint V1 completion: 20%** under an explicit equal-weight A–E gate count. A passes for bounded synthetic acceptance; B (standalone runner), C (customer UI), D (DBVORA integration), and E (security, Windows and end-to-end release validation) remain unimplemented. This percentage describes the whole AX FLOW target, not REA_APP alone. The independent runner remains on explicit user hold until chief review.
+
+**Unverified environment items:** clean npm install, physical symlink/junction creation (Windows host denied permission; scanner rejection path has test-double coverage), Windows packaging, and authorized non-synthetic source validation. These do not block bounded synthetic A acceptance. No external auth, customer source, paid service or deploy is authorized or needed for the next review gate.
+
+**Next safe step:** chief review decides whether and when to authorize the independent engine. Until then, do not begin B. Any additional work should stay within a separately prioritized REA_APP verification gap; do not broaden the n8n study without a concrete open question.
+
 ## 2026-10-27 KST — REA_APP bounded data-flow checkpoint
 
 Implemented and committed as `1e43893146bdbd46b030e56e84e1d4959c07ab35` (parent `f25abdc6d7424677ead023e445a3baa401e19f63`): `value_flow_edges` now cover same-scope direct aliases, call results assigned to simple names, identifier call arguments and identifier returns. Every edge includes exact source/use/call/return lines. Duplicated or reassigned bindings are omitted. This is a conservative syntax-level subset; control-flow, runtime semantics and cross-module value flow remain out of scope. Tool version is 0.2.0.
