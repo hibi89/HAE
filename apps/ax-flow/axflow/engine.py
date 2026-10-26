@@ -6,6 +6,7 @@ import json
 import math
 import re
 import sqlite3
+import time
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -25,6 +26,14 @@ class ApprovalRequired(RuntimeError):
 
 class InjectedStop(RuntimeError):
     """Synthetic fault injected after a business DB commit."""
+
+
+class StepTimeout(TimeoutError):
+    """A SQLite step exhausted its bounded lock-wait budget."""
+
+
+class StepRetryExhausted(RuntimeError):
+    """A SQLite step reached its configured transient-error attempt cap."""
 
 
 def canonical_json(value: object) -> str:
@@ -56,10 +65,14 @@ def validate(plan: object) -> dict:
             "sqlite_put": {"id", "op", "from"},
             "sqlite_get": {"id", "op", "from"},
         }
-        optional_when = {"field", "map", "sqlite_put", "sqlite_get"}
+        optional = {
+            "field": {"when"},
+            "map": {"when"},
+            "sqlite_put": {"when", "max_attempts", "timeout_ms"},
+            "sqlite_get": {"when", "max_attempts", "timeout_ms"},
+        }
         allowed = fields.get(op)
-        if allowed is None or not (set(step) == allowed or
-                                   (op in optional_when and set(step) == allowed | {"when"})):
+        if allowed is None or not allowed <= set(step) or set(step) - allowed - optional.get(op, set()):
             raise PlanError(f"unknown operation or invalid fields for {ident}")
         if op in {"field", "map", "condition", "sqlite_put", "sqlite_get"} and (
                 not isinstance(step["from"], str) or step["from"] not in seen):
@@ -95,6 +108,13 @@ def validate(plan: object) -> dict:
             if (not isinstance(then_step, str) or then_step not in seen or
                     not isinstance(else_step, str) or else_step not in seen):
                 raise PlanError("branch outputs must reference earlier steps")
+        if op in {"sqlite_put", "sqlite_get"}:
+            attempts = step.get("max_attempts", 1)
+            timeout_ms = step.get("timeout_ms", 5000)
+            if isinstance(attempts, bool) or not isinstance(attempts, int) or not 1 <= attempts <= 3:
+                raise PlanError("max_attempts must be an integer from 1 to 3")
+            if isinstance(timeout_ms, bool) or not isinstance(timeout_ms, int) or not 1 <= timeout_ms <= 5000:
+                raise PlanError("timeout_ms must be an integer from 1 to 5000")
         if "when" in step:
             guard = step["when"]
             if (not isinstance(guard, dict) or set(guard) != {"condition", "equals"} or
@@ -135,6 +155,8 @@ class Engine:
                 con.execute("ALTER TABLE steps ADD COLUMN status TEXT NOT NULL DEFAULT 'completed'")
             if "error_type" not in step_columns:
                 con.execute("ALTER TABLE steps ADD COLUMN error_type TEXT")
+            if "attempt_count" not in step_columns:
+                con.execute("ALTER TABLE steps ADD COLUMN attempt_count INTEGER NOT NULL DEFAULT 1")
         with self._business() as con:
             con.execute("CREATE TABLE IF NOT EXISTS records (run_id TEXT NOT NULL, step_id TEXT NOT NULL, payload_json TEXT NOT NULL, PRIMARY KEY(run_id,step_id))")
 
@@ -148,8 +170,8 @@ class Engine:
             con.close()
 
     @contextmanager
-    def _business(self):
-        con = sqlite3.connect(self.business_path, timeout=5)
+    def _business(self, timeout: float = 5):
+        con = sqlite3.connect(self.business_path, timeout=timeout)
         try:
             with con:
                 yield con
@@ -207,7 +229,7 @@ class Engine:
             with self._state() as con:
                 if saved is None:
                     con.execute(
-                        "INSERT OR IGNORE INTO steps(run_id,step_id,output_json,status,error_type) VALUES (?,?,?,'running',NULL)",
+                        "INSERT OR IGNORE INTO steps(run_id,step_id,output_json,status,error_type,attempt_count) VALUES (?,?,?,'running',NULL,0)",
                         (run_id, sid, "null"),
                     )
                 else:
@@ -221,7 +243,39 @@ class Engine:
                     value = None
                     status = "skipped"
                 else:
-                    value = self._evaluate_step(step, results, outcomes, run_id, inject_stop_after_business)
+                    max_attempts = step.get("max_attempts", 1)
+                    timeout_seconds = step.get("timeout_ms", 5000) / 1000
+                    deadline = time.monotonic() + timeout_seconds
+                    for attempt in range(1, max_attempts + 1):
+                        with self._state() as con:
+                            con.execute(
+                                "UPDATE steps SET attempt_count=? WHERE run_id=? AND step_id=?",
+                                (attempt, run_id, sid),
+                            )
+                        remaining = deadline - time.monotonic()
+                        if remaining <= 0:
+                            raise StepTimeout("SQLite step exceeded its lock-wait budget")
+                        try:
+                            value = self._evaluate_step(
+                                step, results, outcomes, run_id, inject_stop_after_business,
+                                # Let the explicit retry loop own lock waiting so each
+                                # attempt cannot silently exceed the total deadline.
+                                sqlite_timeout=0,
+                            )
+                        except sqlite3.OperationalError as exc:
+                            transient = "locked" in str(exc).lower() or "busy" in str(exc).lower()
+                            remaining = deadline - time.monotonic()
+                            if not transient:
+                                raise
+                            if remaining <= 0:
+                                raise StepTimeout("SQLite step exceeded its lock-wait budget") from exc
+                            if attempt >= max_attempts:
+                                raise StepRetryExhausted("SQLite step reached its bounded busy/locked attempt cap") from exc
+                            time.sleep(min(0.01 * (2 ** (attempt - 1)), remaining))
+                            continue
+                        if time.monotonic() > deadline:
+                            raise StepTimeout("SQLite step exceeded its lock-wait budget")
+                        break
                     status = "completed"
                 with self._state() as con:
                     con.execute(
@@ -246,7 +300,7 @@ class Engine:
         return output
 
     def _evaluate_step(self, step: dict, results: dict, outcomes: dict, run_id: str,
-                       inject_stop_after_business: bool) -> object:
+                       inject_stop_after_business: bool, *, sqlite_timeout: float = 5) -> object:
         sid, op = step["id"], step["op"]
         if op == "literal":
             return step["value"]
@@ -277,7 +331,7 @@ class Engine:
         if op == "sqlite_put":
             value = {"stored_by": sid}
             payload = canonical_json(results[step["from"]])
-            with self._business() as con:
+            with self._business(timeout=sqlite_timeout) as con:
                 con.execute("INSERT OR IGNORE INTO records VALUES (?,?,?)", (run_id, sid, payload))
                 stored = con.execute(
                     "SELECT payload_json FROM records WHERE run_id=? AND step_id=?", (run_id, sid)
@@ -293,7 +347,7 @@ class Engine:
             raise PlanError("sqlite_get source write was skipped")
         if not isinstance(results[store], dict) or "stored_by" not in results[store]:
             raise PlanError("sqlite_get requires preceding sqlite_put receipt")
-        with self._business() as con:
+        with self._business(timeout=sqlite_timeout) as con:
             row = con.execute(
                 "SELECT payload_json FROM records WHERE run_id=? AND step_id=?",
                 (run_id, results[store]["stored_by"]),

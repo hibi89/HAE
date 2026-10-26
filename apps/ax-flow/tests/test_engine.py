@@ -4,12 +4,14 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 import unittest
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from pathlib import Path
 
-from axflow.engine import ApprovalRequired, Engine, InjectedStop, PlanError, validate
+from axflow.engine import (ApprovalRequired, Engine, InjectedStop, PlanError, StepRetryExhausted,
+                           StepTimeout, validate)
 from axflow.runlog import inspect_run
 
 
@@ -99,6 +101,67 @@ class TestEngine(unittest.TestCase):
             with self.assertRaises(PlanError):
                 validate(bad)
 
+    def test_sqlite_retry_cap_and_timeout_are_bounded_and_resume_succeeds(self):
+        def plan_with_budget(timeout_ms):
+            return {"version": "axflow.ir.v0", "steps": [
+                {"id": "source", "op": "literal", "value": {"value": "fixture"}},
+                {"id": "save", "op": "sqlite_put", "from": "source",
+                 "max_attempts": 3, "timeout_ms": timeout_ms},
+                {"id": "read", "op": "sqlite_get", "from": "save",
+                 "max_attempts": 2, "timeout_ms": timeout_ms},
+            ]}
+
+        retry_plan, timeout_plan = plan_with_budget(1000), plan_with_budget(1)
+        validate(retry_plan)
+        validate(timeout_plan)
+        blocker = sqlite3.connect(self.root / "business.db", timeout=1)
+        blocker.execute("BEGIN EXCLUSIVE")
+        started = time.monotonic()
+        try:
+            with self.assertRaises(StepRetryExhausted):
+                self.engine.execute(retry_plan, "RetryCapRun", approve_writes=True)
+            self.assertLess(time.monotonic() - started, 2)
+            status = inspect_run(self.root / "state.db", "RetryCapRun")
+            self.assertEqual(status["status"], "failed")
+            self.assertEqual(status["error_type"], "StepRetryExhausted")
+            with closing(sqlite3.connect(self.root / "state.db")) as state:
+                step = state.execute(
+                    "SELECT status,attempt_count,error_type FROM steps WHERE run_id='RetryCapRun' AND step_id='save'"
+                ).fetchone()
+            self.assertEqual(step, ("failed", 3, "StepRetryExhausted"))
+            with self.assertRaises(StepTimeout):
+                self.engine.execute(timeout_plan, "TimeoutRun", approve_writes=True)
+            timeout_status = inspect_run(self.root / "state.db", "TimeoutRun")
+            self.assertEqual(timeout_status["error_type"], "StepTimeout")
+        finally:
+            blocker.rollback()
+            blocker.close()
+
+        self.assertEqual(self.engine.execute(retry_plan, "RetryCapRun", approve_writes=True), {"value": "fixture"})
+        status = inspect_run(self.root / "state.db", "RetryCapRun")
+        self.assertEqual(status["status"], "completed")
+        with closing(sqlite3.connect(self.root / "business.db")) as con:
+            self.assertEqual(con.execute("SELECT COUNT(*) FROM records WHERE run_id='RetryCapRun'").fetchone()[0], 1)
+
+    def test_retry_and_timeout_limits_are_strict(self):
+        base = {"version": "axflow.ir.v0", "steps": [
+            {"id": "source", "op": "literal", "value": {}},
+            {"id": "save", "op": "sqlite_put", "from": "source"},
+        ]}
+        for patch in ({"max_attempts": 0}, {"max_attempts": 4}, {"max_attempts": True},
+                      {"timeout_ms": 0}, {"timeout_ms": 5001}, {"timeout_ms": False}):
+            bad = json.loads(json.dumps(base))
+            bad["steps"][1].update(patch)
+            with self.assertRaises(PlanError):
+                validate(bad)
+        pure_with_retry = {"version": "axflow.ir.v0", "steps": [
+            {"id": "source", "op": "literal", "value": {}},
+            {"id": "mapped", "op": "map", "from": "source", "max_attempts": 2,
+             "fields": {"x": {"field": "x"}}},
+        ]}
+        with self.assertRaises(PlanError):
+            validate(pure_with_retry)
+
     def test_step_failure_is_recorded_and_legacy_receipts_migrate(self):
         broken = {"version": "axflow.ir.v0", "steps": [
             {"id": "source", "op": "literal", "value": {"name": "ok"}},
@@ -120,6 +183,10 @@ class TestEngine(unittest.TestCase):
         Engine(state, business)
         migrated = inspect_run(state, "OldRun")
         self.assertEqual(migrated["step_outcomes"], {"completed": 1, "failed": 0, "running": 0, "skipped": 0})
+        with closing(sqlite3.connect(state)) as con:
+            self.assertEqual(con.execute(
+                "SELECT status,attempt_count FROM steps WHERE run_id='OldRun' AND step_id='old_step'"
+            ).fetchone(), ("completed", 1))
 
     def test_restart_after_committed_write_does_not_duplicate(self):
         with self.assertRaises(InjectedStop):
