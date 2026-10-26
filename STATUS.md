@@ -43,3 +43,9 @@ Follow `docs/NEXT_TASK.md`, starting with REA_APP synthetic-repository source in
 - **Code/tests:** no implementation authorized as completed by documentation. REA_APP, runner, GUI, OAuth, DBVORA integration remain NOT_STARTED as of planning. No Codex autonomous execution initiated.
 - Schedule caveat: three hackathon submissions fall in Week 3; calendar target is stretch only. Existing DBVORA still separately owned and independently gated.
 - Next action: Codex first 72-hour synthetic JS/TS analyzer MVP on REA_APP branch, actual tests and SHA recorded.
+
+## 2026-10-27 — ACTIVE 7-DAY SPRINT SCHEDULE (main overview)
+- User preferred **3–5 days by Oct31**, user-requested **max 7-day verification by Nov02** for a **supported-scope hackathon-reusable AX FLOW core**, not every n8n feature or commercial product.
+- [Active daily gates](docs/SPRINT_7_DAY_HACKATHON.md) supersede old 5-week schedule; original full scope blueprint and commercial safety gates are still required to claim full release.
+- Coding on **feature/axflow-mvp** only; this main branch has no merged AX FLOW runnable implementation. Feature branch includes a synthetic SQLite runner and new runlog CLI status/resume, with isolated 2/2 runlog unit test PASS and full updated combined suite PENDING. Real GUI/natural language/DBVORA adapter NOT IMPLEMENTED.
+- KIC prelim is PDF only; PayPal real Sandbox/AI must be proven independently; UGREEN official ZIP is Markdown-only. No forced external action or reuse until exact tests/rights are verified.
