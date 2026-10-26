@@ -9,7 +9,7 @@
 | Component | State | Evidence |
 | --- | --- | --- |
 | REA_APP static source analyzer | MVP_VERIFIED (BOUNDED SYNTHETIC JS/TS) | `REA_APP@80e8d7aad99c1c40d503848ed620421837b79477`; 10 Python + Node parser tests |
-| AX FLOW local runtime | P0_VERIFIED / P1_IN_PROGRESS (SYNTHETIC ONLY) | `feature/axflow-mvp@5e7e05dac27336e87a02d847316b654e82cacbac`; Windows Python 3.11 full suite 12/12 PASS |
+| AX FLOW local runtime | P1_CONDITIONS_TRANSFORMS_VERIFIED / P1_RETRY_TIMEOUT_NEXT (SYNTHETIC ONLY) | `feature/axflow-mvp@e0dd9959dd624ee58321fac34761f9525445ee42`; Windows Python 3.11 full suite 15/15 PASS |
 | Natural-language planner and file input | NOT_STARTED | no code/tests |
 | OAuth, Gmail/Sheets connectors | NOT_STARTED | no account credentials, no auth test |
 | DBVORA integration | NOT_STARTED | separate repository remains unchanged |
@@ -18,7 +18,7 @@
 | Vercel/Production | NOT_APPLICABLE | local-first product, no hosted service |
 
 ## Next
-Continue P1 on `feature/axflow-mvp`: implement bounded conditions/branching and pure data transforms with step outcomes, bounded retries/timeouts, then the synthetic CSV→SQLite vertical path. Keep external auth, real customer data, paid services, deployments and DBVORA source changes behind their documented approval gates.
+Continue P1 on `feature/axflow-mvp`: add bounded SQLite lock-wait retry/timeout policy, then build and verify the synthetic CSV→SQLite vertical path. Keep external auth, real customer data, paid services, deployments and DBVORA source changes behind their documented approval gates.
 
 ## Bootstrap verified after GitHub writes (2026-10-27 KST)
 - GitHub repository visibility independently rechecked: **private**.
@@ -68,3 +68,12 @@ Continue P1 on `feature/axflow-mvp`: implement bounded conditions/branching and 
 - **Concurrency limits:** Same-plan replay with same `run_id` and independent run IDs passed threaded tests; different plans with one `run_id` are rejected under a serialized SQLite claim. Cross-process stress, parallel steps, external side effects, and transaction atomicity across two arbitrary DBs are **UNVERIFIED/UNSUPPORTED**. Hard process termination can leave `running`; operator resume is needed after confirming the old process is stopped.
 - **Product/safety state:** P0 VERIFIED for local synthetic scope, not a customer-ready engine or full Blueprint B pass. Runtime SQLite remains separate from synthetic business SQLite; writes still require `--approve-writes`, and every CLI command remains synthetic-only. No external API, OAuth, real customer data, public host, DBVORA source or paid service used.
 - **Blueprint gaps / next:** P1 remains: branch/condition and transform operators, step-level success/failure records, timeout/retry budgets, and CSV→SQLite data path. Then constrained no-paid template planner and localhost UI; DBVORA service availability and Windows/browser end-to-end remain separate gates.
+
+## 2026-10-27 KST — P1 conditions, transforms and step outcomes verified
+- **Branch/commit:** `feature/axflow-mvp@e0dd9959dd624ee58321fac34761f9525445ee42` (`feat(ax-flow): add bounded branching transforms and step outcomes`), parent `d26a89f7bb1f84eb55ddaa76af5fd2f0b5ee35d1`.
+- **Scope completed:** bounded `condition` comparisons, allowlisted `map` transforms, boolean `when` guards, explicit `branch`, durable `running/completed/failed/skipped` step outcomes, legacy SQLite ledger migration, and outcome aggregates in read-only status.
+- **Verification:** Windows Python 3.11, `cd apps/ax-flow; python -m unittest discover -s tests -v` — **15 passed, 0 failed**. Tests exercise both IF/ELSE paths with actual separate SQLite business writes, safe-transform/operator rejection, failure receipts, old-ledger migration, existing CLI/recovery/concurrency checks. Commit file blob SHAs were checked against uploaded source.
+- **Observed failures and fixes:** initial regression run had 2 assertion mismatches because the new failed-step row is counted and status now returns outcome aggregates; expectations were updated. A migration fixture initially closed without committing, so its inserted rows rolled back; explicit commit fixed it. A concurrent same-run regression exposed a duplicate step-row insert; `INSERT OR IGNORE` restored deterministic same-plan replay. The full suite then passed 15/15.
+- **Not done:** bounded retry/SQLite lock timeout, CSV import, GUI, planner, DBVORA adapter, n8n study. No external credentials, customer data, browser, paid service, or external DB was used.
+- **Limits:** same-plan/threaded replay remains verified; cross-process stress and parallel step scheduling remain unverified. Hard kills may leave a run `running`; resume only after confirming the old process stopped. Runtime and business SQLite remain separate and all writes require explicit approval.
+- **Next atomic task:** bounded retry and SQLite lock-wait timeout with a deterministic held-lock test; then CSV→SQLite synthetic vertical test. Preserve `--synthetic`, explicit local write approval, and no arbitrary code expressions.
