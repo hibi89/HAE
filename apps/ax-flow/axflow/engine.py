@@ -2,18 +2,24 @@
 from __future__ import annotations
 
 import hashlib
+import csv
+import io
 import json
 import math
 import re
 import sqlite3
 import time
 from contextlib import contextmanager
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 VERSION = "axflow.ir.v0"
 IDENTIFIER = re.compile(r"^[a-zA-Z][a-zA-Z0-9_]{0,31}$")
 MAX_STEPS = 32
 MAX_SPEC_BYTES = 65536
+MAX_CSV_BYTES = 262144
+MAX_CSV_ROWS = 1000
+MAX_CSV_COLUMNS = 64
+MAX_CSV_CELL_CHARS = 4096
 
 
 class PlanError(ValueError):
@@ -62,21 +68,37 @@ def validate(plan: object) -> dict:
             "map": {"id", "op", "from", "fields"},
             "condition": {"id", "op", "from", "field", "operator", "value"},
             "branch": {"id", "op", "condition", "then", "else"},
+            "csv_read": {"id", "op", "path"},
             "sqlite_put": {"id", "op", "from"},
+            "sqlite_import_csv": {"id", "op", "from"},
             "sqlite_get": {"id", "op", "from"},
         }
         optional = {
             "field": {"when"},
             "map": {"when"},
             "sqlite_put": {"when", "max_attempts", "timeout_ms"},
+            "sqlite_import_csv": {"when", "max_attempts", "timeout_ms"},
             "sqlite_get": {"when", "max_attempts", "timeout_ms"},
         }
         allowed = fields.get(op)
         if allowed is None or not allowed <= set(step) or set(step) - allowed - optional.get(op, set()):
             raise PlanError(f"unknown operation or invalid fields for {ident}")
-        if op in {"field", "map", "condition", "sqlite_put", "sqlite_get"} and (
+        if op in {"field", "map", "condition", "sqlite_put", "sqlite_import_csv", "sqlite_get"} and (
                 not isinstance(step["from"], str) or step["from"] not in seen):
             raise PlanError("step source must reference an earlier step")
+        if (op in {"field", "map", "condition", "sqlite_put", "sqlite_get"} and
+                step_ops.get(step["from"]) == "csv_read"):
+            raise PlanError("CSV rows may only flow into sqlite_import_csv")
+        if op == "csv_read":
+            source_path = step["path"]
+            parts = source_path.split("/") if isinstance(source_path, str) else []
+            relative = PurePosixPath(source_path) if isinstance(source_path, str) else None
+            if (not isinstance(source_path, str) or not source_path or len(source_path) > 512 or
+                    "\\" in source_path or ":" in source_path or relative.is_absolute() or
+                    "\x00" in source_path or
+                    any(part in {"", ".", ".."} for part in parts) or
+                    relative.suffix.lower() != ".csv"):
+                raise PlanError("csv_read path must be a relative .csv path under --input-root")
         if op == "field" and (not isinstance(step["field"], str) or not IDENTIFIER.fullmatch(step["field"])):
             raise PlanError("field name must be a safe identifier")
         if op == "map":
@@ -108,7 +130,9 @@ def validate(plan: object) -> dict:
             if (not isinstance(then_step, str) or then_step not in seen or
                     not isinstance(else_step, str) or else_step not in seen):
                 raise PlanError("branch outputs must reference earlier steps")
-        if op in {"sqlite_put", "sqlite_get"}:
+            if "csv_read" in {step_ops.get(then_step), step_ops.get(else_step)}:
+                raise PlanError("CSV row data may not be exposed as a branch output")
+        if op in {"sqlite_put", "sqlite_import_csv", "sqlite_get"}:
             attempts = step.get("max_attempts", 1)
             timeout_ms = step.get("timeout_ms", 5000)
             if isinstance(attempts, bool) or not isinstance(attempts, int) or not 1 <= attempts <= 3:
@@ -124,6 +148,8 @@ def validate(plan: object) -> dict:
                 raise PlanError("when must reference an earlier condition and a boolean equals value")
         if op == "sqlite_get" and step_ops.get(step["from"]) != "sqlite_put":
             raise PlanError("sqlite_get source must be a sqlite_put step")
+        if op == "sqlite_import_csv" and step_ops.get(step["from"]) != "csv_read":
+            raise PlanError("sqlite_import_csv source must be a csv_read step")
         seen.add(ident)
         step_ops[ident] = op
     try:
@@ -137,13 +163,16 @@ def validate(plan: object) -> dict:
 class Engine:
     """Do not use on customer data: this early engine persists synthetic step outputs."""
 
-    def __init__(self, state_path: Path, business_path: Path):
+    def __init__(self, state_path: Path, business_path: Path, input_root: Path | None = None):
         self.state_path = Path(state_path).expanduser().resolve()
         self.business_path = Path(business_path).expanduser().resolve()
+        self.input_root = Path(input_root).expanduser().resolve() if input_root is not None else None
         if self.state_path == self.business_path:
             raise PlanError("runtime and business SQLite files must be distinct")
         if not self.state_path.parent.is_dir() or not self.business_path.parent.is_dir():
             raise PlanError("both database parent directories must already exist")
+        if self.input_root is not None and not self.input_root.is_dir():
+            raise PlanError("CSV input root must be an existing directory")
         with self._state() as con:
             con.execute("CREATE TABLE IF NOT EXISTS runs (run_id TEXT PRIMARY KEY, plan_hash TEXT NOT NULL, status TEXT NOT NULL, output_json TEXT, error_type TEXT)")
             columns = {row[1] for row in con.execute("PRAGMA table_info(runs)")}
@@ -159,6 +188,11 @@ class Engine:
                 con.execute("ALTER TABLE steps ADD COLUMN attempt_count INTEGER NOT NULL DEFAULT 1")
         with self._business() as con:
             con.execute("CREATE TABLE IF NOT EXISTS records (run_id TEXT NOT NULL, step_id TEXT NOT NULL, payload_json TEXT NOT NULL, PRIMARY KEY(run_id,step_id))")
+            con.execute(
+                "CREATE TABLE IF NOT EXISTS csv_records (run_id TEXT NOT NULL, import_step_id TEXT NOT NULL, "
+                "source_sha256 TEXT NOT NULL, row_number INTEGER NOT NULL CHECK(row_number > 0), "
+                "payload_json TEXT NOT NULL, PRIMARY KEY(run_id,import_step_id,row_number))"
+            )
 
     @contextmanager
     def _state(self):
@@ -183,7 +217,9 @@ class Engine:
         validate(plan)
         if not isinstance(run_id, str) or not IDENTIFIER.fullmatch(run_id):
             raise PlanError("run_id must be a safe identifier")
-        if any(s["op"] == "sqlite_put" for s in plan["steps"]) and not approve_writes:
+        if any(s["op"] == "csv_read" for s in plan["steps"]) and self.input_root is None:
+            raise PlanError("CSV workflows require an explicit --input-root")
+        if any(s["op"] in {"sqlite_put", "sqlite_import_csv"} for s in plan["steps"]) and not approve_writes:
             raise ApprovalRequired("explicit --approve-writes required for local SQLite writes")
         digest = hashlib.sha256(canonical_json(plan).encode("utf-8")).hexdigest()
         with self._state() as con:
@@ -222,7 +258,22 @@ class Engine:
                     "SELECT output_json,status FROM steps WHERE run_id=? AND step_id=?", (run_id, sid)
                 ).fetchone()
             if saved is not None and saved[1] in {"completed", "skipped"}:
-                results[sid] = json.loads(saved[0])
+                persisted = json.loads(saved[0])
+                if op == "csv_read" and saved[1] == "completed":
+                    try:
+                        current = self._read_csv(step["path"])
+                        if current["source_sha256"] != persisted.get("source_sha256"):
+                            raise PlanError("CSV content changed since this run was checkpointed")
+                        results[sid] = current
+                    except Exception as exc:
+                        with self._state() as con:
+                            con.execute(
+                                "UPDATE steps SET status='failed',error_type=? WHERE run_id=? AND step_id=?",
+                                (type(exc).__name__, run_id, sid),
+                            )
+                        raise
+                else:
+                    results[sid] = persisted
                 outcomes[sid] = saved[1]
                 continue
 
@@ -277,10 +328,11 @@ class Engine:
                             raise StepTimeout("SQLite step exceeded its lock-wait budget")
                         break
                     status = "completed"
+                persisted_value = self._step_receipt(op, value)
                 with self._state() as con:
                     con.execute(
                         "UPDATE steps SET output_json=?,status=?,error_type=NULL WHERE run_id=? AND step_id=?",
-                        (canonical_json(value), status, run_id, sid),
+                        (canonical_json(persisted_value), status, run_id, sid),
                     )
                 results[sid], outcomes[sid] = value, status
             except Exception as exc:
@@ -291,7 +343,8 @@ class Engine:
                     )
                 raise
 
-        output = results[plan["steps"][-1]["id"]]
+        last_step = plan["steps"][-1]
+        output = self._step_receipt(last_step["op"], results[last_step["id"]])
         with self._state() as con:
             con.execute(
                 "UPDATE runs SET status='completed',output_json=?,error_type=NULL WHERE run_id=?",
@@ -304,6 +357,8 @@ class Engine:
         sid, op = step["id"], step["op"]
         if op == "literal":
             return step["value"]
+        if op == "csv_read":
+            return self._read_csv(step["path"])
         if op in {"field", "map", "condition"}:
             source = results[step["from"]]
             if not isinstance(source, dict):
@@ -341,6 +396,36 @@ class Engine:
             if inject_stop_after_business:
                 raise InjectedStop("after durable business write, before runtime receipt")
             return value
+        if op == "sqlite_import_csv":
+            source = results[step["from"]]
+            if not isinstance(source, dict) or not isinstance(source.get("rows"), list):
+                raise PlanError("sqlite_import_csv requires a csv_read result")
+            digest = source["source_sha256"]
+            rows = source["rows"]
+            with self._business(timeout=sqlite_timeout) as con:
+                for row_number, row in enumerate(rows, start=1):
+                    payload = canonical_json(row)
+                    existing = con.execute(
+                        "SELECT source_sha256,payload_json FROM csv_records "
+                        "WHERE run_id=? AND import_step_id=? AND row_number=?",
+                        (run_id, sid, row_number),
+                    ).fetchone()
+                    if existing is not None and existing != (digest, payload):
+                        raise PlanError("replayed CSV row does not match its original source")
+                    con.execute(
+                        "INSERT OR IGNORE INTO csv_records VALUES (?,?,?,?,?)",
+                        (run_id, sid, digest, row_number, payload),
+                    )
+                    stored = con.execute(
+                        "SELECT source_sha256,payload_json FROM csv_records "
+                        "WHERE run_id=? AND import_step_id=? AND row_number=?",
+                        (run_id, sid, row_number),
+                    ).fetchone()
+                    if stored != (digest, payload):
+                        raise PlanError("replayed CSV row does not match its original source")
+            if inject_stop_after_business:
+                raise InjectedStop("after durable CSV import, before runtime receipt")
+            return {"imported_rows": len(rows), "source_sha256": digest}
         # sqlite_get
         store = step["from"]
         if outcomes.get(store) == "skipped":
@@ -355,6 +440,71 @@ class Engine:
         if row is None:
             raise PlanError("record not found")
         return json.loads(row[0])
+
+    @staticmethod
+    def _step_receipt(op: str, value: object) -> object:
+        if op != "csv_read":
+            return value
+        return {key: value[key] for key in ("source_path", "source_sha256", "headers", "row_count")}
+
+    def _read_csv(self, relative_path: str) -> dict[str, object]:
+        if self.input_root is None:
+            raise PlanError("CSV workflows require an explicit --input-root")
+        relative = PurePosixPath(relative_path)
+        candidate = self.input_root
+        try:
+            for part in relative.parts:
+                candidate = candidate / part
+                if candidate.is_symlink():
+                    raise PlanError("CSV input must not traverse symbolic links")
+            resolved = candidate.resolve(strict=True)
+        except (OSError, RuntimeError) as exc:
+            raise PlanError("CSV input file is unavailable") from exc
+        if not resolved.is_relative_to(self.input_root):
+            raise PlanError("CSV input resolved outside --input-root")
+        if not resolved.is_file() or resolved.suffix.lower() != ".csv":
+            raise PlanError("CSV input must be a regular .csv file")
+        try:
+            if resolved.stat().st_size > MAX_CSV_BYTES:
+                raise PlanError("CSV input exceeds 256 KiB")
+            with resolved.open("rb") as stream:
+                raw = stream.read(MAX_CSV_BYTES + 1)
+        except OSError as exc:
+            raise PlanError("CSV input could not be read") from exc
+        if len(raw) > MAX_CSV_BYTES:
+            raise PlanError("CSV input exceeds 256 KiB")
+        try:
+            text = raw.decode("utf-8-sig")
+        except UnicodeDecodeError as exc:
+            raise PlanError("CSV input must use UTF-8 encoding") from exc
+        try:
+            reader = csv.reader(io.StringIO(text, newline=""), strict=True)
+            headers = next(reader, None)
+            if not headers or len(headers) > MAX_CSV_COLUMNS:
+                raise PlanError("CSV must have between 1 and 64 header columns")
+            headers = [header.strip() for header in headers]
+            if any(not IDENTIFIER.fullmatch(header) for header in headers):
+                raise PlanError("CSV headers must be non-empty safe identifiers")
+            if len({header.casefold() for header in headers}) != len(headers):
+                raise PlanError("CSV headers must be unique, ignoring case")
+            rows = []
+            for fields in reader:
+                if not fields or len(fields) != len(headers):
+                    raise PlanError("CSV row has a missing or extra column")
+                if any(len(value) > MAX_CSV_CELL_CHARS or "\x00" in value for value in fields):
+                    raise PlanError("CSV cell exceeds 4096 characters or contains NUL")
+                if len(rows) >= MAX_CSV_ROWS:
+                    raise PlanError("CSV input exceeds 1000 data rows")
+                rows.append(dict(zip(headers, fields)))
+        except csv.Error as exc:
+            raise PlanError("CSV syntax is malformed") from exc
+        return {
+            "source_path": relative.as_posix(),
+            "source_sha256": hashlib.sha256(raw).hexdigest(),
+            "headers": headers,
+            "row_count": len(rows),
+            "rows": rows,
+        }
 
     @staticmethod
     def _transform(value: object, transform: str) -> object:

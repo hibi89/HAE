@@ -6,7 +6,7 @@ import json
 import sys
 from pathlib import Path
 
-from .engine import ApprovalRequired, Engine, PlanError, validate
+from .engine import ApprovalRequired, Engine, PlanError, StepRetryExhausted, StepTimeout, validate
 from .runlog import RunLogError, inspect_run
 
 
@@ -29,6 +29,7 @@ def main() -> int:
     p.add_argument("plan", type=Path, nargs="?")
     p.add_argument("--state", type=Path)
     p.add_argument("--data", type=Path)
+    p.add_argument("--input-root", type=Path, help="explicit directory containing allowed synthetic CSV inputs")
     p.add_argument("--run-id")
     p.add_argument("--approve-writes", action="store_true")
     p.add_argument("--synthetic", action="store_true", help="mandatory: this MVP handles synthetic fixtures only")
@@ -56,10 +57,13 @@ def main() -> int:
             return 0
         if a.state is None or a.data is None or a.run_id is None:
             raise PlanError("run requires --state, --data and --run-id")
-        result = Engine(a.state, a.data).execute(plan, a.run_id, approve_writes=a.approve_writes)
+        result = Engine(a.state, a.data, input_root=a.input_root).execute(
+            plan, a.run_id, approve_writes=a.approve_writes
+        )
         print(json.dumps({"run_id": a.run_id, "status": "completed", "result": result}, ensure_ascii=False, sort_keys=True))
         return 0
-    except (PlanError, ApprovalRequired, RunLogError, OSError, ValueError, json.JSONDecodeError) as exc:
+    except (PlanError, ApprovalRequired, StepRetryExhausted, StepTimeout,
+            RunLogError, OSError, ValueError, json.JSONDecodeError) as exc:
         print(f"AX FLOW stopped safely: {exc}", file=sys.stderr)
         return 2
 

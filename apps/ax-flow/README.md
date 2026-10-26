@@ -9,9 +9,11 @@
 This is the baseline for Blueprint B. REA_APP remains a separate tool in `tools/rea-app/`. DBVORA is a separate process/repository; **no DBVORA connection exists yet**.
 
 ## Executable scope
-- Strict `axflow.ir.v0` JSON plan validator; max 32 steps / 64KiB; allowed operations: `literal`, `field`, `map`, `condition`, `branch`, `sqlite_put`, `sqlite_get`.
+- Strict `axflow.ir.v0` JSON plan validator; max 32 steps / 64KiB; allowed operations: `literal`, `field`, `map`, `condition`, `branch`, `csv_read`, `sqlite_put`, `sqlite_get`, `sqlite_import_csv`.
 - `map` supports only `identity`, `trim`, `lower`, `upper`, `number`, and scalar `string` transforms. `condition` supports typed `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, and bounded `contains` checks. `when` guards skip unselected steps and `branch` chooses one earlier result; no expression evaluation or user code execution exists.
 - `sqlite_put` and `sqlite_get` may set `max_attempts` (1–3) and `timeout_ms` (1–5000; defaults 1 and 5000). Only transient SQLite `busy`/`locked` errors retry. The retry loop owns the wait budget; it does not retry validation, payload mismatch, or arbitrary external operations. Attempt counts persist with each step.
+- `csv_read` accepts a relative `.csv` path only under an explicit `--input-root`. It rejects symlink traversal, path escape, non-UTF-8, malformed rows, unsafe/duplicate headers, files over 256 KiB, more than 1000 data rows, more than 64 columns, or cells over 4096 characters. `sqlite_import_csv` writes rows atomically to the separate business DB with run/step/row idempotency keys and source SHA-256 provenance.
+- CSV rows remain in memory only while a run is active. The runtime ledger checkpoints the relative path, file hash, headers and row count; resume rereads the file and refuses a changed source. Business rows remain local and the CLI is still synthetic-only.
 - Runtime SQLite: `runs` and `steps` persistent status/results/receipts. Separate business SQLite: `records`, uniquely indexed by run and step for idempotent local writes.
 - Step outcomes persist as `running`, `completed`, `failed`, or `skipped`; read-only `status` reports aggregate outcomes without step payloads. Existing P0 step receipts migrate to `completed`.
 - No write operation without explicit `--approve-writes`. Synthetic-only CLI requires `--synthetic` and cannot call real HTTP, shells, browser or external providers.
@@ -23,7 +25,7 @@ From `apps/ax-flow/` with Python 3.11+:
 ```shell
 python -m unittest discover -s tests -v
 ```
-Latest P1 checkpoint: Windows Python 3.11, **17/17 tests PASS**. This includes existing P0 CLI/recovery/concurrency checks, IF/ELSE execution on both outcomes, mapping transforms, step-failure reporting, old-receipt migration, a held-lock retry cap, timeout, and resume after lock release. CI and clean third-party installs have not been run.
+Latest P2 checkpoint: Windows Python 3.11, **20/20 tests PASS**. This includes existing P0/P1 CLI/recovery/concurrency checks, both IF/ELSE outcomes, mapping transforms, held-lock retry/timeout/recovery, full CLI CSV→SQLite import, payload-redacted CSV checkpointing, source-change rejection, and malformed/oversized/path-escape input rejection. CI and clean third-party installs have not been run.
 
 For a manual synthetic demo, create a JSON file outside the repo:
 ```json
@@ -36,8 +38,19 @@ python -m axflow run /path/to/plan.json --synthetic --state /path/to/runtime.db 
 ```
 Both database parent folders must already exist. This stores test fixture values in SQLite and is **not authorized for confidential/customer data**.
 
+### Synthetic CSV → SQLite
+Plan:
+```json
+{"version":"axflow.ir.v0","steps":[{"id":"input","op":"csv_read","path":"contacts.csv"},{"id":"imported","op":"sqlite_import_csv","from":"input"}]}
+```
+Run with an explicit fixture directory:
+```shell
+python -m axflow run /path/to/csv-plan.json --input-root /path/to/synthetic-input --synthetic --state /path/to/runtime.db --data /path/to/business.db --run-id CsvDemo1 --approve-writes
+```
+Imported rows are stored in the local business database's `csv_records` table. Use synthetic fixtures only; this does not authorize processing confidential data.
+
 ## Next slice
-Test a complete synthetic CSV→SQLite path. Keep runtime and business DB separate and preserve tests. A 5-week stretch plan is a target, not evidence of completion.
+Constrained template/natural-language planning into this native IR, then local GUI and supported end-to-end checks. Keep runtime and business DB separate and preserve tests. A 5-week stretch plan is a target, not evidence of completion.
 
 ## 2026-10-27 — fast hackathon sprint / status-resume increment
 Active user target: **3–5 days** (Oct 31 preferred), max **7-day verification** (Nov 2), limited scope; see `../../docs/SPRINT_7_DAY_HACKATHON.md`. Older plans superseded.

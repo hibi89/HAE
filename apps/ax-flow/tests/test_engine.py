@@ -1,4 +1,5 @@
 import json
+import hashlib
 import sqlite3
 import subprocess
 import sys
@@ -161,6 +162,125 @@ class TestEngine(unittest.TestCase):
         ]}
         with self.assertRaises(PlanError):
             validate(pure_with_retry)
+
+    def test_csv_import_is_bounded_local_and_resumes_without_payload_duplication(self):
+        input_root = self.root / "csv-input"
+        input_root.mkdir()
+        csv_path = input_root / "rows.csv"
+        original = b"id,name\r\n001,Alice\r\n002,Bob\r\n"
+        csv_path.write_bytes(original)
+        plan = {"version": "axflow.ir.v0", "steps": [
+            {"id": "input", "op": "csv_read", "path": "rows.csv"},
+            {"id": "imported", "op": "sqlite_import_csv", "from": "input",
+             "max_attempts": 3, "timeout_ms": 1000},
+        ]}
+        engine = Engine(self.root / "csv-state.db", self.root / "csv-business.db", input_root=input_root)
+        with self.assertRaises(InjectedStop):
+            engine.execute(plan, "CsvReplay", approve_writes=True, inject_stop_after_business=True)
+        with closing(sqlite3.connect(self.root / "csv-state.db")) as state:
+            receipt = state.execute(
+                "SELECT output_json,status FROM steps WHERE run_id='CsvReplay' AND step_id='input'"
+            ).fetchone()
+        self.assertEqual(receipt[1], "completed")
+        self.assertNotIn("Alice", receipt[0])
+        with closing(sqlite3.connect(self.root / "csv-business.db")) as business:
+            stored = business.execute(
+                "SELECT row_number,payload_json FROM csv_records WHERE run_id='CsvReplay' ORDER BY row_number"
+            ).fetchall()
+        self.assertEqual(stored, [(1, '{"id":"001","name":"Alice"}'),
+                                  (2, '{"id":"002","name":"Bob"}')])
+
+        csv_path.write_bytes(b"id,name\r\n003,Changed\r\n")
+        with self.assertRaises(PlanError):
+            engine.execute(plan, "CsvReplay", approve_writes=True)
+        self.assertEqual(inspect_run(self.root / "csv-state.db", "CsvReplay")["status"], "failed")
+        csv_path.write_bytes(original)
+        result = engine.execute(plan, "CsvReplay", approve_writes=True)
+        self.assertEqual(result, {"imported_rows": 2, "source_sha256": hashlib.sha256(original).hexdigest()})
+        self.assertEqual(inspect_run(self.root / "csv-state.db", "CsvReplay")["status"], "completed")
+        with closing(sqlite3.connect(self.root / "csv-business.db")) as business:
+            self.assertEqual(business.execute(
+                "SELECT COUNT(*) FROM csv_records WHERE run_id='CsvReplay'"
+            ).fetchone()[0], 2)
+        metadata = engine.execute({"version": "axflow.ir.v0", "steps": [
+            {"id": "input", "op": "csv_read", "path": "rows.csv"},
+        ]}, "CsvMetadata")
+        self.assertEqual(metadata["row_count"], 2)
+        self.assertNotIn("rows", metadata)
+        with closing(sqlite3.connect(self.root / "csv-state.db")) as state:
+            output_json = state.execute(
+                "SELECT output_json FROM runs WHERE run_id='CsvMetadata'"
+            ).fetchone()[0]
+        self.assertNotIn("Alice", output_json)
+
+    def test_csv_input_limits_and_path_allowlist_fail_before_business_writes(self):
+        input_root = self.root / "invalid-csv"
+        input_root.mkdir()
+        fixtures = {
+            "duplicate.csv": b"id,ID\n1,2\n",
+            "ragged.csv": b"id,name\n1,Alice,extra\n",
+            "malformed.csv": b'id,name\n1,"unfinished\n',
+            "invalid-utf8.csv": b"\xff\xfe\xfd",
+            "oversized.csv": b"id\n" + b"x" * (262144 + 1),
+            "too-many.csv": ("id\n" + "".join(f"{i}\n" for i in range(1001))).encode("utf-8"),
+            "too-many-columns.csv": (",".join(f"c{i}" for i in range(65)) + "\n").encode("utf-8"),
+            "long-cell.csv": ("id\n" + "x" * 4097 + "\n").encode("utf-8"),
+        }
+        for name, content in fixtures.items():
+            (input_root / name).write_bytes(content)
+        engine = Engine(self.root / "invalid-state.db", self.root / "invalid-business.db", input_root=input_root)
+        for index, name in enumerate([*fixtures, "missing.csv"], start=1):
+            plan = {"version": "axflow.ir.v0", "steps": [
+                {"id": "input", "op": "csv_read", "path": name},
+                {"id": "imported", "op": "sqlite_import_csv", "from": "input"},
+            ]}
+            with self.subTest(name=name), self.assertRaises(PlanError):
+                engine.execute(plan, f"BadCsv{index}", approve_writes=True)
+        for bad_path in ("../escape.csv", "C:/escape.csv", "/absolute.csv", "dir\\rows.csv", "rows.txt", "\x00bad.csv"):
+            with self.assertRaises(PlanError):
+                validate({"version": "axflow.ir.v0", "steps": [
+                    {"id": "input", "op": "csv_read", "path": bad_path},
+                ]})
+        with self.assertRaises(PlanError):
+            validate({"version": "axflow.ir.v0", "steps": [
+                {"id": "input", "op": "csv_read", "path": "duplicate.csv"},
+                {"id": "saved", "op": "sqlite_put", "from": "input"},
+            ]})
+        good_plan = {"version": "axflow.ir.v0", "steps": [
+            {"id": "input", "op": "csv_read", "path": "duplicate.csv"},
+            {"id": "imported", "op": "sqlite_import_csv", "from": "input"},
+        ]}
+        with self.assertRaises(ApprovalRequired):
+            engine.execute(good_plan, "NoApproval")
+        with self.assertRaises(PlanError):
+            Engine(self.root / "no-root-state.db", self.root / "no-root-data.db").execute(
+                good_plan, "NoRoot", approve_writes=True
+            )
+        with closing(sqlite3.connect(self.root / "invalid-business.db")) as business:
+            self.assertEqual(business.execute("SELECT COUNT(*) FROM csv_records").fetchone()[0], 0)
+
+    def test_cli_csv_to_sqlite_vertical_path(self):
+        input_root = self.root / "cli-csv"
+        input_root.mkdir()
+        (input_root / "contacts.csv").write_text("id,name\n1,Alice\n", encoding="utf-8")
+        plan_path = self.root / "csv-plan.json"
+        plan_path.write_text(json.dumps({"version": "axflow.ir.v0", "steps": [
+            {"id": "input", "op": "csv_read", "path": "contacts.csv"},
+            {"id": "imported", "op": "sqlite_import_csv", "from": "input"},
+        ]}), encoding="utf-8")
+        result = subprocess.run([
+            sys.executable, "-m", "axflow", "run", str(plan_path),
+            "--state", str(self.root / "cli-csv-state.db"),
+            "--data", str(self.root / "cli-csv-business.db"),
+            "--input-root", str(input_root), "--run-id", "CliCsvRun",
+            "--synthetic", "--approve-writes",
+        ], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["result"]["imported_rows"], 1)
+        with closing(sqlite3.connect(self.root / "cli-csv-business.db")) as business:
+            self.assertEqual(business.execute(
+                "SELECT payload_json FROM csv_records WHERE run_id='CliCsvRun' AND row_number=1"
+            ).fetchone()[0], '{"id":"1","name":"Alice"}')
 
     def test_step_failure_is_recorded_and_legacy_receipts_migrate(self):
         broken = {"version": "axflow.ir.v0", "steps": [
