@@ -1,14 +1,13 @@
-# AX FLOW milestone roadmap — accelerated v2
+# AX FLOW — active 7-day sprint / longer-term product roadmap
 
-**User priority: REA_APP → learn n8n and build our own new core (within 2 weeks) → AX FLOW UI/AI + concurrently DBVORA completion and integration (another 3 weeks). Total target 5 weeks.** Not a request to modify or commercially redistribute n8n source.
+## Immediate objective
+**Working supported-scope hackathon-reusable AX FLOW vertical slice:** 3–5 days target through **2026-10-31 KST**, maximum user-requested 7-day verification by **2026-11-02 KST**. Details/acceptance [SPRINT_7_DAY_HACKATHON.md](SPRINT_7_DAY_HACKATHON.md), target [TARGET_BLUEPRINT_V1.md](TARGET_BLUEPRINT_V1.md).
 
-| Gate | Expected date | Acceptance |
-|---|---|---|
-| A0 | 2026-10-27–29 | REA_APP practical JS/TS analyzer MVP with actual safe CLI regression |
-| A1 | by 2026-11-02 | n8n permitted architecture research, original independent workflow contracts |
-| E1 | by 2026-11-09 | new native runner executes three fixture workflows with versioned IR + SQLite and restart safeguards |
-| U1 | by 2026-11-16 | natural-language→workflow and local UI, templates, auto-config/tests for supported cases |
-| D1 | by 2026-11-23 | DBVORA approved read-only SQLite inventory adapter; authorized connector(s) |
-| R1 | by 2026-11-30 | AX FLOW + DBVORA integrated scope-limited v1 candidate, Windows/GUI/security/recovery E2E, verified supported-source restore where permitted |
+1. REA_APP v0.3.0 bounded synthetic source scanner already exists; n8n research reference documented.
+2. Native JSON IR + SQLite synthetic runner existing; extend status/resume, safe conditional transform, CSV fixture read & business SQLite write, tests.
+3. Templates/constrained natural-language intake, auto-config/test and minimal GUI for one supported automation.
+4. Read-only DBVORA local SQLite view plus explicit unsupported/offline conditions; integrated E2E, Windows/GUI and failure checks.
+5. Pin SHA and publish **hackathon-ready library contract only when end-to-end tests pass**. No direct dependency in KIC prelim PDF, PayPal real Sandbox flow or UGREEN Round 1 Markdown Skill ZIP.
 
-Dates are targets; provider authorization, hackathon conflicts, DBVORA independent release and test evidence can delay. The legacy 21-week plan is superseded. Exact process: [FAST_TRACK_5_WEEK.md](FAST_TRACK_5_WEEK.md); blueprint: [TARGET_BLUEPRINT_V1.md](TARGET_BLUEPRINT_V1.md); tests: [ACCEPTANCE_MATRIX.md](ACCEPTANCE_MATRIX.md).
+## Subsequent customer product backlog (not magically complete by day 7)
+General natural language request coverage and repair, arbitrary app integrations, real provider OAuth lifecycle, supported multi-provider DB management, independently verified backup/restore across supported OS, packaging and security/privacy review, pilot customers, performance comparisons, support/monetization. Release with specific feature claims only after each gate. Older 5-week and 21-week calendar drafts are historical.
