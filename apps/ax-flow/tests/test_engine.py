@@ -53,6 +53,28 @@ class TestEngine(unittest.TestCase):
         with self.assertRaises(PlanError):
             self.engine.execute(changed, "Stable", approve_writes=True)
 
+    def test_cli_status_and_resume(self):
+        path = self.root / "plan.json"
+        path.write_text(json.dumps(self.plan), encoding="utf-8")
+        base = [sys.executable, "-m", "axflow"]
+        run_args = [str(path), "--state", str(self.root / "state.db"),
+                    "--data", str(self.root / "business.db"), "--run-id", "ResumeCase",
+                    "--synthetic", "--approve-writes"]
+        first = subprocess.run(base + ["run"] + run_args, capture_output=True, text=True)
+        self.assertEqual(first.returncode, 0, first.stderr)
+        status = subprocess.run(base + ["status", "--state", str(self.root / "state.db"),
+                                         "--run-id", "ResumeCase", "--synthetic"],
+                                capture_output=True, text=True)
+        self.assertEqual(status.returncode, 0, status.stderr)
+        report = json.loads(status.stdout)
+        self.assertEqual(report["status"], "completed")
+        self.assertEqual(report["steps_recorded"], 4)
+        self.assertNotIn("fixture", str(report))
+        restarted = subprocess.run(base + ["resume"] + run_args, capture_output=True, text=True)
+        self.assertEqual(restarted.returncode, 0, restarted.stderr)
+        with sqlite3.connect(self.root / "business.db") as con:
+            self.assertEqual(con.execute("SELECT COUNT(*) FROM records WHERE run_id='ResumeCase'").fetchone()[0], 1)
+
     def test_cli_validate_requires_synthetic_flag(self):
         path = self.root / "plan.json"
         path.write_text(json.dumps(self.plan), encoding="utf-8")
