@@ -35,3 +35,11 @@ Follow `docs/NEXT_TASK.md`, starting with REA_APP synthetic-repository source in
 - **Schedule:** 21-week planning baseline, 445–750 focused hours, target review 2027-03-22 if continuous, possible +2–6-week risk buffer; not an estimated uptime, quote or guaranteed finish.
 - **Implementation/tests:** only planning and GitHub configuration; 0 application tests / 0 live workflows / 0 DB adapter tests / 0 customer installs. Vercel/Production N/A; release UNVERIFIED.
 - **Next:** source-safe REA_APP R1 design and synthetic MVP on REA_APP branch following docs/NEXT_TASK.md. No permission to use real customer DB, paid API, public hosting, OAuth account/app or mutate DBVORA.
+
+## 2026-10-27 — LATEST SCHEDULE DECISION (supersedes 21-week estimate)
+- **New target: 5 weeks total**: REA_APP + lawful n8n reference study + independently written basic runner in Weeks 1–2 (Oct27–Nov09); AX FLOW AI/GUI/auth with DBVORA adapter/independent DBVORA readiness concurrently in Weeks 3–5 (Nov10–Nov30).
+- User workflow: **2–3 day executable MVP → freeze/compare original blueprint → gap repair → security/Windows/commercial hardening**, not upfront months of elaborate architecture.
+- New docs: docs/FAST_TRACK_5_WEEK.md, docs/TARGET_BLUEPRINT_V1.md, docs/CODEX_EXTRA_HIGH_ORDER.md. docs/MASTER_SCHEDULE.md, docs/NEXT_TASK.md, docs/ROADMAP.md replaced with v2 active schedule. GitHub commits/refs need final live verification.
+- **Code/tests:** no implementation authorized as completed by documentation. REA_APP, runner, GUI, OAuth, DBVORA integration remain NOT_STARTED as of planning. No Codex autonomous execution initiated.
+- Schedule caveat: three hackathon submissions fall in Week 3; calendar target is stretch only. Existing DBVORA still separately owned and independently gated.
+- Next action: Codex first 72-hour synthetic JS/TS analyzer MVP on REA_APP branch, actual tests and SHA recorded.
