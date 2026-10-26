@@ -8,6 +8,12 @@
 - Progress remains **77%** on the established A–E heuristic; this adds recovery evidence but does not close browser E2E, restore/security, installer or customer/release gates. Product remains PARTIAL.
 - No new site needed; existing synthetic localhost UI at `http://127.0.0.1:8765/` remains open.
 
+## n8n architecture analysis complete (official sources, 2026-10-27 KST)
+- Reviewed graph/branch ordering, executor stack and suspend boundary, execution retry modes, item lineage, Redis queue mode, Code-node task runners, and current Sustainable Use License guidance.
+- Findings recorded in `docs/NEXT_TASK.md`: n8n is a versioned graph runtime with explicit branch-order semantics; queue mode separates trigger intake from workers; item lineage and wait/retry persistence are first-class; arbitrary code requires isolation. AX FLOW should remain local and synthetic for this stage, without queue infrastructure, arbitrary code, n8n dependencies or source/assets. Do not claim feature parity.
+- Primary sources: n8n official docs and n8n-io GitHub source; license FAQ updated 2026-10-06. No application tests apply to this source review; no product code changed.
+- Progress stays **77%**. Product remains PARTIAL.
+
 
 ## Verified by GitHub at start of bootstrap
 - Repository `hibi89/AX_FLOW`: **Private** (renamed from user-created REA_APP), default branch `main`, read/write admin available.
