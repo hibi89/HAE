@@ -1,3 +1,13 @@
+## Current checkpoint (P6 process-crash and cross-process replay passed — 2026-10-27 KST)
+
+Branch `feature/axflow-mvp`: P6 code `7190f5a3c8a238b1f33a948dd9a3df0d5e121b37`, process-recovery regression tests `d90644e28ab46c48091a1b0fb0329af0b1d15eb9`. Windows Python 3.11.9 engine tests 27/27 and full suite 49/49 pass. A child process was terminated with `os._exit(73)` after the synthetic CSV business commit but before the runtime receipt; resume completed with no duplicate rows. Two independent processes replaying one run produced one durable write. First test invocation and helper failed due test harness import paths; both corrected and fully rerun.
+
+Blueprint gaps: local interval trigger; visible-browser click/render E2E; independently verified source-preserving DBVORA restore; security assessment; Windows installer; customer/release gates. Product remains PARTIAL. Updated A–E equal-weight tracking estimate: 70% (A100/B85/C70/D60/E35), not acceptance or release readiness. P6 localhost UI is `http://127.0.0.1:8765/`; refresh the already-open tab. DBVORA service is separate and currently unavailable.
+
+**NEXT ATOMIC TASK:** implement a bounded local interval trigger for a synthetic workflow with persisted due ticks, duplicate-run protection, explicit cancellation/stop and a bounded run count. Test restart/recovery, missed/due tick semantics, and no duplicate business writes. Do not connect external schedulers or customer data. Then re-run the full suite and update STATUS/HANDOFF.
+
+---
+
 # Next work unit — 2026-10-27 KST (ACTIVE fast-track)
 
 ## Current checkpoint (P6 filtered planner and UI/API verification passed)
