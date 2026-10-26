@@ -1,21 +1,19 @@
-# NEXT TASK — after DB-required architecture plan (2026-10-27 KST)
+# Next work unit — 2026-10-27 KST (ACTIVE fast-track)
 
-## Preconditions already verified
-Repo hibi89/AX_FLOW is private, initial docs published. Branches main, develop, REA_APP, feature/axflow-mvp existed and were identical at earlier bootstrap checkpoint. User asked for dedicated DBVORA integration branch. Verify its actual existence and HEAD before work; do not assume docs means code.
+**Owner decision supersedes 21-week plan:** first 2 weeks REA_APP + own n8n-like runner; next 3 weeks AX FLOW + parallel DBVORA integration. Read docs/FAST_TRACK_5_WEEK.md, docs/TARGET_BLUEPRINT_V1.md, docs/CODEX_EXTRA_HIGH_ORDER.md before any implementation.
 
-## First code gate: REA_APP R1
-1. From `REA_APP` branch, choose between Python AST-first (recommended zero-extra-dependency Python MVP, optional Tree-sitter for JS/TS) and Tree-sitter-first (broader languages but install/runtime complexity). Approval gate for substantive coding/dependencies.
-2. Create only synthetic fixtures, read-only bounded repo walker, safe path/symlink rules, Python AST import graph with file/line evidence and deterministic JSON + human report in `tools/rea-app/`.
-3. Run source inventory, graph, mutation/symlink/error limit tests. Note actual test counts and hash verification.
-4. Update STATUS/HANDOFF and commit with actual SHA; move to permissible n8n functional study only with license provenance review.
-5. In parallel define AX FLOW v0 typed IR schema and separate internal/business SQLite data model, but do not touch customer credentials or real customer data.
+## Codex first authorized implementation unit (MVP D1–D3, REA_APP branch)
+1. Verify hibi89/AX_FLOW current HEAD and read HANDOFF/STATUS/AGENTS/REQUIREMENTS/docs + actual code.
+2. Build read-only bounded source walker and parser-accurate JS/TS import/export graph with file/line provenance under tools/rea-app. Python AST optional. Use a permissible local AST parser (TypeScript compiler API/Tree-sitter) with pinned version; no code copied from n8n.
+3. Design small synthetic JS/TS fixture, run CLI end-to-end, return deterministic JSON+Markdown. Fail closed on huge/binary/secret/symlink/file escape cases. Never execute inspected code or mutate the source root.
+4. Fix test failures; report **actual** commands, PASS/FAIL/SKIP, exact commit SHA and target blueprint gaps. Avoid asking owner to do work Codex can do itself. No blanket “finished” claim from skeleton.
+5. D4–D6 permitted n8n study and original behavior contracts; D7–D14 independent executor on feature/axflow-mvp. Refer to work order for exact limits.
 
-## Later DB gate (separate branch feature/dbvora-integration)
-1. Confirm current hibi89/DBVORA `feature/p0-db-map` SHA and read newest HANDOFF/STATUS/code. Its latest documented 210 test definitions do not equal 210 passes on current head, and Windows acceptance is pending.
-2. Design versioned, authenticated **read-only** localhost metadata contract for one user-selected SQLite DB first. DBVORA `/api/inventory` exists now but multi-asset generalized API does NOT.
-3. Build AX FLOW adapter against fixtures/stubs and independently verified DBVORA real service, including authorized asset enrollment, offline failure, relationship provenance, schema upgrades, no raw rows, no source mutations.
-4. Read-only UI DB map; backup/restore integration only through explicit consent and DBVORA's separately validated safety gates. No direct public server write endpoint or secret forwarding.
-5. Update both repositories' contracts only if separately approved; do not silently alter DBVORA production or feature branch.
+## Chief review gate
+Compare every completed small module against docs/TARGET_BLUEPRINT_V1.md, identify high-priority missing features, and allow Codex to implement immediately within approved scope. First design decisions preselected for speed (bounded Python CLI + AST parser adapter, native JSON IR, SQLite, local-first). Escalate new paid costs/licensing, public visibility, user secrets, real external API/DB operations or destructive effects only.
 
-## Completion checkpoint
-Review docs/MASTER_SCHEDULE.md weekly, record actual effort vs baseline. No claims of product-ready until docs/ACCEPTANCE_MATRIX.md tests all pass including DBVORA and Windows/GUI/customer cases. No paid API, external upload, provider OAuth app, public port, production or customer database without explicit approval. User `ㄱ` means next safe work unit.
+## DBVORA parallel work
+AX FLOW-side feature/dbvora-integration branch only. Check independent DBVORA source/API/Windows gate before committing adapter claims. No dependency on a nonexistent universal API; safe read-only SQLite inventory first. Preserve separate runtime and business SQLite.
+
+## Safety
+The active 2026 hackathon deadlines overlap Week 3; don't override submission priorities. 5-week target is conditional, no automatic background execution. Update STATUS/HANDOFF when actual implementation/test results change.
