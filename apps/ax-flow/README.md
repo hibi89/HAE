@@ -67,10 +67,10 @@ An interval workflow uses a bounded trigger in its native IR:
 Start it with the synthetic scheduler command and a persistent schedule ID:
 
 ```shell
-python -m axflow schedule /path/to/interval-plan.json --synthetic --state /path/to/runtime.db --data /path/to/business.db --schedule-id LocalDemo --approve-writes
+python -m axflow schedule /path/to/interval-plan.json --synthetic --state /path/to/runtime.db --data /path/to/business.db --schedule-id LocalDemo --max-runs 100 --approve-writes
 ```
 
-The first tick runs immediately; subsequent ticks follow the persisted one-second-to-one-day interval. Add `--max-runs 2` to stop after two due ticks (the bounded maximum is 1000); otherwise stop with Ctrl+C. Runtime state records the plan hash, interval anchor and next tick. Tick run IDs are deterministic, so restarting after a process exit retries the pending tick and uses the engine's local idempotency keys. Reusing a schedule ID with a changed plan or interval fails closed. This scheduler is a local foreground process, not an OS service or cloud scheduler; it handles synthetic workflows only, and writes still require explicit approval.
+The first tick runs immediately; subsequent ticks follow the persisted one-second-to-one-day interval. `--max-runs` is required and bounded from 1 to 1000, and Ctrl+C also stops the foreground process. Runtime state records the plan hash, interval anchor and next tick. Tick run IDs are deterministic, so restarting after a process exit retries the pending tick and uses the engine's local idempotency keys. Reusing a schedule ID with a changed plan or interval fails closed. This scheduler is a local foreground process, not an OS service or cloud scheduler; it handles synthetic workflows only, and writes still require explicit approval.
 
 ## Local request UI
 The localhost UI adds a narrow, deterministic English/Korean request parser for four synthetic CSV tasks: full import, one-field filtered import, import only when the filter matches, and read-only lookup of match count/original row numbers. Filters accept one explicit safe comparison; numeric thresholds use bounded numeric conversion. The lookup never returns or checkpoints matching row contents. The parser is rule-based and offline, not an LLM or general-purpose planner. The UI previews validated IR, asks for write approval only when a plan writes SQLite, runs through the same engine, and displays redacted receipts and failure status. Its DBVORA panel can display schema/file-size metadata for the one database selected by the DBVORA service.
