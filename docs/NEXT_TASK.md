@@ -1,3 +1,13 @@
+## Current checkpoint (P8 zipapp/package API smoke passed — 2026-10-27 KST)
+
+Branch `feature/axflow-mvp` P8 commits end at `c1219d2d55b0ea1cbd195fcdbcb9ec386220e83e`. Windows Python 3.11.9: package tests 3/3, full suite 57/57; JS syntax and py_compile pass. A stdlib `.pyz` ran from outside the source tree with no `PYTHONPATH`; CLI synthetic SQLite and packaged UI GET/preview/approved-run passed. The completion receipt did not expose the fixture row. Overwrite was rejected without changing artifact SHA.
+
+A–E heuristic: **76%** (A100/B95/C80/D60/E45); status PARTIAL. Still open: visible browser click/render, DBVORA browser view and independent restore, security assessment, signed installer, customer/release gates. The host denied creating a symlink fixture, so that path is unverified. No extra site needs opening; existing `http://127.0.0.1:8765/` is the P6 UI and schedule controls are CLI-only.
+
+**NEXT ATOMIC TASK:** conduct a read-only review of loopback/origin checks, file/database path boundaries, privacy/redaction, interval tick persistence and zipapp contents against Blueprint E. Add regression tests only for concrete findings; run the complete suite before claiming closure. Do not touch customer data, credentials, DBVORA restore or deployment.
+
+---
+
 ## Current checkpoint (P7 interval trigger passed — 2026-10-27 KST)
 
 Code/test chain on `feature/axflow-mvp` ends at `bef87cce42960cb31daaeb10b8e2ede0698a5748`; hard-crash test commit `ce1316c430fe90c67a76bdd29c63ec7e82687889`. Windows Python 3.11.9: scheduler tests 5/5; complete suite 54/54; JS syntax and Python compile pass. IR supports bounded manual/interval triggers; local schedule state pins plan hash and due tick. Restart replays the same deterministic tick; concurrent workers do not duplicate its SQLite write. Every schedule call requires `--max-runs 1..1000`; writes require explicit approval.
