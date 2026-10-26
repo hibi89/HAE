@@ -105,7 +105,7 @@ python tools/package_axflow.py --output "C:\axflow-demo\axflow.pyz"
 python "C:\axflow-demo\axflow.pyz" template --name csv_to_sqlite --csv contacts.csv --synthetic
 ```
 
-The zipapp bundles the `axflow` Python package and its UI assets; it does not install dependencies or write to an existing artifact. `python -m unittest discover -s tests -v` builds and exercises a temporary package from outside the source tree, runs a synthetic SQLite workflow, and checks its localhost static UI assets. This proves a package smoke only. It is not a signed executable, installer, background service, customer-data approval or release gate.
+The zipapp bundles the `axflow` Python package and its UI assets; it does not install dependencies or write to an existing artifact. `python -m unittest discover -s tests -v` builds and exercises a temporary package from outside the source tree, runs a synthetic SQLite CLI workflow, loads its localhost static UI assets, then previews and runs a synthetic import through the packaged UI API. This proves a package/API smoke only. It is not a signed executable, installer, background service, visible-browser click test, customer-data approval or release gate.
 
 ## 2026-10-27 — fast hackathon sprint / status-resume increment
 Active user target: **3–5 days** (Oct 31 preferred), max **7-day verification** (Nov 2), limited scope; see `../../docs/SPRINT_7_DAY_HACKATHON.md`. Older plans superseded.
