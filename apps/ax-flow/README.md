@@ -25,7 +25,7 @@ From `apps/ax-flow/` with Python 3.11+:
 ```shell
 python -m unittest discover -s tests -v
 ```
-Latest full suite: Windows Python 3.11, **54/54 tests PASS**. This includes P0/P1 CLI/recovery/concurrency checks, CSV parsing/import/filter/replay, English/Korean intent recognition, localhost UI API preview/run/status for full import, filtered import, conditional import and read-only lookup, DBVORA contract validation, redirect refusal, response bounds, per-write approval, redacted receipts, and bounded persistent interval ticks with crash recovery and concurrent tick deduplication. Node syntax check for axflow/static/app.js and Python compilation also pass. A live HTTP smoke using DBVORA's unmodified `feature/p0-db-map@31b8257468d28743fb2d3767d1caa56938df756c` source inspected the synthetic business SQLite schema through AX FLOW and confirmed its SHA-256 and mtime did not change. The visible browser automation attempt stopped before navigation because the Windows UI helper could not verify the current browser URL; visual browser E2E remains unverified. CI and clean third-party installs have not been run.
+Latest full suite: Windows Python 3.11, **57/57 tests PASS**. This includes P0/P1 CLI/recovery/concurrency checks, CSV parsing/import/filter/replay, English/Korean intent recognition, localhost UI API preview/run/status for full import, filtered import, conditional import and read-only lookup, DBVORA contract validation, redirect refusal, response bounds, per-write approval, redacted receipts, bounded persistent interval ticks with crash recovery and concurrent tick deduplication, and a dependency-free zipapp CLI/UI smoke. Node syntax check for axflow/static/app.js and Python compilation also pass. A live HTTP smoke using DBVORA's unmodified `feature/p0-db-map@31b8257468d28743fb2d3767d1caa56938df756c` source inspected the synthetic business SQLite schema through AX FLOW and confirmed its SHA-256 and mtime did not change. The visible browser automation attempt stopped before navigation because the Windows UI helper could not verify the current browser URL; visual browser E2E remains unverified. CI and clean third-party installs have not been run.
 
 For a manual synthetic demo, create a JSON file outside the repo:
 ```json
@@ -95,6 +95,17 @@ Then add `--dbvora-url http://127.0.0.1:8766` to the AX FLOW `serve` command and
 
 ## Remaining Blueprint gaps
 Visible browser click/render E2E, independently verified source-preserving DBVORA restore, security assessment, Windows installer, customer/release gates and broader supported scope remain open. The local interval runner is foreground-only and has no GUI schedule editor or OS/cloud service integration. Keep customer data, OAuth, external writes and release claims blocked until authorized and independently verified.
+
+## Local Windows zipapp package smoke
+
+Build a standard-library-only `.pyz` from this branch, writing outside the source tree to a new file path whose parent already exists:
+
+```powershell
+python tools/package_axflow.py --output "C:\axflow-demo\axflow.pyz"
+python "C:\axflow-demo\axflow.pyz" template --name csv_to_sqlite --csv contacts.csv --synthetic
+```
+
+The zipapp bundles the `axflow` Python package and its UI assets; it does not install dependencies or write to an existing artifact. `python -m unittest discover -s tests -v` builds and exercises a temporary package from outside the source tree, runs a synthetic SQLite workflow, and checks its localhost static UI assets. This proves a package smoke only. It is not a signed executable, installer, background service, customer-data approval or release gate.
 
 ## 2026-10-27 — fast hackathon sprint / status-resume increment
 Active user target: **3–5 days** (Oct 31 preferred), max **7-day verification** (Nov 2), limited scope; see `../../docs/SPRINT_7_DAY_HACKATHON.md`. Older plans superseded.
