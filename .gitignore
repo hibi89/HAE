@@ -1,0 +1,38 @@
+# Credentials / private config
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
+*.key
+secrets/
+credentials/
+tokens/
+.oauth/
+# Customer input and raw data
+data/
+customer_data/
+uploads/
+artifacts/private/
+*.sqlite
+*.sqlite3
+*.db
+*.db-wal
+*.db-shm
+# Python / JS temporary output
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+node_modules/
+dist/
+build/
+coverage/
+.nyc_output/
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
