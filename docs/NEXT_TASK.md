@@ -1,5 +1,3 @@
-## Current checkpoint (P9 local boundary fixes passed — 2026-10-27 KST)
-
 ## P10 complete — interval hard-crash replay (60/60 full-suite pass)
 The actual CLI scheduler was killed at `os._exit(73)` after its synthetic business DB commit and before the runtime receipt. Restart replayed tick 0 with the same deterministic run ID, completed the run, advanced the schedule once, and kept one business row. Scheduler tests passed 6/6; full suite passed 60/60 under permitted loopback; Node syntax and compilation of 17 Python files passed. Commits: `a2a7c9ce5915c86f0de0dce754e7fdac450d68f5`, `c952fcfdfc9f8cabf25c9656ed4f18c0c6319ac3`.
 
@@ -7,6 +5,7 @@ Resolved run failures: wrong unittest cwd (`ModuleNotFoundError`), sandboxed loo
 
 **Next authorized unit:** complete a concise official-source n8n behavior/architecture analysis and compare only the permitted patterns to current requirements. Do not copy code/assets or implement the standalone AX FLOW execution engine before overall review. No new site needs opening; current localhost UI remains at `http://127.0.0.1:8765/`.
 
+## Previous checkpoint — P9 local boundary fixes passed (2026-10-27 KST)
 
 `feature/axflow-mvp`: response hardening `30be45331ea71b5a39cd2530764664dd8620d565`, regressions `2da4b40ebfeec92b0fb589c75392c3e962e5ffb7`. Windows Python 3.11.9 DBVORA client suite 9/9; full suite 59/59; Node syntax and Python compilation pass. Hostile 5000-digit Content-Length and deeply nested JSON now fail closed. Read-only code review verified loopback-only binding/client, Host/Origin gate, capped/rate-limited requests, CSP/no-store, DOM textContent, and redirect-disabled GET-only bounded DBVORA client.
 
@@ -120,3 +119,4 @@ P2 passed on Windows Python 3.11 at `feature/axflow-mvp@ebc2bbfdf05e51fc82732fce
 Limits are enforced and tested: 256 KiB, 1000 data rows, 64 columns, 4096 chars per cell, UTF-8/BOM, unique safe identifier headers, exact row widths; malformed/invalid UTF-8, missing files, unsupported extensions and path traversal fail before business writes. Code rejects symlink components; an actual symlink fixture was not run on this Windows host. XLSX/PDF and arbitrary human-readable headers are out of scope.
 
 **NEXT ATOMIC TASK:** perform the user-authorized n8n behavior analysis against current public/authorized material and official licensing text. Record only evidence-backed functional behavior contracts; no code/assets/trademarks/connector copying. In parallel, add one deterministic built-in template that generates native IR, can be validated and exercised entirely offline with synthetic fixtures, and fails closed on unsupported requests. Then local GUI remains a separate user-notified step before any visible browser is opened. Full AX FLOW and DBVORA acceptance remain PARTIAL.
+
