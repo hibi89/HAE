@@ -9,8 +9,8 @@
 | Component | State | Evidence |
 | --- | --- | --- |
 | REA_APP static source analyzer | MVP_VERIFIED (BOUNDED SYNTHETIC JS/TS) | `REA_APP@80e8d7aad99c1c40d503848ed620421837b79477`; 10 Python + Node parser tests |
-| AX FLOW local runtime | P5_SYNTHETIC_DBVORA_E2E_VERIFIED (NOT CUSTOMER READY) | `feature/dbvora-integration@54b4c9336dc9a0dee0cd0418364b89fc1f34dc59`; Windows Python 3.11 full suite 42/42 PASS; actual synthetic UI→DBVORA API smoke passes |
-| Natural-language planner and file input | PARTIAL | bounded deterministic Korean/English parser, CSV→SQLite template, localhost UI; one workflow family only |
+| AX FLOW local runtime | P6_SYNTHETIC_FILTER_LOOKUP_VERIFIED (NOT CUSTOMER READY) | `feature/axflow-mvp@7190f5a3c8a238b1f33a948dd9a3df0d5e121b37`; Windows Python 3.11 full suite 47/47 PASS; P5 DBVORA smoke retained |
+| Natural-language planner and file input | PARTIAL | four bounded Korean/English CSV intents: full import, filtered import, conditional import, read-only lookup; visible browser E2E remains unverified |
 | OAuth, Gmail/Sheets connectors | NOT_STARTED | no account credentials, no auth test |
 | DBVORA integration | P5_SYNTHETIC_READ_ONLY_VERIFIED | selected-file `p0-01.v1` API over loopback; tables/columns/PK/FK/size displayed; customer DB and packaged service deployment unverified |
 | Recovery, resilience and performance | PARTIAL | handled failure status, resume/idempotent SQLite replay and threaded claims tested; hard-kill recovery and multi-process stress unverified |
@@ -18,7 +18,7 @@
 | Vercel/Production | NOT_APPLICABLE | local-first product, no hosted service |
 
 ## Next
-Expand the request planner to multiple distinct, safe no-JSON workflows (CSV filter/import, metadata lookup, conditional branch), then run the synthetic UI/API suite. Keep live customer data, OAuth, deployment, and DBVORA source changes gated. Visible browser E2E and Windows installer/security review remain unverified.
+Planner expansion is verified at API level. Next: process-crash recovery and cross-process replay testing. The permitted n8n behavior review is already recorded from official documentation only; do not copy source or assets. Keep customer data, OAuth, deployments and DBVORA source changes gated. Visible browser E2E and Windows installer/security review remain unverified.
 ## Bootstrap verified after GitHub writes (2026-10-27 KST)
 - GitHub repository visibility independently rechecked: **private**.
 - Branches independently rechecked: `main`, `develop`, `REA_APP`, `feature/axflow-mvp`.
@@ -122,3 +122,16 @@ Expand the request planner to multiple distinct, safe no-JSON workflows (CSV fil
 - **Blueprint comparison:** A remains bounded synthetic REA_APP evidence; B is locally verified synthetic runner evidence with three workflows/branch/replay but no interval trigger or cross-process claim; C remains PARTIAL (only CSV import task family; visible browser interaction unverified); D is PARTIAL (actual synthetic read-only API and GUI endpoint, but single selected DB, no in-app DB listing, no customer data); E remains open (customer security review, installer, visible browser E2E, full release checks). Overall product is PARTIAL, not 100%.
 - **Limits/approval:** This adapter observes metadata only and calls a loopback URL configured at server start. DBVORA's factory takes a selected path; UI clients cannot choose paths. No customer DB, OAuth, paid API, public network, deployment, or DBVORA source mutation occurred. Live service startup requires the separate DBVORA checkout and optional UI dependency.
 - **Next atomic task:** expand the no-paid planner into multiple real workflows (CSV filtering before SQLite import, read-only SQLite lookup, and conditional behavior) with end-to-end tests; keep unsupported tasks fail-closed. Then retry visible browser verification only if the computer-use tool's URL-confidence policy permits.
+
+
+## 2026-10-27 08:15 KST — P6 planner expansion and UI/API verification
+- **Branch/code commit:** hibi89/AX_FLOW, feature/axflow-mvp@7190f5a3c8a238b1f33a948dd9a3df0d5e121b37; parent 06ba9f011796090b84e4625bcd65ded848412e34. feature/axflow-mvp was safely fast-forwarded to the already verified P5 DBVORA checkpoint before this implementation.
+- **Changed paths:** apps/ax-flow/axflow/engine.py, planner.py, web.py, static/app.js, app.css, index.html; tests/test_engine.py, tests/test_web.py; apps/ax-flow/README.md.
+- **Implemented:** bounded csv_filter with typed comparison and numeric conversion; filtered import keeps original row numbers and is idempotent; filter receipts persist only source hash/count/row-number metadata and rebuild row contents from hash-checked input on resume. Added natural-language intents for filtered import, read-only match-count lookup and conditional import, alongside full CSV import. Write approval is required only for plans that can write.
+- **Verification:** Windows Python 3.11.9, from apps/ax-flow, python -m unittest discover -s tests -v — 47 passed, 0 failed. node --check axflow/static/app.js passed; Python py_compile passed for changed Python and test files. UI/API tests preview and execute each intent, check false-branch no-write behavior, and ensure lookup rows do not leak.
+- **Failure cause/recovery:** No application test failed in the final P6 run. Default sandbox HTTP probes returned Windows socket permission errors; rerunning the requested integration suite with loopback-only permission passed 47/47. Earlier P5 default-sandbox loopback test failures remain an environment permission issue. No package install, external service, customer data or DBVORA source mutation was used.
+- **Blueprint comparison:** A remains verified only for bounded synthetic analyzer scope. B remains partial: typed IR, local CLI, SQLite writes/reads, branch, retries, receipts, replay and synthetic CSV filtering pass; interval triggers, hard-kill and cross-process stress remain. C now supports four no-JSON task intents through tested UI APIs; visible browser click/render proof remains unverified. D retains the P5 synthetic DBVORA API smoke but no restore or customer database validation. E remains open for installer, security review and release evidence. Overall status remains PARTIAL.
+- **Progress estimate requested by owner:** 68% heuristic against five equally weighted Blueprint A–E workstreams (A 100, B 75, C 70, D 60, E 35). This is progress tracking only, not acceptance or customer-readiness.
+- **Open gates:** OAuth/connectors, timer trigger, cross-process/hard-kill recovery, visible-browser E2E, backup/restore, security assessment, Windows installer, customer test/release. The UI is synthetic-only and has no authentication.
+- **Failure/rollback:** Reverting commit 7190f5a3c8a238b1f33a948dd9a3df0d5e121b37 returns feature/axflow-mvp to P5 commit 06ba9f011796090b84e4625bcd65ded848412e34. feature/dbvora-integration remains at the P5 head; no main/develop merge.
+- **Next atomic task:** add a real subprocess hard-crash-after-durable-import test and cross-process same-run replay check; fix any product failure before progressing further. Existing official-doc n8n behavior analysis remains the source boundary, with no source/assets copied. Retry visible browser verification only if the UI helper can identify the owner-opened localhost page under its URL-confidence policy.

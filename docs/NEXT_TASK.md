@@ -1,12 +1,12 @@
 # Next work unit — 2026-10-27 KST (ACTIVE fast-track)
 
-## Current checkpoint (P5 synthetic DBVORA integration passed)
+## Current checkpoint (P6 filtered planner and UI/API verification passed)
 
-On `feature/dbvora-integration@54b4c9336dc9a0dee0cd0418364b89fc1f34dc59`, AX FLOW's bounded local UI now reads the actual DBVORA `p0-01.v1` API over `127.0.0.1` only and displays measured file size, tables, columns, PKs, FKs and declared relationships. Windows Python 3.11 suite **42/42 PASS** and JavaScript syntax check passes. A live synthetic smoke using DBVORA source at `feature/p0-db-map@31b8257468d28743fb2d3767d1caa56938df756c` completed the Korean request→preview→approved CSV import→status→DBVORA inventory path and verified the business SQLite file stayed unchanged during inventory.
+On feature/axflow-mvp@7190f5a3c8a238b1f33a948dd9a3df0d5e121b37, Windows Python 3.11.9 full suite is 47/47 PASS; JavaScript syntax and Python compilation pass. The planner supports full import, filtered import, conditional import and read-only match-count/original-row-number lookup. Filtered recovery preserves original row numbers and does not persist matching row payloads in receipts. P5 DBVORA synthetic API smoke remains verified at baseline commit 06ba9f011796090b84e4625bcd65ded848412e34.
 
-Target Blueprint V1 remains **PARTIAL** overall: A bounded synthetic analyzer previously passed; B runner features have synthetic evidence but no interval trigger/cross-process claim; C supports one workflow family and has no visible-browser E2E; D has read-only synthetic integration but no in-app DB listing/customer data; E lacks customer security review, installer and release gates. No customer data or DBVORA source was used.
+Blueprint A–E progress estimate: 68% heuristic (A 100, B 75, C 70, D 60, E 35; equal weights). Product state remains PARTIAL. The visible browser click/render flow, interval triggers, hard-kill/cross-process runner tests, restore, security review, installer and customer/release gates are still open.
 
-**Next:** implement several distinct no-JSON tasks that reuse the existing safe engine: CSV threshold filtering before import, read-only lookup, and conditional behavior. Run UI preview/execute tests for each; unsupported input must still fail clearly. Visible browser automation remains a separate gate because the computer-use helper stopped on URL-confidence policy.
+**Next:** add actual subprocess hard-crash recovery and cross-process same-run replay tests. The authorized n8n behavior review is already recorded from official docs; no code/assets were copied. Keep customer data, OAuth, DBVORA writes and public deployment behind existing approval gates. Visible browser E2E remains unverified because the UI helper previously stopped at its URL-confidence check.
 
 ## Codex first authorized implementation unit (MVP D1–D3, REA_APP branch)
 1. Verify hibi89/AX_FLOW current HEAD and read HANDOFF/STATUS/AGENTS/REQUIREMENTS/docs + actual code.

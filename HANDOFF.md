@@ -173,3 +173,17 @@ Recovery: read this latest appended block before older 21-week historical notes.
 8. **Risks/rollback:** Only synthetic DB used; no DBVORA changes. Roll back both P5 commits to `5acc4abfa8c0bd93c31c8e54ecd76133b1ecb9cc` to remove this adapter/panel.
 9. **Next atomic task:** Expand planner support for CSV filter→SQLite, read-only lookup and conditional flow as distinct safe tasks; add real UI preview/run tests and retain fail-closed behavior. Do not introduce customer data.
 10. **Time/owner actions:** 2026-10-27 KST. Local preview remains `http://127.0.0.1:8765/`; service must be started separately on a selected synthetic SQLite file/loopback port for DBVORA panel to show connected. Overall product remains PARTIAL.
+
+
+## 2026-10-27 08:15 KST — P6 filtered CSV tasks and synthetic API E2E
+
+1. **Goal/scope:** Expand the offline English/Korean planner with distinct safe filtering, read-only lookup and conditional-import tasks, while retaining the original full-import task and fail-closed unsupported requests.
+2. **Branch/base/commit:** hibi89/AX_FLOW, feature/axflow-mvp; P5 baseline 06ba9f011796090b84e4625bcd65ded848412e34; P6 code commit 7190f5a3c8a238b1f33a948dd9a3df0d5e121b37. The feature branch was fast-forwarded from the P5 adapter branch because the exact base commit was an ancestor.
+3. **Changed files:** apps/ax-flow/axflow/engine.py, planner.py, web.py, static/app.js, app.css, index.html; tests/test_engine.py, tests/test_web.py; README.md.
+4. **Executed tests:** Windows Python 3.11.9, cd apps/ax-flow; python -m unittest discover -s tests -v — 47 passed, 0 failed. node --check axflow/static/app.js and python -m py_compile on changed Python/test files also passed. GitHub blob SHAs matched local git hash-object values; branch now points at the P6 commit.
+5. **Failure/recovery:** No product test failed. Unprivileged localhost probes were rejected by Windows socket permissions; the same loopback-only suite passed with explicit loopback permission. No external APIs, credentials, customer files or DBVORA writes were used.
+6. **Implemented/tested:** Full CSV import, comparison-filtered import with source row-number preservation, conditional import with verified empty no-write branch, and read-only lookup returning only count/original row numbers. Raw matching rows are not returned or persisted in receipts. Write approval is conditional on a plan containing a SQLite write.
+7. **Remaining limits:** Parser is rule-based, CSV-only, one comparison per task, safe identifier headers and synthetic fixtures. UI API coverage passed, but visible-browser click/render E2E is unverified. No interval triggers, OAuth, customer DB, backup/restore, customer security review, Windows installer or release gate.
+8. **Risks/rollback:** Local UI is single-user and unauthenticated; synthetic data only. Revert 7190f5a3c8a238b1f33a948dd9a3df0d5e121b37 to return to P5. No merge to main/develop. Local checkout still presents an unborn REA_APP branch; actual committed source-of-truth is the verified GitHub feature branch.
+9. **Next task:** Test real process termination immediately after durable synthetic import, then same-run recovery and separate-process duplicate replay; record and fix any failure.
+10. **Owner actions/time:** Owner was told to open http://127.0.0.1:8765/; server must be restarted after P6 so its loaded Python module uses the new planner. Restart and verify local page before reporting ready. 2026-10-27 08:15 KST. Overall product remains PARTIAL; progress estimate 68% by the equally weighted A–E tracking rubric.
