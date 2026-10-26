@@ -8,6 +8,7 @@ from pathlib import Path
 from urllib.error import HTTPError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
+from unittest.mock import patch
 
 from axflow.web import create_server
 
@@ -64,8 +65,44 @@ class WebUITests(unittest.TestCase):
         self.assertEqual((script_status, css_status), (200, 200))
         self.assertNotIn(b"https://", script)
         self.assertNotIn(b"https://", css)
+        self.assertIn(b"DBVORA", body)
+        self.assertIn(b"/api/dbvora", script)
         self.assertFalse(self.state.exists())
         self.assertFalse(self.business.exists())
+
+    def test_dbvora_endpoint_reports_unconfigured_without_network(self):
+        status, _, raw = self.request("/api/dbvora")
+        self.assertEqual(status, 200)
+        body = json.loads(raw.decode("utf-8"))
+        self.assertFalse(body["available"])
+        self.assertEqual(body["error_code"], "NOT_CONFIGURED")
+        self.assertIn("loopback", body["message"])
+
+    def test_dbvora_endpoint_exposes_only_read_only_metadata(self):
+        inventory = {
+            "available": True,
+            "contract_version": "p0-01.v1",
+            "engine": "sqlite",
+            "size_bytes": 2048,
+            "size_scope": "main_database_file_only_excludes_wal_and_shm",
+            "observed_at": "2026-10-27T00:00:00Z",
+            "tables": [{
+                "name": "customers",
+                "columns": [{
+                    "name": "id", "type": "INTEGER", "nullable_declared": True,
+                    "pk_position": 1, "hidden": 0,
+                }],
+                "foreign_keys": [],
+            }],
+            "relationships": [],
+        }
+        with patch.object(self.server.dbvora_client, "fetch_inventory", return_value=inventory):
+            status, _, raw = self.request("/api/dbvora")
+        self.assertEqual(status, 200)
+        body = json.loads(raw.decode("utf-8"))
+        self.assertEqual(body["tables"][0]["columns"][0]["pk_position"], 1)
+        self.assertEqual(body["size_bytes"], 2048)
+        self.assertNotIn("payload", body)
 
     def test_preview_parses_supported_request_and_rejects_unsupported_scope(self):
         status, _, body = self.post_json("/api/preview", {

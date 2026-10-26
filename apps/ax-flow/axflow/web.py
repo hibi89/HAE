@@ -12,6 +12,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 from .engine import ApprovalRequired, Engine, PlanError, StepRetryExhausted, StepTimeout
+from .dbvora_client import DbvoraClient
 from .planner import plan_request
 from .runlog import RunLogError, inspect_run
 
@@ -45,7 +46,14 @@ def _reject_constant(value: str) -> None:
     raise ValueError("unsupported JSON constant")
 
 
-def create_server(input_root: Path, state_path: Path, business_path: Path, *, port: int = 8765):
+def create_server(
+    input_root: Path,
+    state_path: Path,
+    business_path: Path,
+    *,
+    port: int = 8765,
+    dbvora_url: str | None = None,
+):
     """Create a localhost-only server. Paths are fixed at startup, never supplied by HTTP."""
     root = Path(input_root).expanduser().resolve(strict=True)
     state = Path(state_path).expanduser().resolve(strict=False)
@@ -161,6 +169,9 @@ def create_server(input_root: Path, state_path: Path, business_path: Path, *, po
                 except RunLogError as exc:
                     self._send_json(404, {"error": str(exc)})
                 return
+            if parsed.path == "/api/dbvora":
+                self._send_json(200, self.server.dbvora_client.fetch_inventory())
+                return
             self._send_json(404, {"error": "route not found"})
 
         def do_POST(self) -> None:
@@ -233,6 +244,7 @@ def create_server(input_root: Path, state_path: Path, business_path: Path, *, po
 
         def __init__(self, address, handler):
             super().__init__(address, handler)
+            self.dbvora_client = DbvoraClient(dbvora_url)
             self._recent_requests: deque[float] = deque()
             self._rate_lock = threading.Lock()
             self._preview_lock = threading.Lock()

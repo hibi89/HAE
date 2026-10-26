@@ -14,6 +14,11 @@ const runIdOutput = document.querySelector("#run-id");
 const rowCountOutput = document.querySelector("#row-count");
 const stepCountOutput = document.querySelector("#step-count");
 const refreshButton = document.querySelector("#refresh-status");
+const dbvoraStatus = document.querySelector("#dbvora-status");
+const dbvoraMeta = document.querySelector("#dbvora-meta");
+const dbvoraTables = document.querySelector("#dbvora-tables");
+const dbvoraRelations = document.querySelector("#dbvora-relations");
+const dbvoraRefreshButton = document.querySelector("#refresh-dbvora");
 
 let previewKey = "";
 let currentRunId = "";
@@ -67,6 +72,76 @@ async function checkConnection() {
   } catch {
     connection.textContent = "로컬 서버 연결을 확인할 수 없습니다";
     connection.className = "connection offline";
+  }
+}
+
+function clearChildren(element) {
+  while (element.firstChild) element.removeChild(element.firstChild);
+}
+
+function renderDbvora(result) {
+  clearChildren(dbvoraTables);
+  clearChildren(dbvoraRelations);
+  if (!result.available) {
+    dbvoraStatus.textContent = result.message || "DBVORA 로컬 서비스를 사용할 수 없습니다.";
+    dbvoraStatus.className = "dbvora-status offline";
+    dbvoraMeta.textContent = result.error_code === "NOT_CONFIGURED"
+      ? "실행 시 --dbvora-url로 127.0.0.1 API 주소를 설정하세요."
+      : "DBVORA API가 실행 중인지 확인한 뒤 새로고침하세요.";
+    return;
+  }
+
+  dbvoraStatus.textContent = "DBVORA 로컬 읽기 전용 API 연결됨";
+  dbvoraStatus.className = "dbvora-status online";
+  dbvoraMeta.textContent = "SQLite 파일 " + Number(result.size_bytes).toLocaleString() + " bytes · " +
+    result.size_scope + " · 관측 " + result.observed_at;
+
+  for (const table of result.tables) {
+    const article = document.createElement("article");
+    article.className = "dbvora-table";
+    const title = document.createElement("h3");
+    title.textContent = table.name;
+    article.appendChild(title);
+    const columnList = document.createElement("ul");
+    for (const column of table.columns) {
+      const item = document.createElement("li");
+      const primaryKey = column.pk_position > 0 ? " · PK " + column.pk_position : "";
+      item.textContent = column.name + (column.type ? " · " + column.type : "") + primaryKey;
+      columnList.appendChild(item);
+    }
+    article.appendChild(columnList);
+    dbvoraTables.appendChild(article);
+  }
+
+  if (result.relationships.length === 0) {
+    dbvoraRelations.textContent = "선언된 외래 키 관계가 없습니다.";
+    return;
+  }
+  const relationTitle = document.createElement("h3");
+  relationTitle.textContent = "선언된 관계";
+  dbvoraRelations.appendChild(relationTitle);
+  const relationList = document.createElement("ul");
+  for (const relation of result.relationships) {
+    const item = document.createElement("li");
+    item.textContent = relation.from_table + "." + relation.from_columns.join(", ") +
+      " → " + relation.to_table + "." + relation.to_columns.join(", ");
+    relationList.appendChild(item);
+  }
+  dbvoraRelations.appendChild(relationList);
+}
+
+async function loadDbvora() {
+  dbvoraRefreshButton.disabled = true;
+  dbvoraStatus.textContent = "DBVORA 읽기 전용 메타데이터 조회 중…";
+  dbvoraStatus.className = "dbvora-status";
+  try {
+    renderDbvora(await api("/api/dbvora"));
+  } catch {
+    dbvoraStatus.textContent = "AX FLOW 로컬 서비스에서 DBVORA 상태를 확인할 수 없습니다.";
+    dbvoraStatus.className = "dbvora-status offline";
+    dbvoraMeta.textContent = "";
+  } finally {
+    dbvoraRefreshButton.disabled = false;
   }
 }
 
@@ -140,4 +215,7 @@ refreshButton.addEventListener("click", async () => {
   }
 });
 
+dbvoraRefreshButton.addEventListener("click", loadDbvora);
+
 checkConnection();
+loadDbvora();
