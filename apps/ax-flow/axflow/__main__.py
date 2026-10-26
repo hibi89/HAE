@@ -7,12 +7,13 @@ import sys
 from pathlib import Path
 
 from .engine import ApprovalRequired, Engine, PlanError, validate
+from .runlog import RunLogError, inspect_run
 
 
 def main() -> int:
     p = argparse.ArgumentParser(prog="axflow")
-    p.add_argument("command", choices=("validate", "run"))
-    p.add_argument("plan", type=Path)
+    p.add_argument("command", choices=("validate", "run", "resume", "status"))
+    p.add_argument("plan", type=Path, nargs="?")
     p.add_argument("--state", type=Path)
     p.add_argument("--data", type=Path)
     p.add_argument("--run-id")
@@ -22,6 +23,13 @@ def main() -> int:
     try:
         if not a.synthetic:
             raise PlanError("MVP restricted to synthetic fixtures; include --synthetic")
+        if a.command == "status":
+            if a.state is None or a.run_id is None:
+                raise PlanError("status requires --state and --run-id")
+            print(json.dumps(inspect_run(a.state, a.run_id), ensure_ascii=False, sort_keys=True))
+            return 0
+        if a.plan is None:
+            raise PlanError("validate, run and resume require a workflow JSON file")
         if a.plan.stat().st_size > 65536:
             raise PlanError("workflow file exceeds 64 KiB")
         plan = json.loads(a.plan.read_text(encoding="utf-8"))
@@ -34,7 +42,7 @@ def main() -> int:
         result = Engine(a.state, a.data).execute(plan, a.run_id, approve_writes=a.approve_writes)
         print(json.dumps({"run_id": a.run_id, "status": "completed", "result": result}, ensure_ascii=False, sort_keys=True))
         return 0
-    except (PlanError, ApprovalRequired, OSError, ValueError, json.JSONDecodeError) as exc:
+    except (PlanError, ApprovalRequired, RunLogError, OSError, ValueError, json.JSONDecodeError) as exc:
         print(f"AX FLOW stopped safely: {exc}", file=sys.stderr)
         return 2
 
