@@ -28,3 +28,10 @@ Synthetic fixtures only until explicit real-data approval. Files/credentials rem
 
 ## Delivery/handoff
 Update STATUS.md, HANDOFF.md (10 mandatory fields), docs/NEXT_TASK.md when material implementation or verification changes. Record exact branch, SHA, test commands and counts, blockers, recovery, deployment URL if applicable, and KST time. Verify author/committer are associated with connected GitHub account; do not alter Git identity via environment overrides. GitHub commit + production status + functionality + security must be reported independently.
+
+## DB-required release policy (2026-10-27)
+AX FLOW's **full-package Definition of Done** requires a supported business-data connector plus DBVORA-visible database asset inventory/health and verified supported-source backup/restore with provenance. Embedded runtime SQLite is mandatory from the first runner MVP. For a simple send-email workflow, no redundant business DB is needed. DBVORA remains standalone; its source, customers' databases and credentials must not be copied into AX FLOW.
+
+The new `feature/dbvora-integration` work track may create the AX FLOW-side adapter/contract only. No DBVORA source modification or metadata API expansion without reviewing the independent repo and separate change approval. Nonexistent service endpoints must be described as planned, never treated as implemented. Preserve two-manifest / versioned contract compatibility for integration.
+
+Schedule estimates and acceptance status live in docs/MASTER_SCHEDULE.md and docs/ACCEPTANCE_MATRIX.md. Stop at first failed safety gate; no customer DB data until full system smoke on synthetic fixtures and Windows approval.

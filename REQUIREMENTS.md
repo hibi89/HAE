@@ -1,27 +1,34 @@
-# Requirements — AX FLOW + REA_APP (2026-10-27 KST)
+# AX FLOW and REA_APP — requirements (2026-10-27 KST)
 
-## Agreed product intent
-### AX FLOW
-1. Natural language is the primary control surface. Customers must not manually choose nodes, compose JSON or understand CLI/API details to get a supported task working.
-2. Optionally choose an automation from a template catalog, attach CSV/XLSX/PDF or other explicitly supported input, or describe a task directly.
-3. Planner infers shortest supportable route, explains required data/auth in plain Korean, and asks only genuinely necessary questions.
-4. OAuth/API keys use least privileges, first-party consent and local secret storage; no credential pasting to model or silent approval.
-5. Build workflow, dry run, verify result with evidence, ask for appropriate authorization, execute, schedule, recover and show observable logs/status. Risky actions need confirmation.
-6. Local-first, CLI-capable deterministic runtime; small optional GUI/dashboard that hides irrelevant integrations, supports advanced inspection when needed.
-7. No mandatory external DB for business data. Embed SQLite for engine state; Gmail/Google Sheets/cloud services are optional **external stores**, managed only via authorized connectors.
-8. No mandatory cloud hosting; polling/local scheduling first, inbound webhooks via explicitly opted-in relay later. Free tier is not an availability guarantee.
-9. Support optional DBVORA integration via standard scoped metadata APIs, not by merging DBVORA repository/code.
-10. Commercial positioning: proposed 590,000 KRW assisted single-workflow implementation package, **unvalidated proposal**, not proof of buyers or guaranteed software price.
+## Product goal, now confirmed
+AX FLOW must go beyond AI JSON output: **customer instruction/template + optional files → validated internal workflow IR → automatic configuration → only necessary OAuth/API consent → dry-run and tests → error diagnosis/safe repair → approved live execution → scheduling, monitoring, recovery, and database visibility.** No manual node setup or copied JSON required of end users.
 
-### REA_APP
-1. Independently analyze authorized project source structures (files, dependencies, key call/data paths), output evidence-linked architecture report, help plan and verify changes.
-2. First research target: source-available workflow automation (n8n functional study within applicable licensing/contract permissions); must distinguish first-party documentation, permissible source, proprietary terms and clean-room code.
-3. Support eventual repair/extension and independent reimplementation, but never promise full replication of opaque/closed products.
-4. The initial MVP uses static parsing/indexing before optional AI explanation; avoid loading an entire repository into one prompt.
-5. REA_APP is a **development tool**, not AX FLOW runtime, not DBVORA, not a universal management suite.
+## Mandatory AX FLOW requirements
+R-01. Natural-language and suggested-template intake; minimize questions; helpful plain Korean instructions for unavoidable external authentication/permissions.
+R-02. Customer-file intake with strict allowlist, provenance, size/type limits and local default; CSV first, XLSX/PDF later with explicit parsing and confidentiality handling.
+R-03. Internal **typed JSON workflow IR (schema+version)** separated from AI-generated prose; validation, idempotency classification, allowed connectors, rollback/compensation and per-step receipts.
+R-04. Deterministic local CLI runner independent of GUI. AI may plan/diagnose but cannot run unrestricted shell or modify customer sources unsupervised.
+R-05. Auto-fill supported integration settings; scoped secret broker/OAuth in OS secure store; provider consent and high-risk live actions require user authorization. No plaintext token in plans, logs or model context.
+R-06. Dry-run, fixtures, simulated failures, controlled retries, observed results and bounded auto-repair. For ambiguous remote responses, verify before resending or request review. Don't promise global exactly-once.
+R-07. **Embedded SQLite engine database, mandatory from first runtime MVP**: versioned workflow definitions, job/step state, run IDs, approvals, checkpoints, receipts, audit records and idempotency keys; transactional schema upgrades/backups; no customer email body duplication by default.
+R-08. **Business data plane mandatory for full product**: explicit SQLite dataset read/write adapter and a provider-neutral asset registry/typed metadata contract. PostgreSQL and Google Sheets adapter coverage planned; no universal full-DB capabilities claimed for SaaS.
+R-09. **DBVORA integration mandatory for full bundled-product acceptance**: approved DB asset link, SQLite schema/table/column/FK map, measured size/status where possible, read-only inventory API, offline/disconnected handling and independently verified backup/restore of supported sources. DBVORA remains a separate private repo/process and keeps its own safety controls. Initial engine MVP may be accepted before this final gate.
+R-10. Data owner chooses storage; no automatic migration, mirroring, source DB mutation, cross-account discovery, full Gmail sync or automatic customer DB deletion. Google Sheets can be a data sink without being an actual SQL DB engine.
+R-11. Local-first, CLI + minimal GUI, irrelevant plugins hidden, optional approved webhook relay/cloud later. PC must run for local schedules.
+R-12. Security from first MVP: localhost binding, CSRF/origin/path validation, prompt injection resistance, least privilege, outbound safeguards and fail-closed recovery; no external transmission by default.
+R-13. Evidence-based performance comparison (latency, memory, retries, operator interventions), reproducible regression tests and local/Windows validation before commercial claim.
 
-## Non-goals at first MVP
-No universal "automate anything" guarantee, no 24/7 operation on a powered-off PC, no bypass of OAuth/antibot controls, no mass third-party app integration, no pay-to-use API without approval, no n8n code-resale/white labeling, no real customer data and no production SLA.
+## REA_APP
+R-A1. Inventory authorized source trees, parsers/imports/data paths, evidence-linked architecture and change-impact report. No entire large repo in one prompt.
+R-A2. Observe n8n within verified license/contract permissions; no unlicensed source copying, UI cloning or code transplantation into AX FLOW.
+R-A3. Provide useful static-analysis MVP first, then permitted n8n research and independent specs; retain REA_APP as separate internal tool.
 
-## Acceptance gates
-REA_APP: deterministic synthetic repository inventory/import graph and traceable report, tested with repeatable fixtures, memory/time caps and provenance. AX FLOW: a single synthetic workflow created via validated plan, executed with local SQLite, observed by CLI and restart recovery tested. OAuth/Gmail/customer deployment are subsequent separately approved/verified gates.
+## Full completion (not just MVP)
+1. A nondeveloper can create, authorize, validate, deploy and supervise **three supported end-to-end automations** (local CSV→SQLite, Google Sheets→local storage, authorized Gmail report) without selecting nodes/editing JSON; use safely prepared synthetic data first.
+2. Workflow restart recovery and duplicate external-action protections are verified under fault injection.
+3. DBVORA panel shows linked supported SQLite DB → tables → columns/relations, measured size/provenance, and backed-up source can be restored independently without source mutation (for supported DB/source types only).
+4. Auth, logs, file input, UI, customer Windows package and real browser tests pass; signed or explicitly characterized distribution; documented privacy and limits.
+5. At least 3 controlled customer-style pilot workflows complete and yield support-time/performance evidence; commercial contract and license review complete. Pricing hypothesis 590,000 KRW per assisted single-workflow service is NOT market acceptance evidence.
+
+## Explicit limits
+No promise to automate literally every app, operate with a powered-off local PC, bypass OAuth/antibot, read cloud provider internals, eliminate all outages, or resell n8n derivatives. Real customer data, public ports, OAuth app registration, paid services and customer deployment need approval.

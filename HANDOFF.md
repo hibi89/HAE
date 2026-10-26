@@ -27,3 +27,18 @@ Read `HANDOFF.md` → `STATUS.md` → `AGENTS.md` → `REQUIREMENTS.md` → `doc
 10. **Time/proof:** 2026-10-27 KST. Confirmed GitHub private metadata, branch names, cross-branch file retrieval and commit author/committer `hibi89`. No full runtime tests exist.
 
 **Note:** Documentation-only branches should be aligned to this latest main handoff checkpoint before independent feature development; verify with branch SHA after synchronization.
+
+## 2026-10-27 KST — latest DB-required scope handoff (supersedes old optional-DBVORA description)
+
+1. **Goal/technology:** AX FLOW customer product must automatically convert language/files into validated IR, auto-configure and dry-run/test/recover local workflows; internal SQLite journal and business data plane mandatory. Full product requires DBVORA-managed supported database visibility/backup/restore integration. REA_APP is distinct developer research tool; Python 3.11+ / SQLite / CLI / localhost GUI proposed.
+2. **Completed and rationale:** Verified current AX_FLOW private repo docs and DBVORA independent feature source. Designed independent DBVORA read-only service adapter vs merging its code; select adapter for clear permission/rollback boundary. Wrote schedule and acceptance criteria; no actual product code implemented.
+3. **Tests:** GitHub content/branch and metadata inspection only. **0/0 product tests**, no integration/browser/Windows/OAuth/customer acceptance; DBVORA prior per-feature tests do not establish current entire suite success.
+4. **State:** R0 documents/branches organized, DB management requirement recorded; REA_APP R1 PENDING; AX FLOW runner/AI/GUI and DBVORA adapter NOT_STARTED; no product ready.
+5. **Failure/recovery:** No implementation failures. DBVORA full-suite and Windows/unavailable service are known **unverified**, not claimed product defects. Do not use actual customer DB before independent synthetic tests and approval. No repeated ineffective attempts.
+6. **Repo/branches/SHA:** hibi89/AX_FLOW private, main, develop, REA_APP, feature/axflow-mvp, planned/new feature/dbvora-integration branch. Prior verified main source `7de40d342ed2454ed63794a1322db05096193357`; GitHub must be re-queried for new documentation HEAD after writes. Critical paths docs/MASTER_SCHEDULE.md, docs/DATA_ARCHITECTURE.md, docs/ACCEPTANCE_MATRIX.md, docs/NEXT_TASK.md. DBVORA stays hibi89/DBVORA on active feature/p0-db-map; separate source/release.
+7. **Production/environment:** local-first, no deployed URL, Vercel N/A. Proposed Python 3.11+ and SQLite; no executable app yet and no HTTP/service E2E.
+8. **Originals/backup/auth:** all old files preserved through Git history; no secrets, customer DB or original n8n code committed. No changes to DBVORA repo or source data; credentials planned only OS secret broker.
+9. **Next/approval:** verify final branch parity/docs SHA; get approval for substantive code design then implement REA_APP static AST source analyzer with synthetic tests; later AX FLOW CLI/runtime SQLite+business SQLite; then AI/file/OAuth; DBVORA integration adapter; full acceptance. Paid cloud, external data, real OAuth registration, customer DB access/mutation, public deployment need prior approval.
+10. **KST/checkpoint/test scope:** 2026-10-27 KST; source files and architecture reviewed through GitHub connector, schedule is an **estimate** (21 weeks 445–750 hours, conditional). Document commit SHA cannot self-reference; resolve from GitHub remote main HEAD. Author/committer and branch comparisons must be checked after commit.
+
+**Next chat:** HANDOFF → STATUS → AGENTS → REQUIREMENTS → docs/MASTER_SCHEDULE → docs/DATA_ARCHITECTURE → docs/ACCEPTANCE_MATRIX → docs/NEXT_TASK → actual source. `ㄱ` advances next authorized safe step.

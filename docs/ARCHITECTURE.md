@@ -1,47 +1,41 @@
-# Architecture options and preliminary ADR
+# Architecture Decision: AX FLOW deterministic engine + separated DBVORA
 
-## A. Modular Python core + local CLI + optional localhost web UI (RECOMMENDED for MVP)
-Planner interface (AI optional) → validated workflow spec → policy/consent engine → deterministic executor → SQLite durable job ledger → connector adapters → result receipts. Independent secret broker uses OS secure store. DBVORA integration uses a scoped local contract if implemented. REA_APP keeps separate parser/index/graph/report modules.
+## Alternatives
+| Criterion | A. Merge DBVORA code and automation into one executable | B. Separate local DBVORA process + versioned API (SELECTED) | C. Embed modified n8n as execution service |
+|---|---|---|---|
+| Engineering setup | simpler initially | adapter and lifecycle setup needed | quick node reuse |
+| Maintenance | DB recovery changes risk workflow regressions | independent releases/rollback, bounded contracts | upstream drift and licensing obligations |
+| Runtime overhead | one process | second service only when DB management enabled | larger service stack |
+| Cash cost | local zero possible | local zero possible | commercial licensing may be required |
+| Data safety | mixed write and backup privileges | allowlist/read-only boundary | modified engine security review |
+| Product independence | weak | strong | weak / sales risk |
 
-**Performance/cost:** stdlib Python+SQLite can run locally at zero service cost for small/medium workflows; startup/UI smaller than full workflow suites. Performance gains over n8n are unverified. Memory limits/timeouts and job concurrency should be measured.
-**Maintenance:** small core and narrow adapter contracts; gradual expansion. Weakness: custom integrations and scheduling/recovery require engineering/testing.
+**Decision:** B for final product: AX FLOW owns workflow state and actual data adapters; DBVORA owns observation, catalog, verified backups and restores. AX FLOW can operate on a single local SQLite data destination without a running DBVORA **during early MVP**; release claiming the **full AX FLOW + DB suite** requires passing DBVORA integration acceptance.
 
-## B. Open-source Node-RED / Activepieces core + our AI front end
-Existing flow editor/executor and connectors speed up breadth; license obligations/third-party notices must be reviewed per exact revision (Node-RED Apache 2.0; Activepieces core MIT with separately licensed components). Larger runtime/dependencies, upstream compatibility burden and UI complexity.
-**Tradeoff:** potentially quickest prototype for supported connectors; greater upgrade/licensing surface.
-
-## C. n8n fork or n8n-based customer platform (NOT RECOMMENDED)
-Fast reuse but modified n8n commercial offering and AI-based customer-facing builder can require commercial license; contract, trademark and copyright restrictions. Not the default distributable implementation.
-
-### Decision proposal
-Choose A for **local deterministic runtime and own UX**; optionally use permitted individual OSS libraries/connectors, not a wholesale n8n derivative. Record acceptance in ADR before substantive code. Avoid equating CLI with faster workflows; benchmark workflow authoring time, CPU/memory, run latency, error recovery and user interventions.
-
-## Logical module boundaries
+## AX FLOW layers
 ```
-AX FLOW UI/CLI ──> Planner (natural language or templates)
-                         │ validated typed workflow IR
-                         v
-                    Policy & Consent
-                         │ approved execution intent
-                         v
-                Local Deterministic Runner
-                ├─ durable SQLite job/event ledger
-                ├─ scheduling, locks, idempotency and replay checks
-                ├─ adapter registry (only selected adapters load)
-                ├─ secrets broker (OS store / least privilege)
-                └─ result evidence + safe error reports
-                         │ optional metadata-only contract
-                         v
-                   DBVORA [external repo]
-
-REA_APP source-inventory/parser/graph/report [separate tool]
+Customer (natural language, template, files) → planner / typed JSON IR
+   → validator + risk policy + approval
+   → connector/secret broker → deterministic local runner
+   ├── private runtime SQLite (jobs, workflow versions, run receipts)
+   ├── business data adapters (SQLite first, Sheets/Postgres as authorized)
+   └── data asset registry + DBVORA adapter → localhost read-only DBVORA API
+                                             └── source databases (no raw data export)
 ```
+REA_APP is external R&D source analysis and cannot execute customer jobs.
 
-## Failure modes and constraints
-- Untrusted document text and agent tool output may contain prompt injection.
-- Filesystem operations need path bounds, sandboxing and explicit authorization; never run raw unrestricted AI shell plans.
-- Outbound email can be accepted by remote provider before response lost; remote message-ID reconciliation, bounded retries and an ambiguous state are necessary. "Exactly once" not guaranteed globally.
-- Cron locally executes only while host is powered/on; offline catch-up policy explicit.
-- OAuth scopes and external AI upload require informed consent and separate user approvals.
-- No silent public network listener, webhook port forwarding, telemetry or elevated privileges.
-- Cost governance: optional hosted LLM/provider usage has separate pay limits and explicit opt-in.
+## Data protection and execution
+- Runtime SQLite and business SQLite have **different paths, schemas and privileges**. Never make DBVORA's own metadata catalog the only state store for AX FLOW.
+- The registry stores stable source IDs, type, provider, scope, time/provenance, latest available inventory status; credentials remain in the OS secret store.
+- DBVORA's currently available `dbvora/api.py` exposes one user-selected SQLite file read-only (`/api/inventory` and `/health`); a generic multi-asset / versioned service contract and trusted enrollment mechanism are **not implemented**.
+- First adapter can use a pre-approved selected local SQLite database; report DBVORA unavailable explicitly. Do not silently fall back to fabricated metrics.
+- Any backup/restore command belongs to an **independent, explicitly approved, fail-closed DBVORA workflow**; no general-purpose raw SQL executor or source delete API across the bridge.
+- External Google Sheets is **API-observable tabular storage**, not a promise to administer Google's physical storage or backups. Gmail retains email messages on Google's servers; runtime SQLite records minimal provider IDs and receipts.
+- Use localhost only, authenticated app-to-app channel, origin checks, limited file/path access, least privilege. Secrets never enter AI prompt or GitHub.
+- Benchmark CLI vs n8n on identical workloads; neither CPU, memory, speed nor compression improvements are assumed.
+
+## Compiler/executor contract
+AI produces **typed, canonical, versioned JSON IR**, not executable raw shell script. Validator checks node references, connector capability schema, scopes, path policy, data mappings, resource budgets, retries/timeouts, and side effects. Compiler binds adapters and dry-run checks; runner performs only approved operations with receipts and crash-safe checkpoint ledger. Unknown node types are rejected or treated as plugin development tasks.
+
+## Open questions before implementation
+Exact DBVORA adapter API version, OS secret broker, Windows process lifecycle, whether embedded GUI uses FastAPI + static assets/Tauri, local AI vs cloud budget. Default local and zero service cost until approved; require regression tests at every integration gate.
