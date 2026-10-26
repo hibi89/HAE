@@ -1,3 +1,5 @@
+> **ACTIVE OVERRIDE — 2026-10-27 KST:** user shortened AX FLOW core for hackathon reuse to **3–5 days preferred (Oct31), 7-day review target (Nov02)**. The older 5-week dates in this file are superseded for the supported-scope reusable integration MVP. Execute `docs/SPRINT_7_DAY_HACKATHON.md` first. Full commercial gates and third-party permissions remain unchanged. No guaranteed completion claim.
+
 # Codex GPT-6 Extra-High — REA_APP / AX FLOW implementation order
 Issued 2026-10-27 KST by AX FLOW chief GPT-6. This is an **executable work brief**, not evidence that Codex has started.
 
