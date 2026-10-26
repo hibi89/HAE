@@ -217,7 +217,9 @@ class DbvoraClient:
                     raise DbvoraClientError("RESPONSE_TOO_LARGE", "DBVORA response exceeds the local size limit.")
                 raw = response.read(MAX_RESPONSE_BYTES + 1)
         except HTTPError as exc:
-            raise DbvoraClientError("HTTP_" + str(exc.code), "DBVORA rejected the local request.") from None
+            status = exc.code
+            exc.close()
+            raise DbvoraClientError("HTTP_" + str(status), "DBVORA rejected the local request.") from None
         except (URLError, OSError, TimeoutError):
             raise DbvoraClientError("UNAVAILABLE", "DBVORA local service is unavailable.") from None
         if len(raw) > MAX_RESPONSE_BYTES:
