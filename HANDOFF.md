@@ -193,3 +193,16 @@ Recovery: read this latest appended block before older 21-week historical notes.
 - Latest code server restarted at http://127.0.0.1:8765/ with loopback permission. Host curl GET returned 200. Live preview/run of read-only lookup against contacts.csv ID 42 returned one match on source row 1 and no raw row value.
 - Recovery: default-sandbox server was not reachable from the host and its request timed out; restart under loopback-only permission fixed it. Initial lookup value 11 was absent from fixture (actual synthetic ID 42); corrected smoke passed. No product failure remains.
 - Visual/click browser E2E is still unverified. User can refresh the already-open localhost tab.
+
+
+## 2026-10-27 08:25 KST — P6 hard-crash and cross-process replay verified
+
+1. **Goal:** Verify durable resume after an actual process exit and duplicate suppression across separate OS processes.
+2. **Branch/commits:** `hibi89/AX_FLOW`, `feature/axflow-mvp`; code `7190f5a3c8a238b1f33a948dd9a3df0d5e121b37`; test commit `d90644e28ab46c48091a1b0fb0329af0b1d15eb9`. STATUS checkpoint follows this handoff.
+3. **Changed path:** `apps/ax-flow/tests/test_engine.py` adds a real child-process `os._exit(73)` at the durable-import/pre-receipt boundary and a two-process same-run replay test.
+4. **Verification:** Windows Python 3.11.9 — engine suite 27/27 PASS; complete suite 49/49 PASS. Separate CLI processes return equivalent results; one durable business record per run/step. Full API suite ran with loopback-only socket access.
+5. **Failure and fix:** first targeted invocation from `tests/` failed to import `axflow` (wrong working directory). The first subprocess crash harness failed to import `axflow` because its script lived in a temp folder. Fixed the helper's import path to use its inherited application cwd; reran engine and complete suites successfully. These were test harness failures; no product regression remained.
+6. **Blueprint delta:** B verifies restart across a real OS process boundary and same-run multi-process idempotency. Interval triggers remain unimplemented. C visual browser E2E remains unverified; D source-preserving restore is not verified and requires separate approved DBVORA capability; E security, installer and customer/release checks remain open.
+7. **Safety/rollback:** synthetic local files/SQLite only; no external account/API, customer source, DBVORA write, public deployment or credential used. Reverting `d90644e28ab46c48091a1b0fb0329af0b1d15eb9` removes these test cases.
+8. **Next task:** implement the narrow local interval trigger with persisted schedule ticks and duplicate-run protection, then test schedule recovery and a bounded run count before claiming trigger support.
+9. **Owner actions:** localhost preview already open at `http://127.0.0.1:8765/`; refresh it for the P6 page. DBVORA service is separate and currently unavailable. Overall product remains PARTIAL, estimated 70% by the unchanged A–E tracking heuristic.
