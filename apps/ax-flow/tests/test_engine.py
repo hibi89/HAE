@@ -342,6 +342,13 @@ class TestEngine(unittest.TestCase):
         ], capture_output=True, text=True)
         self.assertEqual(unknown.returncode, 2)
         self.assertIn("unsupported template", unknown.stderr)
+        unused_option = subprocess.run([
+            sys.executable, "-m", "axflow", "template", "ignored-plan.json",
+            "--name", "csv_to_sqlite", "--csv", "contacts.csv", "--input-root", str(self.root),
+            "--synthetic",
+        ], capture_output=True, text=True)
+        self.assertEqual(unused_option.returncode, 2)
+        self.assertIn("template accepts only", unused_option.stderr)
 
     def test_step_failure_is_recorded_and_legacy_receipts_migrate(self):
         broken = {"version": "axflow.ir.v0", "steps": [

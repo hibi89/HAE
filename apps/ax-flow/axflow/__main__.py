@@ -41,6 +41,9 @@ def main() -> int:
         if not a.synthetic:
             raise PlanError("MVP restricted to synthetic fixtures; include --synthetic")
         if a.command == "template":
+            if (a.plan is not None or a.state is not None or a.data is not None or
+                    a.input_root is not None or a.run_id is not None or a.approve_writes):
+                raise PlanError("template accepts only --name, --csv and --synthetic")
             plan = build_template(a.name, csv_path=a.csv_path) if a.csv_path is not None else build_template(a.name)
             print(json.dumps(plan, ensure_ascii=False, sort_keys=True, indent=2))
             return 0
