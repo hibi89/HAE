@@ -232,3 +232,17 @@ Recovery: read this latest appended block before older 21-week historical notes.
 7. **Safety/rollback:** only synthetic temporary CSV/SQLite; no package artifact kept in repo, customer data, external account/API, DBVORA write, public service or dependency install. Revert `f04f8b65cbeb8074e99fd7031377d02cdcd58f0d`, `5bbb5c1a6d313eeef3efed67c2026266ce365cbf`, `5b10c8eb5a79163d95167230b304a032f462ac19`, and `301b1f7c0e195c4af897bc80dbc3a9ca6ec76c1c` to remove P8 code/package test increment.
 8. **Next task:** read-only security review against Blueprint E; fix concrete local-boundary defects only, with regression tests and full-suite rerun.
 9. **Owner action/site:** no new site required. Existing `http://127.0.0.1:8765/` tab stays open; it is the UI, not the CLI schedule panel. Product PARTIAL, 76% heuristic.
+
+
+## 2026-10-27 08:52 KST — P9 DBVORA response hardening
+
+1. **Task:** Harden AX FLOW's loopback-only DBVORA client against malformed response lengths and recursive JSON parser errors, discovered during a bounded read-only security review.
+2. **Branch/commits:** `feature/axflow-mvp`; implementation `30be45331ea71b5a39cd2530764664dd8620d565`; tests `2da4b40ebfeec92b0fb589c75392c3e962e5ffb7`; README `0b0a18a517cd69e8c894cb46c3571abf4b4a7e81`.
+3. **Changed files:** `apps/ax-flow/axflow/dbvora_client.py`, `apps/ax-flow/tests/test_dbvora_client.py`, README.
+4. **Commands/results:** DBVORA client loopback tests 9/9 PASS; full Windows Python 3.11.9 suite 59/59 PASS; `node --check` and `python -m py_compile` pass.
+5. **Security finding/recovery:** a 5000-digit `Content-Length` could trip Python's integer-string limit before the client mapped it to a safe response. Deep nesting could escape JSON error handling as `RecursionError`. Added ASCII/digit/length-bound checks before integer conversion, explicit malformed-length errors, and bounded parser-error handling. Both synthetic loopback regressions now return safe unavailable/error results.
+6. **Review evidence:** checked literal 127.0.0.1 bind, Host/Origin/client checks, 8 KiB request body, 60/minute limit, CSP/no-store headers, DOM `textContent`, absence of `innerHTML`/dynamic eval, and GET-only loopback DBVORA client with redirect refusal and response/time bounds. This was a code-level self-review, not an independent assessment.
+7. **Open gaps:** actual visual browser render/click E2E; Windows symlink fixture (OS denied symlink creation); DBVORA browser-linked running service and separately approved source-preserving restore; signed installer, independent security assessment, customer and release evidence. UI remains unauthenticated and synthetic-only.
+8. **Safety/rollback:** local synthetic loopback fixture only; no customer DB, credentials, external request, DBVORA mutation or deployment. Revert `30be45331ea71b5a39cd2530764664dd8620d565` and `2da4b40ebfeec92b0fb589c75392c3e962e5ffb7` to remove this increment.
+9. **Next task:** preserve product PARTIAL; continue permission-free verifications only. Do not claim release/100% acceptance until the browser, restore, security and installer/customer gates are satisfied.
+10. **Owner action/site:** no new site needed; existing `http://127.0.0.1:8765/` remains open. Product estimate 77% by the A–E tracker.
