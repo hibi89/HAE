@@ -8,6 +8,7 @@ from pathlib import Path
 
 from .engine import ApprovalRequired, Engine, PlanError, StepRetryExhausted, StepTimeout, validate
 from .runlog import RunLogError, inspect_run
+from .templates import build_template
 
 
 def _unique_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
@@ -25,8 +26,10 @@ def _reject_json_constant(value: str) -> None:
 
 def main() -> int:
     p = argparse.ArgumentParser(prog="axflow")
-    p.add_argument("command", choices=("validate", "run", "resume", "status"))
+    p.add_argument("command", choices=("validate", "run", "resume", "status", "template"))
     p.add_argument("plan", type=Path, nargs="?")
+    p.add_argument("--name", help="built-in template name (template command)")
+    p.add_argument("--csv", dest="csv_path", help="relative CSV path for csv_to_sqlite")
     p.add_argument("--state", type=Path)
     p.add_argument("--data", type=Path)
     p.add_argument("--input-root", type=Path, help="explicit directory containing allowed synthetic CSV inputs")
@@ -37,6 +40,10 @@ def main() -> int:
     try:
         if not a.synthetic:
             raise PlanError("MVP restricted to synthetic fixtures; include --synthetic")
+        if a.command == "template":
+            plan = build_template(a.name, csv_path=a.csv_path) if a.csv_path is not None else build_template(a.name)
+            print(json.dumps(plan, ensure_ascii=False, sort_keys=True, indent=2))
+            return 0
         if a.command == "status":
             if a.state is None or a.run_id is None:
                 raise PlanError("status requires --state and --run-id")

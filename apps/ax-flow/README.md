@@ -49,8 +49,15 @@ python -m axflow run /path/to/csv-plan.json --input-root /path/to/synthetic-inpu
 ```
 Imported rows are stored in the local business database's `csv_records` table. Use synthetic fixtures only; this does not authorize processing confidential data.
 
+## Deterministic built-in template
+The CLI can emit validated native IR for one fixed synthetic workflow without AI or network access:
+```shell
+python -m axflow template --name csv_to_sqlite --csv contacts.csv --synthetic
+```
+The command writes JSON to stdout only. `--csv` must be a safe relative `.csv` path under the `--input-root` supplied later to `run`; import still requires `--synthetic` and `--approve-writes`. Unsupported templates and extra parameters fail closed. This is a deterministic template, not natural-language planning.
+
 ## Next slice
-Constrained template/natural-language planning into this native IR, then local GUI and supported end-to-end checks. Keep runtime and business DB separate and preserve tests. A 5-week stretch plan is a target, not evidence of completion.
+Compare this executable MVP against the original Blueprint V1 and close the highest-priority supported-scope gaps, then implement a local GUI and complete browser-to-engine verification. Keep runtime and business DB separate and preserve tests. A 5-week stretch plan is a target, not evidence of completion.
 
 ## 2026-10-27 — fast hackathon sprint / status-resume increment
 Active user target: **3–5 days** (Oct 31 preferred), max **7-day verification** (Nov 2), limited scope; see `../../docs/SPRINT_7_DAY_HACKATHON.md`. Older plans superseded.

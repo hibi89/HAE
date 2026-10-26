@@ -14,6 +14,7 @@ from pathlib import Path
 from axflow.engine import (ApprovalRequired, Engine, InjectedStop, PlanError, StepRetryExhausted,
                            StepTimeout, validate)
 from axflow.runlog import inspect_run
+from axflow.templates import build_template
 
 
 class TestEngine(unittest.TestCase):
@@ -281,6 +282,66 @@ class TestEngine(unittest.TestCase):
             self.assertEqual(business.execute(
                 "SELECT payload_json FROM csv_records WHERE run_id='CliCsvRun' AND row_number=1"
             ).fetchone()[0], '{"id":"1","name":"Alice"}')
+
+    def test_csv_to_sqlite_template_generates_valid_ir_and_runs_from_cli(self):
+        input_root = self.root / "template-input"
+        input_root.mkdir()
+        (input_root / "fixtures/contacts.csv").parent.mkdir()
+        (input_root / "fixtures/contacts.csv").write_text("id,name\n7,Synthetic\n", encoding="utf-8")
+
+        direct = build_template("csv_to_sqlite", csv_path="fixtures/contacts.csv")
+        self.assertEqual(direct, {"version": "axflow.ir.v0", "steps": [
+            {"id": "input", "op": "csv_read", "path": "fixtures/contacts.csv"},
+            {"id": "imported", "op": "sqlite_import_csv", "from": "input"},
+        ]})
+        validate(direct)
+        for name, params in (("unknown", {"csv_path": "contacts.csv"}),
+                             ("csv_to_sqlite", {}),
+                             ("csv_to_sqlite", {"csv_path": "../escape.csv"}),
+                             ("csv_to_sqlite", {"csv_path": "contacts.csv", "destination": "remote"})):
+            with self.subTest(name=name, params=params), self.assertRaises(PlanError):
+                build_template(name, **params)
+
+        generated = subprocess.run([
+            sys.executable, "-m", "axflow", "template", "--name", "csv_to_sqlite",
+            "--csv", "fixtures/contacts.csv", "--synthetic",
+        ], capture_output=True, text=True)
+        self.assertEqual(generated.returncode, 0, generated.stderr)
+        plan = json.loads(generated.stdout)
+        validate(plan)
+        plan_path = self.root / "generated-template.json"
+        plan_path.write_text(generated.stdout, encoding="utf-8")
+
+        checked = subprocess.run([
+            sys.executable, "-m", "axflow", "validate", str(plan_path), "--synthetic",
+        ], capture_output=True, text=True)
+        self.assertEqual(checked.returncode, 0, checked.stderr)
+        executed = subprocess.run([
+            sys.executable, "-m", "axflow", "run", str(plan_path),
+            "--state", str(self.root / "template-state.db"),
+            "--data", str(self.root / "template-business.db"),
+            "--input-root", str(input_root), "--run-id", "TemplateRun",
+            "--synthetic", "--approve-writes",
+        ], capture_output=True, text=True)
+        self.assertEqual(executed.returncode, 0, executed.stderr)
+        self.assertEqual(json.loads(executed.stdout)["result"]["imported_rows"], 1)
+        with closing(sqlite3.connect(self.root / "template-business.db")) as business:
+            self.assertEqual(business.execute(
+                "SELECT payload_json FROM csv_records WHERE run_id='TemplateRun' AND row_number=1"
+            ).fetchone()[0], '{"id":"7","name":"Synthetic"}')
+
+    def test_template_cli_keeps_synthetic_guard_and_rejects_unknown_names(self):
+        without_guard = subprocess.run([
+            sys.executable, "-m", "axflow", "template", "--name", "csv_to_sqlite",
+            "--csv", "contacts.csv",
+        ], capture_output=True, text=True)
+        self.assertEqual(without_guard.returncode, 2)
+        unknown = subprocess.run([
+            sys.executable, "-m", "axflow", "template", "--name", "arbitrary",
+            "--csv", "contacts.csv", "--synthetic",
+        ], capture_output=True, text=True)
+        self.assertEqual(unknown.returncode, 2)
+        self.assertIn("unsupported template", unknown.stderr)
 
     def test_step_failure_is_recorded_and_legacy_receipts_migrate(self):
         broken = {"version": "axflow.ir.v0", "steps": [
