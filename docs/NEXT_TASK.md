@@ -1,3 +1,11 @@
+## P32 complete — actual DBVORA source/API integration
+On AX FLOW `feature/axflow-mvp`, the current 61-test Python suite and Node provenance regression passed. A temporary synthetic SQLite fixture with a declared FK was served by the exact DBVORA `feature/p0-db-map@31b8257468d28743fb2d3767d1caa56938df756c` API, then read through AX FLOW's `/api/dbvora`. FK metadata arrived; row markers and source paths did not; DBVORA rejected POST; the source file hash/size/mtime were unchanged and no WAL/SHM appeared. Local browser/API test resources were removed. **Progress remains 88% PARTIAL.**
+
+Failure record: default sandbox loopback tests failed with WinError 10013 (9 failures/10 errors); authorized loopback rerun passed 61/61. Temporary integration-harness path, import-root, future-import ordering and retained SQLite handle errors were fixed; final integration passed and cleaned up. WSL status returned `E_ACCESSDENIED`, so D2 archive/restore was not run on an unsupported Windows filesystem.
+
+## Next
+Continue with one distinct permission-free acceptance gap. D2 remains unverified until a supported synthetic-only archive/restore run is available; do not use a customer DB or claim restore from a stub. OAuth, customer/release, independent review and commercial checks retain their explicit gates. No extra website needs to be left open.
+
 ## P31 complete — packaged DBVORA provenance and offline state
 A temporary Windows zipapp connected only to a synthetic loopback contract stub. Packaged UI/API safely displayed the allowlisted provenance and table metadata; injected paths/markup were absent. After taking the stub offline, the UI showed offline state and cleared provenance/tables/relations. Temporary processes, tab, artifact and fixtures were removed. **88% PARTIAL** remains; this does not prove actual DBVORA installation/customer behavior or restore.
 

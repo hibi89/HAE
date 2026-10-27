@@ -1,3 +1,15 @@
+## Latest checkpoint — P32 actual DBVORA source/API integration
+1. **Goal:** continue evidence-based AX FLOW implementation toward the full Blueprint without overstating customer readiness.
+2. **Completed:** revalidated the current AX FLOW source and tests, then connected its DBVORA adapter to the actual read-only DBVORA FastAPI source on `feature/p0-db-map`, using a synthetic SQLite fixture. No product source changed.
+3. **Tests:** Windows Python 3.11.9 full AX FLOW suite **61/61 PASS** (26.721 s) with authorized loopback; Node UI regression and both syntax checks PASS. Actual service → AX FLOW `/api/dbvora` showed declared FK metadata, omitted row data/paths, rejected POST (405), and left source SHA/size/mtime unchanged with no WAL/SHM.
+4. **Current state:** `feature/axflow-mvp`; estimated **88% PARTIAL** (A100/B95/C95/D95/E55). D1 has actual-source integration evidence; D2 and customer/multi-asset behavior remain open. No customer-ready claim.
+5. **Failures/recovery:** restricted sandbox: 9 failures/10 errors caused by WinError 10013 loopback denial; authorized local rerun passed. Temporary integration harness path/import/future-import errors were corrected. First cleanup failed WinError 32 because the harness retained its SQLite creator connection; explicit close made the rerun and cleanup pass. CIM listener query was denied, but `netstat` confirmed no active TCP connections. WSL status returned `E_ACCESSDENIED`, so no archive/restore was attempted.
+6. **Repository/SHA:** AX FLOW `hibi89/AX_FLOW`, `feature/axflow-mvp`, code baseline `99058617d8b35806b02be41a84fcd7ec5bee1c66`, docs parent `9a93923071776da634aa7f02c036ef8b5f18c523`; DBVORA read-only source `hibi89/DBVORA feature/p0-db-map@31b8257468d28743fb2d3767d1caa56938df756c`. This checkpoint commit updates evidence only.
+7. **Execution/environment:** Windows Python 3.11.9, Node v24.21.0. Synthetic API servers were stopped and temp source/DB removed. `netstat` shows no active TCP listener; no website needs to remain open.
+8. **Originals/credentials:** only a temporary synthetic SQLite fixture was read. Its SHA-256, size, and mtime were unchanged; no sidecars, customer records, OAuth tokens, or external DB writes.
+9. **Next/approval:** keep D2 archive/restore on a supported synthetic-only environment; WSL was unavailable, and the actual DBVORA HTTP API is read-only. OAuth, customer data, independent review, signing/release and commercial proof retain their owner/external gates. Keep independent-engine expansion out of scope pending chief review.
+10. **Time/scope:** 2026-10-27 KST. Full regression and one bounded actual-service integration were run; no release gate is declared complete by this checkpoint.
+
 ## Latest checkpoint — P31 packaged DBVORA provenance
 1. **Source:** feature/axflow-mvp@99058617d8b35806b02be41a84fcd7ec5bee1c66; no product source changed. Documentation branch before P31: 79636e921d8c37c9d7fbaa7168393da8653287e5.
 2. **Artifact:** temporary Windows zipapp SHA-256 fab5dc8a8faeb4712a12a25bd86cd7974fbb56225e6619ac233cc7e42653ec42.
