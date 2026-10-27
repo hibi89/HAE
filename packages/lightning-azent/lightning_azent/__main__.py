@@ -45,7 +45,7 @@ def _read_plan(path: Path) -> PreparedPlan:
 def main() -> int:
     parser = argparse.ArgumentParser(prog="lightning-azent")
     parser.add_argument("--version", action="version", version=__version__)
-    parser.add_argument("command", choices=("capabilities", "validate", "preflight", "run", "resume", "status", "schedule"))
+    parser.add_argument("command", choices=("capabilities", "validate", "preflight", "run", "resume", "status", "schedule", "verify"))
     parser.add_argument("plan", nargs="?", type=Path)
     parser.add_argument("--state", type=Path)
     parser.add_argument("--data", type=Path)
@@ -77,6 +77,10 @@ def main() -> int:
                           "steps": len(plan["steps"])}
             elif args.command == "preflight":
                 result = preflight_summary(prepared)
+            elif args.command == "verify":
+                if args.state is None or args.data is None or args.run_id is None:
+                    raise PlanError("verify requires --state, --data and --run-id")
+                result = LAExecutor(args.state, args.data).verify_receipts(plan, args.run_id)
             else:
                 if not args.synthetic or args.state is None or args.data is None:
                     raise PlanError("execution requires --synthetic, --state and --data")
