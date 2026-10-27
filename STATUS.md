@@ -1,3 +1,11 @@
+## P23 — REA_APP chief review and file-open race guard (2026-10-27 KST)
+- Owner-approved order now REA_APP verified → lawful n8n behavior/contracts → independent **Lightning Azent** → AX FLOW. This branch handles REA_APP only. Chief code+gap report: `tools/rea-app/CHIEF_GATE_R_REVIEW.md` (`20672b0c34b2a2480f87e1e7f8f20d6af06c7a83`).
+- Baseline `REA_APP@96d1ced45c37064642dda79d0559be9f076269ce`: compared to last **exact-remote-tested** `ff7997f2fd7a5c195bc06a63f2535ec469c24eae`, only HANDOFF/STATUS/NEXT_TASK changed (one docs commit). Previous exact-source 15/15 Python PASS and npm parser PASS refer to **old source**, not P23.
+- P23 scanner commit `f39bc31525a47c9a4621a24e0ed7f3b612c2c3f1` rejects a file swapped between precheck/stat and descriptor open, using OS `O_NOFOLLOW` when available + descriptor device/inode match. New tests `f6b868d977020e976a8e7f4363696f8eb3e095ec`: regular-file replacement and POSIX symlink swap; README updated `08d6edcb23abe2104683b548aa2a0205c8dbc951`. Isolated POSIX OS-behavior reproduction **2/2 PASS**, but **actual new repo tests/full-suite NOT RUN** (no authenticated executable checkout). Ancestor-directory races and Windows junction environment remain outside proof.
+- Research hold: n8n's official Sustainable Use License restricts commercial reuse; current 2026-08-27 n8n EULA also flags competitive analysis/reverse engineering restrictions for covered users. No n8n source was accessed in this work unit; require permission/license review before REA_APP is run against it. See chief report for exact official URLs and nuanced applicability.
+- No separate Lightning Azent package/repository created; no AX FLOW/DBVORA code touched; no deployment or customer data. Do not change inherited 91% historic AX FLOW synthetic heuristic based on this analyzer increment.
+- Next priority: actual current-HEAD full Python & Node tests with hash-/origin-checked source; run two new race regressions; record OS/exact SHA/test counts. Then original behavior contracts and clean-room fixtures after legal scope review.
+
 # STATUS — 2026-10-27 KST
 
 ## Latest verification checkpoint — P22 exact remote-source rerun (2026-10-27 13:15 KST)
