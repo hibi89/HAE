@@ -1,24 +1,33 @@
 # STATUS — 2026-10-27 KST
 
+## Latest checkpoint — P18 REA_APP change-impact report (2026-10-27 12:49 KST)
+- Branch: REA_APP. Implementation and tests are in commit 150a056f1eb13dd352ef1a1be0ce9fb9324e98e3.
+- Added bounded compare of two non-overlapping, explicitly selected source roots; reports added/removed/modified indexed files, direct/transitive resolved JS/TS dependents, exact import-line evidence, and impacted package entrypoints. Report output remains outside both roots; each scan enforces its configured caps; skipped paths and static-analysis limits are disclosed.
+- Verification on Windows (Python 3.11.9, Node 24.21.0, npm 11.19.0, Babel parser 7.29.9) from tools/rea-app: python -m unittest discover -s tests -v — 14/14 PASS; npm run test:parser — PASS; npm ls --all confirms only the pinned parser and its three resolved Babel packages. Synthetic source roots remained byte-identical; repeated JSON and Markdown reports were byte-identical.
+- Failure and resolution: the first new test run was 13/14 because a nonexistent comparison root raised a localized Windows path exception before the intended validation. Root resolution now normalizes without requiring existence, then returns the stable safe-directory error. The full suites then passed.
+- n8n research was refreshed from official documentation only: execution order, failed-node retry semantics, error workflows, queue-mode constraints, task-runner isolation, and current commercial-license boundaries. No n8n source, assets, runtime, or UI were copied.
+- Project-wide estimate is still 91% PARTIAL (heuristic A100/B100/C95/D95/E65) from docs/ACCEPTANCE_MATRIX.md at feature/axflow-mvp@62d712053470518376bdab59d4eec53191c46c88 (matrix blob 4a1f223bfa0b73693972cecc11f4a5eda637c837); REA_APP is a separate track and this change is not integrated into that matrix.
+- Remaining gates: overall chief review before any standalone AX FLOW engine; real-source/customer data, OAuth, external DB writes/restore, commercial licensing, deployment, and customer release remain unapproved/unverified. Windows junction fixture remains unverified after host denial.
+
 ## P16 — REA_APP clean dependency install verified (2026-10-27 KST)
 - Added the pinned npm lockfile for `@babel/parser@7.29.9` and changed the README setup step to `npm ci`.
 - Verification from `tools/rea-app`: `npm ci --ignore-scripts --no-audit --no-fund` PASS; Python suite **11/11 PASS**; `npm run test:parser` PASS; `npm ls --all` shows only the pinned parser and three resolved Babel transitives.
 - Failure cause/resolution: offline `npm ci` failed with `ENOTCACHED` because the cache lacked `@babel/types@7.29.11`; rerunning with network access and no install scripts/audit succeeded. No credentials were used.
-- Actual Windows junction fixture remains unverified because Windows denied junction creation (`Access denied`); synthetic reparse-attribute test passes. Overall status remains **77% / PARTIAL**.
+- Actual Windows junction fixture remains unverified because Windows denied junction creation (`Access denied`); synthetic reparse-attribute test passes. At the P16 checkpoint, the available project estimate was **77% / PARTIAL**; the later cross-track acceptance matrix supersedes that estimate.
 
 ## REA_APP parser verification checkpoint (2026-10-27 KST)
 - Re-ran the bounded analyzer against synthetic fixtures after installing the pinned public `@babel/parser@7.29.9` required by this branch's README. `python -m unittest discover -s tests -v`: **10/10 PASS**; `npm run test:parser`: PASS. Checked the analyzer/parser implementation files against `REA_APP`; local and remote source blobs matched exactly.
 - The regression now copies only the Python package and parser adapter to an isolated temporary tool root to prove missing-parser fail-closed behavior. It no longer assumes that clearing `NODE_PATH` hides a package installed beside the real adapter.
 - Failure causes/resolution: first run lacked `node_modules`, so five Python checks and the Node assertion reported parser unavailable; local npm cache was empty. Installed the exact public pinned package using `--ignore-scripts --no-audit --no-fund --package-lock=false` (four packages, no lockfile; `node_modules` is git-ignored). With it present, the missing-parser test exposed its incorrect isolation assumption; corrected and reran Python 10/10 plus Node successfully.
 - Test-only commit on `REA_APP`: `b815e72f3f0c9e0e1aad117b7db7b6cad9f84bc1`. No analyzer behavior changed.
-- Blueprint A remains **MVP_VERIFIED** for the supported synthetic JS/TS scope. Overall A–E estimate stays **77% / PARTIAL** due unrelated UI, restore, security, installer and customer/release gates.
+- Blueprint A remains **MVP_VERIFIED** for the supported synthetic JS/TS scope. At that checkpoint, the overall A–E estimate was **77% / PARTIAL** due UI, restore, security, installer and customer/release gates; the later 91% cross-track matrix above supersedes it.
 - n8n's allowed official-source structure review is recorded on `feature/axflow-mvp` at `8e8f89b5f797fdf77790a2fea57d6d7ad7b344a6`; no source/assets were copied.
 
 ## P13 — Windows reparse-point gate tightened (2026-10-27 KST)
 - Added `test_windows_reparse_attribute_is_treated_as_link`, which exercises the actual scanner predicate with FILE_ATTRIBUTE_REPARSE_POINT set and clear. REA_APP Python suite: **11/11 PASS**; `npm run test:parser`: PASS.
 - An actual filesystem fixture was attempted in an isolated temp directory. PowerShell parsed the corrected command and attempted `New-Item -ItemType Junction`, but Windows returned **Access denied**. No privilege escalation was attempted. An earlier probe had a PowerShell parenthesis syntax error before executing any operation; it was corrected before the denied attempt. Temporary fixture cleanup completed.
 - Test commit `98c6d6b399804b9041862caeb3124a0faa1146a0`; README limitation disclosure `f2b09c0827d7fb86666fa3d8fd4684cbebd39b96`.
-- The actual filesystem junction remains unverified; attribute-level behavior is tested. Blueprint A remains verified for supported synthetic scope, overall tracker stays **77% / PARTIAL**.
+- The actual filesystem junction remains unverified; attribute-level behavior is tested. Blueprint A remains verified for supported synthetic scope, the overall tracker at that checkpoint was **77% / PARTIAL**; it was later superseded by the cross-track matrix above.
 
 
 ## Verified by GitHub at start of bootstrap

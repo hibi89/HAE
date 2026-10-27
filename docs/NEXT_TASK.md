@@ -1,4 +1,16 @@
-# Next work unit — 2026-10-27 KST (ACTIVE fast-track)
+# Next work unit — 2026-10-27 KST (verified checkpoint)
+
+## P18 — REA_APP change-impact report — COMPLETE (2026-10-27 12:49 KST)
+- Implementation commit: 150a056f1eb13dd352ef1a1be0ce9fb9324e98e3 on REA_APP, parent 1409d9d383e1515a1c19350252a1c7a6f534d04d.
+- Added `rea-app compare BASELINE CURRENT --output-dir REPORTS`. It rejects equal/overlapping roots and outputs inside either source root; applies each scan's existing file/byte caps; hashes indexed files without including their contents in the report; labels added/removed/modified paths; follows resolved in-root JS/TS dependencies from both snapshots with exact import evidence; lists affected package entrypoints.
+- Tests from tools/rea-app: `python -m unittest discover -s tests -v` — 14/14 PASS; `npm run test:parser` — PASS; `npm ls --all` confirms the pinned parser dependency tree (Windows Python 3.11.9 / Node 24.21.0). Determinism, same-size edits, added/removed files, transitive impact, entrypoints, source immutability, cap failure and path rejection are covered.
+- Initial failure: one new test failed (13/14) because strict path resolution leaked a localized Windows exception for a missing comparison root. Non-strict canonicalization plus explicit directory validation fixed it; the full suite then passed.
+- Limits: only indexed paths are compared; skipped paths are disclosed, and impact is bounded static reachability from the JS/TS module graph. It does not infer Python/runtime/dynamic/external-package effects.
+
+## Next authorized step — overall chief review
+- REA_APP's synthetic JS/TS acceptance and the permitted n8n docs analysis are complete for this pass. Review the branch evidence and the separate latest shared acceptance matrix before choosing more implementation.
+- Keep the independent AX FLOW runner/engine on explicit hold until that review; do not merge REA_APP and feature/axflow-mvp. No site is needed or running.
+- Last cross-track matrix: `docs/ACCEPTANCE_MATRIX.md` at `feature/axflow-mvp@62d712053470518376bdab59d4eec53191c46c88`, blob `4a1f223bfa0b73693972cecc11f4a5eda637c837`; heuristic A100/B100/C95/D95/E65 = 91% PARTIAL. This REA_APP work is not yet reflected in it.
 
 ## P16 — REA_APP clean install and lockfile verified
 - Added the lockfile for pinned `@babel/parser@7.29.9`; setup now uses `npm ci`.
@@ -49,21 +61,22 @@ Next work unit: perform bounded n8n architecture and licensing research using of
 
 ## 2026-10-27 KST — n8n documentation findings and gate
 
-Completed this docs-only pass against official n8n documentation and the n8n Help Center:
+Completed the permitted structure pass against official n8n documentation and its Help Center. Findings are functional observations for independent design; they do not authorize copying n8n implementation, UI, assets, or connectors.
 
-- **Graph execution:** webhook, polling, and other event/time triggers start runs; a single run is started by its eventing trigger. Workflows created from n8n 1.0 finish branches one at a time in canvas top-to-bottom/left-to-right order; workflow settings can change the execution order.
-- **Queue architecture:** main intake handles triggers/webhooks and enqueues execution IDs in Redis; workers load workflow data from the shared database, run it, write results/status to the database, and notify main via Redis. Main, workers, and webhook processors share `N8N_ENCRYPTION_KEY`. Queue mode is not a SQLite deployment target.
-- **Recovery:** manual retry is a new execution that reuses results from completed nodes. The failed node receives saved input and processes all its items again, so a partial side effect within that node may duplicate; retrying a sub-workflow node reruns that sub-workflow. Error workflows receive a different payload for trigger activation errors; execution ID/URL require a saved execution.
-- **Persistence:** execution save settings are configurable. Pruning defaults to enabled and removes finished records when they exceed 14 days or 10,000 records; new/running/waiting executions are excluded. The database must be backed up before supported encryption-key rotation.
-- **Commercial boundary:** the official current SUL FAQ says internal organization authoring is permitted in Community, while customer-facing automation authoring/configuration, hosted service or white-label use requires a commercial license. Treat this as a product-boundary signal only; get written guidance from n8n before any commercial integration decision.
+- Execution order: workflows created from n8n 1.0 complete one branch before the next; canvas position orders the branches. Older workflows may retain the earlier level-by-level behavior.
+- Retry and errors: a manual retry is a new execution. Completed nodes reuse saved results, while a failed node reprocesses all its items; partial side effects inside that node may duplicate. Retrying a sub-workflow node can rerun the sub-workflow. Error workflows are configured per workflow and start with Error Trigger.
+- Queue mode: the main process enqueues execution IDs in Redis; workers load workflow data from a shared database, run it, then persist results/status. SQLite is not recommended for queue mode, and filesystem binary storage is unsupported there; use external binary storage.
+- Code-node isolation: task runners isolate user-provided JavaScript/Python. The docs recommend hardened external mode for production/sensitive data; internal mode runs with the n8n process identity, is being deprecated starting with n8n 3.0, and queue workers need runner sidecars.
+- License boundary: the current Sustainable Use License FAQ says customer-configurable automations through an app/API/MCP/AI need a commercial license even when the editor is hidden; OEM embeds keep n8n branding, and internal backend use is a separate Enterprise conversation. This is a product boundary signal, not a legal determination; written review is required before a commercial decision.
+- Previously recorded execution retention/pruning and key-rotation findings remain in the earlier checkpoint below; this refresh focused on the current retry, queue, task-runner and license pages.
 
-Sources: [execution order](https://docs.n8n.io/build/flow-logic/understand-execution-order.md), [trigger/action types](https://docs.n8n.io/connect/create-nodes/plan-your-node/choose-a-node-type.md), [retry](https://docs.n8n.io/build/understand-workflows/understand-executions/view-all-executions.md), [errors](https://docs.n8n.io/build/flow-logic/handle-errors-gracefully.md), [queue mode](https://docs.n8n.io/deploy/host-n8n/configure-n8n/scaling/enable-queue-mode.md), [execution retention](https://docs.n8n.io/deploy/host-n8n/configure-n8n/scaling/manage-execution-data.md), [key rotation](https://docs.n8n.io/deploy/host-n8n/configure-n8n/security/rotate-encryption-keys.md), [SUL FAQ](https://support.n8n.io/article/can-i-use-your-license-for-my-use-case).
+Sources: [execution order](https://docs.n8n.io/build/flow-logic/understand-execution-order.md), [retry behavior](https://docs.n8n.io/workflows/executions/all-executions/), [error workflows](https://docs.n8n.io/flow-logic/error-handling/), [queue mode](https://docs.n8n.io/deploy/host-n8n/configure-n8n/scaling/enable-queue-mode/), [task runners](https://docs.n8n.io/deploy/host-n8n/configure-n8n/set-up-task-runners/), [SUL FAQ](https://support.n8n.io/article/can-i-use-your-license-for-my-use-case), and [OEM overview](https://n8n.io/oem/).
 
-Verification on synthetic fixtures: `python -m unittest discover -s tools/rea-app/tests -v` — **8 passed**; `npm --prefix tools/rea-app run test:parser` — **PASS**. One first test command omitted `NODE_PATH`, causing 3 expected parser-unavailable failures; setting it to the installed global Babel parser location made the entire suite pass. A standalone credentials environment-variable docs page was inaccessible; encryption-key evidence was cross-checked from queue-mode and key-rotation docs. No n8n source or runtime used.
-
-**Hold point:** before any independent AX FLOW runner/engine work, chief review must compare the passing REA_APP scope and remaining blueprint gaps. Current REA_APP limits: Python AST, value/data-flow, physical symlink/junction and clean npm install validation, Windows packaging, and authorized real-source validation. The next task is to decide which of these merit a bounded follow-up; do not start the standalone engine before review.
+**Result:** no n8n source or runtime was accessed or copied. Do not repeat broad n8n research without a concrete open question. The standalone AX FLOW engine remains on hold for overall chief review.
 
 ## 2026-10-27 KST — REA_APP 0.3.0 / Blueprint A closeout
+
+
 
 The REA_APP Blueprint A acceptance audit is complete for the stated synthetic JS/TS scope. Feature commit `991fe3d908377a70a451013262449a8ad001d0d2` adds exported function signature contracts: explicit parameter/return annotations, optional/rest/default-presence flags, export aliases, and definition/export path+line evidence. Corrective UTF-8 commit `0a4b446bda6b78c3e5c7cbda2865cf061a64b6b9` restores `graph.py` after remote verification found that a truncated Base64 output had been included in its content. The corrected full file now matches the local normalized file. ESM and CommonJS cases pass. Reports omit function bodies and actual default values; ambiguous source bindings are omitted. Tool version is `0.3.0`.
 
@@ -77,7 +90,7 @@ Actual verification from `tools/rea-app`:
 
 The permitted n8n architecture/licensing pass is also complete from official documentation only. Its findings and sources are recorded above and in `STATUS.md`; do not repeat broad research. No n8n source/UI/runtime was inspected or copied.
 
-**Overall Blueprint V1 completion: 20%** under an explicit equal-weight A–E gate count. A passes for bounded synthetic acceptance; B (standalone runner), C (customer UI), D (DBVORA integration), and E (security, Windows and end-to-end release validation) remain unimplemented. This percentage describes the whole AX FLOW target, not REA_APP alone. The independent runner remains on explicit user hold until chief review.
+**Historical Blueprint V1 estimate at this closeout: 20%** under an explicit equal-weight A–E gate count. A passes for bounded synthetic acceptance; B (standalone runner), C (customer UI), D (DBVORA integration), and E (security, Windows and end-to-end release validation) remain unimplemented. This percentage describes the whole AX FLOW target, not REA_APP alone. The independent runner remains on explicit user hold until chief review.
 
 **Failure record:** The first feature commit's `graph.py` blob was corrupted because its large Base64 text exceeded the command-output limit and the truncation warning was accidentally included in the payload. GitHub UTF-8 verification caught the problem. Re-uploading the file in small chunks fixed it. The local test suite did not detect remote blob encoding, so source fetch verification remains part of commit acceptance.
 

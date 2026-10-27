@@ -1,13 +1,25 @@
 # HANDOFF — AX FLOW + REA_APP (bootstrap, 2026-10-27 KST)
 
-## Latest checkpoint — P16 REA_APP reproducible dependency install
+## Latest checkpoint — P18 REA_APP change-impact MVP (2026-10-27 12:49 KST)
+1. Goal: complete REA_APP Blueprint A / R-A1 evidence within the authorized local, bounded, read-only analysis scope; then finish permitted n8n documentation review. Keep the standalone AX FLOW engine on hold for chief review.
+2. Change: commit 150a056f1eb13dd352ef1a1be0ce9fb9324e98e3 adds SHA-256 based two-snapshot file comparison, direct/transitive static dependency impacts, exact import evidence and affected package entrypoints; README documents the CLI and limits.
+3. Tests: from tools/rea-app, python -m unittest discover -s tests -v — 14/14 PASS; npm run test:parser — PASS; npm ls --all confirms pinned @babel/parser@7.29.9 and its three transitive packages. Environment: Windows, Python 3.11.9, Node 24.21.0, npm 11.19.0. Synthetic source snapshots were unchanged and reruns were byte-identical.
+4. State/progress: REA_APP synthetic JS/TS Blueprint A scope passes. The latest project-wide matrix remains 91% PARTIAL (heuristic), from feature/axflow-mvp@62d712053470518376bdab59d4eec53191c46c88; this separate REA_APP commit does not update or merge that matrix.
+5. Failure/pivot: first P18 regression was 13/14; missing-root resolution exposed a localized Windows OSError before stable validation. Switching to non-strict canonicalization followed by explicit directory checks fixed the failure; final suites pass. Earlier physical junction creation remains denied by Windows and unverified.
+6. Repository/branch/SHA/paths: hibi89/AX_FLOW, branch REA_APP, implementation SHA 150a056f1eb13dd352ef1a1be0ce9fb9324e98e3, based on 1409d9d383e1515a1c19350252a1c7a6f534d04d. Changed tools/rea-app/rea_app/{scanner.py,cli.py,impact.py}, tools/rea-app/tests/test_cli.py and tools/rea-app/README.md. Docs checkpoint follows the tested implementation.
+7. Production/execution/site: this is a local CLI/source-analysis tool; no website is needed or running. No browser E2E, deployment, customer execution or production claim was made. Prior UI automation was stopped by the Windows browser-URL confidence guard.
+8. Originals/approvals/credentials: only synthetic fixtures were compared; no source tree was changed by REA_APP. No credentials or customer data were used. OAuth, external DB writes/restore, paid services, deployment, commercial licensing and customer use remain gated.
+9. Next priority/approvals: provide the verified REA_APP and n8n findings to overall chief review. Do not implement the standalone engine until that review clears the explicit hold. Keep real-source, Windows filesystem-link, DBVORA and release gates separate.
+10. KST checkpoint/evidence baseline: 2026-10-27 12:49 KST. The latest feature/axflow-mvp acceptance matrix is blob 4a1f223bfa0b73693972cecc11f4a5eda637c837 and reports 91% PARTIAL; no shared acceptance matrix was changed on REA_APP.
+
+## Prior checkpoint — P16 REA_APP reproducible dependency install
 1. Added `tools/rea-app/package-lock.json` for the pinned `@babel/parser@7.29.9`; README now uses `npm ci`.
 2. **Verification:** `npm ci --ignore-scripts --no-audit --no-fund` PASS; Python **11/11 PASS**; `npm run test:parser` PASS; `npm ls --all` confirms the pinned package tree.
 3. **Failure and resolution:** offline `npm ci` failed `ENOTCACHED` for `@babel/types@7.29.11` because its tarball was not cached. Online public package fetch with lifecycle scripts and audit disabled succeeded; no external credential was needed.
 4. **State:** REA_APP remains verified for bounded synthetic JS/TS only; full AX FLOW remains **77% / PARTIAL**. A real junction fixture is still unverified after Windows returned Access denied.
 5. **Next:** select one permission-free Blueprint gap and verify it. Do not implement the independent AX FLOW engine before chief review. Keep customer data, OAuth, DBVORA writes/restore, security sign-off and release gates on hold.
 
-## Latest REA_APP verification — 2026-10-27
+## Previous REA_APP verification — 2026-10-27
 1. **Branch/change:** `REA_APP`; test-only fix in `tools/rea-app/tests/test_cli.py`, commit `b815e72f3f0c9e0e1aad117b7db7b6cad9f84bc1`.
 2. **Tests:** Python 10/10 PASS; Node parser adapter PASS with the pinned `@babel/parser@7.29.9`. Core analyzer/parser files match the remote REA_APP blobs. The project sources were not changed.
 3. **Failure log:** initial environment had no parser dependency; five Python tests plus the Node assertion failed with the documented unavailable-parser message. After no-script install, the missing-parser test alone failed because `NODE_PATH=""` cannot hide a local dependency. It now runs from an isolated copied tool root with no `node_modules`; both suites pass. No registry authentication was needed and no package lock was created.
