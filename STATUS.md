@@ -1,3 +1,12 @@
+## REA_APP v0.3.0 INTERNAL MVP ACCEPTED / FROZEN — 2026-10-28 KST
+
+- **RELEASE DECISION:** The user-directed local backend/CLI MVP is accepted for `docs/TARGET_BLUEPRINT_V1.md` acceptance **A** on supported synthetic JS/TS. This is not HAE/Lightning Azent completion, real customer use or general-purpose source recovery.
+- **SOURCE PIN:** P53 reviewed code commit `1ae3dac263a1a5c866434c8418fe7dbb1d3f1d48`; prior docs HEAD `3fd0ac452ea3255a24998f550aba3cbf9e6a263d`. This checkpoint changes **documentation only**, not the protected analyzer/parser/test code. The release manifest is `tools/rea-app/MVP_RELEASE_V0.3.0.md`.
+- **RECORDED WINDOWS EVIDENCE (NOT re-executed in this freeze step):** Gate R source 25/25; Python 72 total / 66 PASS / 6 SKIP / 0 FAIL; exact Babel Node PASS; QA 11/11 PASS; native junction tests executed. Clean Python wheel install and locked npm install followed by eight-report `bundle --with-diagram` executed successfully on synthetic inputs with deterministic output and unchanged source hashes. P53 gate evidence `E:\HAE\REA_APP_GATE_EVIDENCE\gate-r-vd4gdxam\evidence.json` is local and not directly inspected by this chief session.
+- **FREEZE:** No P54 wildcard expansion, frontend work, additional language deep-parsers, code rewrite, package publication or deployment. Existing unsupported source constructs remain explicit limitations; security/path/size controls from the supported MVP remain in force.
+- **NEXT:** Use as an internal read-only source-evidence CLI for permissioned research. Prioritize Lightning Azent engine tests and HAE integration instead. Reopen REA_APP only for reproducible defects blocking authorized use and rerun its full Gate R at the new code SHA.
+- **STATUS:** `REA_APP_INTERNAL_MVP_ACCEPTED`; Windows standalone/user install outside the recorded synthetic environment, browser Mermaid rendering and authorized third-party source analysis remain NOT VERIFIED / NOT IN SCOPE. No Vercel/Production (N/A).
+
 ## P53 — direct ESM re-export contracts across all reports (2026-10-27 KST)
 
 - One shared graph-stage enrichment now adds explicit, unique, direct in-root ESM re-export callables. `source-map`, `functional-contracts`, and `change-impact` use the same façade module/export identity with target-definition and export-row evidence. Six/eight output sets and schema IDs are unchanged.
