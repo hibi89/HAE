@@ -1,3 +1,9 @@
+### P27 — installed parser version must match (2026-10-27 KST)
+
+`python verify_gate_r.py` now checks the **locally installed** `@babel/parser` metadata through Node before calling the Node parser test. The installed version must be exactly `7.29.9`, matching the lockfile; a missing dependency or mismatched version fails. No dependencies are installed by the verifier.
+
+The verifier's self-test expanded from 5 to **7 cases**, and its current source/test Git blobs match the committed files. Python self-tests **7/7 PASS** in an isolated Linux environment. Two Node package-metadata simulations confirmed acceptance/rejection (**2/2**); these are not a full analyzer integration or real Babel parser suite. The 14-file exact-source gate, actual Python analyzer tests and genuine Node parser test must still run in an authorized checkout for REA_APP Gate R sign-off.
+
 ### Gate R verifier self-tests (2026-10-27 KST)
 
 The byte-exact `tests/test_verify_gate_r.py` file was executed against a byte-exact local reconstruction of `verify_gate_r.py` (both files matched their GitHub blob IDs). Result on Python 3.13.5 / Linux: **5 tests, 5 PASS**, covering known Git blob fingerprint, accepted reviewed fixture, tampered source rejection, unreviewed test rejection and symlink rejection. Windows symlink permissions require separate handling. The verification manifest now includes **14** reviewed modules/tests. This **does not** constitute a full REA_APP Python/Node suite run on an authenticated repository checkout; those remain pending.
