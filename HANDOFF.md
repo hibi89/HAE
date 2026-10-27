@@ -6,6 +6,7 @@
 5. **Scope:** F2 concurrent publication verified; no DBVORA data restore, power-loss or customer deployment claim. No website/auth/server or external service.
 6. **Estimate:** **91% PARTIAL** (A100/B100/C95/D95/E65). OAuth, DBVORA D2, independent security, signed/customer distribution and commercial gates remain open.
 7. **Next:** inject failures before and after publication; verify no residue and unchanged source.
+8. **P43 implementation commit:** `e2d70db08a171ccd821b5b65de5e273c664cc91a`.
 
 
 
