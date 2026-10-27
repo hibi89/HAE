@@ -1,3 +1,11 @@
+## LA P1b — execute source-pinned current tests, then three E2E flows (2026-10-28 KST)
+
+- New code is on `feature/lightning-azent`. CLI preflights identifiers, trigger match, schedule bounds, and explicit SQLite write approval before Engine opens SQLite; **12 new-branch Python test definitions** exist across two files but no real execution result yet. Do not call this 12 PASS.
+- On authorized Windows checkout: `git switch feature/lightning-azent; git pull --ff-only; $env:PYTHONPATH="packages/lightning-azent"; python -m unittest discover -s packages/lightning-azent/tests -v`. Then `python -m compileall -q packages/lightning-azent`, and rerun unmodified `apps/ax-flow/tests` on original source with the same interpreter.
+- Validate the 3 actual synthetic paths with independent LA CLI: CSV filter->approved 2-row import and same-ID replay; guarded conditional branch; interval two-tick restart. Confirm SQLite row counts, original CSV hash, redacted receipts, valid run/schedule IDs, unsupported-node denial and no SQLite created on invalid/denied requests.
+- If any failure occurs, investigate and patch just the reproducing defect; record OS/Python/runtime/commit, count PASS/SKIP/FAIL, source fixtures SHA, DB state, stdout/stderr, HAE baseline parity. Avoid docs-only churn. No HAE import migration before passing tests.
+- REA_APP MVP v0.3.0 remains frozen and n8n commercial-source licensing review remains independent; do not copy n8n code or use customer data.
+
 ## Lightning Azent P1 — independently execute three offline workflows (2026-10-27 KST)
 
 1. **Source of truth:** `feature/lightning-azent`, staged from original HAE `feature/axflow-mvp@30bb9eb979d1cd2c1180e0bcee419da60e182ed4`. Do not alter the completed REA_APP `REA_APP@3fd0ac452ea3255a24998f550aba3cbf9e6a263d` for P54 while building LA.
