@@ -1,3 +1,14 @@
+## Latest checkpoint — P36 DBVORA synthetic Windows archive capability check
+1. **Goal/branch:** continue AX FLOW against the 100% Blueprint target on `hibi89/AX_FLOW` `feature/axflow-mvp`. Current code/evidence parent is P35 `e7d98efb91fff7c0045ae1c8d47a1a4af7c52e63`; P36 adds docs only.
+2. **P35 code:** validated single-column `csv_normalize`, bounded English/Korean intent, transform/filter/import lineage, duplicate reporting without dropping duplicate rows, and redacted receipts. Full AX FLOW Python suite 66/66 PASS; Node checks/UI regression PASS.
+3. **P36 test:** exact DBVORA archive CLI source at `feature/p0-db-map@31b8257468d28743fb2d3767d1caa56938df756c`; ten copied modules matched remote Git blobs. A disposable synthetic SQLite source with FK was passed to `snapshot --synthetic-only --accept-plaintext` and a distinct output directory.
+4. **P36 result:** exit 2 `PUBLISH_FAILED`, “Staged artifact could not be flushed safely.” No output artifact; source hash/size/mtime unchanged. No snapshot means no archive/restore proof; D2 remains NOT_STARTED. Do not infer an OS-specific subcause from the sanitized CLI response.
+5. **Progress:** 90% PARTIAL (A100/B95/C95/D95/E65), heuristic only.
+6. **Failures/recovery:** P35 records stale result assertion correction and one non-reproducing targeted SQLite busy-cap failure; the isolated retry and final full suite passed. P36's safe failure is host capability evidence. P33 stale temp logs remain locked even though no listener/Python process was visible; CIM details were denied; no force termination.
+7. **Site/credentials:** no site needs to stay open. No customer data, external auth, public deployment, DBVORA write or paid API.
+8. **Next:** inspect the AX FLOW cross-process same-run replay race exposed once by the bounded busy cap. Reproduce under controlled synthetic concurrency before modifying behavior; fix a real race or explicitly document/configure the retry contract, then add deterministic coverage and rerun the full suite. Do not weaken the acceptance test or implement the standalone engine.
+9. **Date:** 2026-10-27 11:39 KST. P36 did not modify product source.
+
 ## Latest checkpoint — P35 bounded CSV normalization and duplicate reporting
 1. **Goal:** continue closing verified Blueprint gaps on `hibi89/AX_FLOW` `feature/axflow-mvp`; preserve the synthetic-only boundary.
 2. **Implemented:** validated `csv_normalize` IR with per-column trim/lower/upper/number/string transforms, one explicit English/Korean normalization request in the bounded planner, normalized filtering/import, exact duplicate detection, redacted duplicate count/source-row receipt, and UI summary. Duplicates are reported and retained; runtime receipts do not persist row payloads.

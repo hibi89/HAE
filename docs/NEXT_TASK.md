@@ -1,3 +1,12 @@
+## P36 complete — DBVORA Windows synthetic archive capability check
+Read and hash-verified the pinned DBVORA archive CLI/source, then invoked its snapshot command on a disposable synthetic SQLite source in separate output directories. The source SHA-256, size and mtime were unchanged; no snapshot was published. The CLI returned exit 2, `PUBLISH_FAILED`, “Staged artifact could not be flushed safely.” Since the snapshot stage could not publish, no archive/restore command was run and D2 remains NOT_STARTED. The CLI did not reveal a lower-level OS error; do not guess one. Windows/NTFS is not covered by DBVORA's recorded Linux synthetic pass.
+
+P36 temporary source and fixture were removed. Six old synthetic log files under the prior `.verification-temp` tree remain locked despite no visible listener/Python process; process-level inspection was denied by CIM, so no process was killed. No site needs to remain open. Progress remains **90% PARTIAL**.
+
+## Next atomic task — reproduce the cross-process same-run lock case
+The AX FLOW full suite passed 66/66, but one targeted run of `test_cross_process_same_run_replay_is_idempotent` reached the configured SQLite busy cap once; its isolated rerun and final full suite passed. Reproduce this against the current committed source with a synthetic repeatable harness, identify whether concurrent step execution can produce a legitimate bounded failure, then make the smallest fix that preserves idempotency and failure reporting. Add a deterministic regression that proves the chosen contract and run the complete suite. Do not hide the race by only changing the expected result or relaxing the assertion.
+
+
 ## P35 complete — bounded CSV normalization and duplicate reporting
 Added a fail-closed, validated single-column normalization step and a narrow English/Korean planner path. The flow keeps rows in memory, preserves original row numbers and source SHA-256, reports exact duplicate rows after transformation, retains rather than deletes them, and never writes row payloads into runtime receipts. Normalization can precede filtering and SQLite import. Failure tests prove invalid numeric conversions stop before business writes; restart tests prove replay remains idempotent.
 

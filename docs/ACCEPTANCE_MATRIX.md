@@ -8,6 +8,8 @@
 
 **P35 normalization evidence:** explicit column transformations, normalized filtering/import, duplicate-row receipts, source-lineage preservation, pre-write failure safety and crash replay are covered by the 66-test suite; duplicates are retained and runtime receipts omit row values.
 
+**P36 DBVORA capability check:** exact archive CLI source was hash-verified and run on a synthetic SQLite source on Windows. It safely returned `PUBLISH_FAILED` before publishing a snapshot; source SHA/size/mtime remained unchanged. No archive or restore completed, so D2 remains NOT_STARTED.
+
 | ID | Component | Required proof | Current |
 |---|---|---|---|
 | R1 | REA_APP synthetic source analyzer | real parser/import/graph + bounds + no source mutation tests | PASS — bounded synthetic JS/TS; Python 11/11, Node parser PASS, deterministic fixture and self-scan |
@@ -18,7 +20,7 @@
 | F4 | AI & attachments | natural language → runnable plan, files parsed locally, bounded repair/dry-run, no manual nodes/JSON | PARTIAL — bounded full/filtered/conditional/lookup CSV flows plus an explicit single-column normalization/import path and duplicate report tested; visible browser flow verified previously; no general AI, arbitrary attachments or bounded AI repair |
 | F5 | Connectors/auth | real user OAuth consent (no bypass), scoped Gmail send / Sheets calls with explicit approval | NOT_STARTED — requires owner consent and real credentials |
 | D1 | DBVORA integration | supported SQLite read-only catalog → UI schema/relations/size/provenance; API offline handling; no raw data leakage | PARTIAL — P24 visible synthetic schema/PK/FK/size verified against exact source; P27–P28 provenance allowlist, unavailable state and offline clearing verified; P31 packaged stub online/offline verified; P32 source-app adapter and P33 current Windows zipapp both read exact DBVORA feature/p0-db-map API, showing FK metadata and omitting data/path; customer/multi-asset and customer-installed service remain unverified |
-| D2 | Data backup/restore | independently restored source, same content and source unchanged, corruption/restart safety on supported platform | NOT_STARTED — separately owner-approval gated; no restore was performed |
+| D2 | Data backup/restore | independently restored source, same content and source unchanged, corruption/restart safety on supported platform | NOT_STARTED — no successful independently verified restore. P36 Windows synthetic snapshot attempt returned `PUBLISH_FAILED` before publication; source was unchanged and no restore was attempted |
 | F6 | Customer dashboard | local browser with authenticated controls, permissions, status, errors, no manual node selection | PARTIAL — synthetic local browser controls/receipts/errors verified; customer authentication absent |
 | F7 | Security/reliability | file/OAuth/token secrecy, prompt injection, outbound limits, idempotency, fault injection, least privilege, dependency audit | PARTIAL — local boundary/redaction/idempotency and fault paths tested; no independent review, live OAuth validation or complete security gate |
 | F8 | Install/customer release | native Windows/NTFS + UI/CLI + network + repeatable packaged install, three real-world-shaped workflows | PARTIAL — stdlib zipapp API smoke, P30 packaged browser workflow, P31 packaged provenance stub, and P33 packaged actual DBVORA API integration verified; signed installer, customer installation, three real-world-shaped workflows and release evidence remain open |
