@@ -6,6 +6,7 @@ The command only invokes the reviewed local verifier; it does not fetch packages
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import platform
@@ -17,29 +18,47 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-REQUIRED_MARKERS = (
-    "SOURCE VERIFIED: 15/15",
-    "PYTHON_ALL: PASS",
-    "DEPENDENCY VERIFIED: @babel/parser@7.29.9",
-    "NODE_PARSER: PASS",
-    "SUMMARY: source=PASS, python=PASS, node=PASS",
-)
+# Pin the trusted Gate R entrypoint as well as its manifest-protected inputs.
+# Update this fingerprint deliberately whenever verify_gate_r.py is reviewed.
+EXPECTED_VERIFIER_BLOB = "396654c47b25cfbc0279b4dcdc2f8872c7e20891"
+REQUIRED_LINES = {
+    "source": re.compile(r"^SOURCE VERIFIED: 15/15 Git blobs match .+$"),
+    "python": re.compile(r"^PYTHON_ALL: PASS \(exit 0\)$"),
+    "babel": re.compile(r"^DEPENDENCY VERIFIED: @babel/parser@7\.29\.9$"),
+    "node": re.compile(r"^NODE_PARSER: PASS \(exit 0\)$"),
+    "summary": re.compile(r"^SUMMARY: source=PASS, python=PASS, node=PASS$"),
+}
 
 
-def git_info() -> tuple[str | None, str | None]:
-    """Collect local provenance only; no Git remote/network operations."""
-    values: list[str | None] = []
-    for args in (("rev-parse", "HEAD"), ("branch", "--show-current")):
+def git_blob_id(data: bytes) -> str:
+    return hashlib.sha1(b"blob " + str(len(data)).encode("ascii") + b"\0" + data).hexdigest()
+
+
+def git_info() -> tuple[str | None, str | None, bool]:
+    """Collect local, narrowly scoped provenance; do not query remotes."""
+    results = []
+    for args in (("rev-parse", "HEAD"), ("branch", "--show-current"),
+                 ("status", "--porcelain", "--untracked-files=all", "--", ".")):
         try:
             result = subprocess.run(
                 ["git", "-C", str(ROOT), *args], capture_output=True,
                 text=True, timeout=10, check=False,
             )
         except (OSError, subprocess.TimeoutExpired):
-            values.append(None)
+            results.append(None)
             continue
-        values.append(result.stdout.strip() if result.returncode == 0 else None)
-    return values[0], values[1]
+        results.append(result.stdout.strip() if result.returncode == 0 else None)
+    return results[0], results[1], results[2] == ""
+
+
+def checked_verifier_blob() -> str | None:
+    try:
+        target = ROOT / "verify_gate_r.py"
+        if not target.is_file() or target.is_symlink():
+            return None
+        return git_blob_id(target.read_bytes())
+    except OSError:
+        return None
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -56,7 +75,8 @@ def main(argv: list[str] | None = None) -> int:
     except OSError as exc:
         print(f"OUTPUT BLOCKED: {type(exc).__name__}", file=sys.stderr)
         return 2
-    sha, branch = git_info()
+    sha, branch, worktree_clean = git_info()
+    verifier_blob = checked_verifier_blob()
     command = [sys.executable, str(ROOT / "verify_gate_r.py")]
     start = datetime.now(timezone.utc)
     stdout, stderr, exit_code = "", "", -1
@@ -73,18 +93,25 @@ def main(argv: list[str] | None = None) -> int:
         (run_dir / "stderr.txt").write_text(stderr, encoding="utf-8")
 
     combined = stdout + "\n" + stderr
-    markers = {marker: any(line.strip() == marker or line.strip().startswith(marker + " ")
-                           for line in combined.splitlines()) for marker in REQUIRED_MARKERS}
+    output_lines = [line.strip() for line in combined.splitlines()]
+    markers = {label: any(pattern.fullmatch(line) for line in output_lines)
+               for label, pattern in REQUIRED_LINES.items()}
     tests = re.findall(r"^Ran (\d+) tests?\b", combined, flags=re.MULTILINE)
     skipped = re.findall(r"^OK \(skipped=(\d+)\)$", combined, flags=re.MULTILINE)
     valid_provenance = bool(sha and re.fullmatch(r"[0-9a-f]{40}", sha) and branch == args.expected_branch)
-    passed = exit_code == 0 and valid_provenance and all(markers.values())
+    verified_verifier = verifier_blob == EXPECTED_VERIFIER_BLOB
+    passed = (exit_code == 0 and valid_provenance and worktree_clean
+              and verified_verifier and all(markers.values()))
     record = {
         "schema_version": "rea-app-gate-r-evidence/v1",
         "source_checkout": str(ROOT),
         "git_head": sha,
         "git_branch": branch,
         "expected_branch": args.expected_branch,
+        "tool_worktree_clean": worktree_clean,
+        "reviewed_verifier_blob_expected": EXPECTED_VERIFIER_BLOB,
+        "reviewed_verifier_blob_actual": verifier_blob,
+        "reviewed_verifier_blob_matches": verified_verifier,
         "utc_started": start.isoformat(),
         "utc_finished": datetime.now(timezone.utc).isoformat(),
         "python_version": platform.python_version(),
