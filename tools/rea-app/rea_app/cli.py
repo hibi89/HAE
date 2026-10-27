@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from . import __version__
+from .contracts import ContractError, build_functional_contracts, load_source_map, render_functional_contracts_markdown
 from .graph import ParserError, build_report, render_markdown
 from .impact import build_change_impact, render_change_impact_markdown
 from .scanner import ScanError, ScanLimits, walk_source
@@ -142,6 +143,29 @@ def _compare(args: argparse.Namespace) -> int:
     return 1 if report["summary"]["syntax_errors"] else 0
 
 
+def _contracts(args: argparse.Namespace) -> int:
+    """Export independent interface evidence from a previously saved source map."""
+    try:
+        source_map_path = args.source_map.expanduser().resolve(strict=True)
+        output = args.output_dir.expanduser().resolve(strict=False)
+        filenames = ("functional-contracts.json", "functional-contracts.md")
+        if any(source_map_path == output / name for name in filenames):
+            raise OutputError("contract output must not overwrite the input source map")
+        if output.exists() and not output.is_dir():
+            raise OutputError("output path exists and is not a directory")
+        report = build_functional_contracts(load_source_map(source_map_path))
+        markdown = render_functional_contracts_markdown(report)
+        output.mkdir(parents=True, exist_ok=True)
+        _write_report(output / filenames[0], json.dumps(report, ensure_ascii=False, sort_keys=True, indent=2) + "\n")
+        _write_report(output / filenames[1], markdown)
+    except (ContractError, OutputError, FileNotFoundError, OSError) as exc:
+        print(f"REA_APP contract export stopped: {exc}", file=sys.stderr)
+        return 2
+    print(f"REA_APP exported {len(report['contracts'])} interface contracts.")
+    print(f"Reports: {output / filenames[0]} and {output / filenames[1]}")
+    return 0
+
+
 def build_argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="rea-app",
@@ -166,6 +190,10 @@ def build_argument_parser() -> argparse.ArgumentParser:
     compare.add_argument("--max-total-bytes", type=int, default=20_000_000)
     compare.add_argument("--parser-timeout", type=int, default=30)
     compare.set_defaults(handler=_compare)
+    contracts = commands.add_parser("contracts", help="export evidence-only interfaces from a saved source-map.json")
+    contracts.add_argument("source_map", type=Path, help="existing REA_APP source-map.json")
+    contracts.add_argument("--output-dir", type=Path, required=True, help="local contract output directory")
+    contracts.set_defaults(handler=_contracts)
     return parser
 
 

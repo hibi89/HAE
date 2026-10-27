@@ -1,3 +1,9 @@
+## REA_APP P38 — functionality-first next work (2026-10-27 KST)
+
+- MVP scan/compare exist, and blueprint's independent exported function interface contract gap is now implemented as `contracts` CLI command (new `rea_app/contracts.py` + tests). Source map input used without rescanning; deterministic JSON + Markdown output. No commercial/n8n source transplant.
+- Run complete supported-scope CLI walk-through: synthetic JS/TS fixture → `scan` → `compare` → `contracts`, inspect actual files/line evidence/determinism. Real parser@7.29.9 and Windows not yet verified on latest HEAD. Existing parser execution block remains; do not mistake candidate tests for full release.
+- Only after MVP path works end-to-end, continue blueprint gap closure, followed by bounded final safety/stability/compatibility review. Avoid new hardening-only P steps, avoid paid CI absent approval.
+
 ## REA_APP P37 — next verified Gate R step (2026-10-27 KST)
 
 - Source code fix published: Linux FIFO swap hang now mitigated with `O_NONBLOCK` and retained `fstat` nonregular/inode guards. Exact GitHub blobs scanner `ac3b5960378924c29e24c87cc58b67c315818c8a`, new regression `59aa669caadcbb31fc5a96629002196728c31a80`. QA evidence [P37](tools/rea-app/P37_FIFO_SWAP_GUARD.md) is at repository path `tools/rea-app/P37_FIFO_SWAP_GUARD.md` (11/11 local, previously 1 timeout before fix).

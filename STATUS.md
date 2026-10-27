@@ -1,3 +1,10 @@
+## P38 — functional contracts blueprint gap (2026-10-27 KST)
+
+- Delivered new offline command `python -m rea_app contracts <source-map.json> --output-dir <directory>` built on existing stored REA_APP analysis evidence; exports deterministic interface-only JSON and Markdown, no reparse, no function bodies/default literals, no target execution.
+- Original blueprint requires independent functional contract export. Compared A: derive from saved source-map (selected: fast, zero new dependency, no extra parse) vs B: augment every scan (extra coupling and output churn). Prior scan/compare APIs preserved. Functional baseline unchanged; P37 runtime-hardening detour closed.
+- Candidate standalone implementation exercised on isolated Linux/Python 3.13.5 with 5/5 tests PASS; newly published code and tests have not been executed as part of full private-source package. P38 adds a test suite and pins new source/test/CLI hashes in 18-file Gate R verifier and runner. **Full exact-HEAD Python + installed Babel Node suite NOT RUN; Gate R PARTIAL**.
+- Next development task: use REA_APP MVP scan→compare→contracts flow on a local synthetic JS/TS application; compare evidence to blueprint and implement only missing user functions. Security/Windows/n8n license checks remain release gates, not the next speculative development sprint.
+
 ## P37 — FIFO race fix with byte-pinned focused suite (2026-10-27 KST)
 
 - **IMPLEMENTED:** `rea_app/scanner.py` uses `O_NONBLOCK` where available to avoid blocking on FIFO swapped after `stat()`, retains existing no-follow, `fstat`, inode and snapshot guards. Tests added to `test_scan_open_races.py`; source commits scanner `6f44fba8dab2e14b8f50b4bc9309d3112d23e2ff`, test `1e5fc9bec55a53788cc9d3a68cf696666026313e`.

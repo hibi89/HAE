@@ -1,3 +1,16 @@
+## P38 handoff — functional contracts blueprint-gap delivery (2026-10-27 KST)
+
+1. **Goal / stack / requirements:** REA_APP authorized local static JS/TS source analyzer MVP, Python 3.11+, Node Babel@7.29.9; follow MVP → original blueprint gap implementation → final security/reliability/compatibility. `TARGET_BLUEPRINT_V1.md` calls for independent functional contract export.
+2. **Delivered / rationale:** New offline `contracts` CLI action reads saved source-map/v1, exports evidenced callable interface JSON/Markdown with package labels, parameters and source lines, no code bodies/default literals. A) saved-report extraction (selected: no parser re-run), B) always regenerate as part of scan (coupling/output cost). Separate REA_APP from Lightning Azent and HAE.
+3. **Tests:** Isolated Python 3.13.5 candidate `contracts` implementation unit fixture 5/5 passed (determinism/no body, empty, schema, path rejection, input size/JSON); this is not an exact-remote-source end-to-end CLI test. Current 18-file source manifest and runner are updated for new code. Full Python + actual Babel 7.29.9 not run on a complete checkout.
+4. **Status:** Functional slice added in one atomic GitHub change. **MVP integrated demo PARTIAL**, release Gate R PARTIAL. Next focus full supported-scope user journey, not further edge-case hardening.
+5. **Failure evidence / pivot:** Existing environment cannot clone private source or resolve installed parser; prior failures recorded; do not repeat ineffective clone or pay for CI without approval. Use authorized executable checkout or targeted local fixtures with precise limitations.
+6. **Repo / branch / SHA:** `hibi89/AX_FLOW` private, branch `REA_APP`; base before P38 `12d74f53001bce359628119fe7866eb172a2c8e3`. New `tools/rea-app/rea_app/contracts.py`, `tests/test_contracts.py`, modified CLI/verifier/runner, docs. Read final SHA and linked source pins.
+7. **Deployment / execution:** Local CLI only; Vercel **N/A**; Linux Python 3.13.5 unit context. Node 22.16 available but genuine pinned parser missing in current isolated environment. No hosted endpoint.
+8. **Original/backup/security:** Prior branch commit preserved for ordinary revert; user data, auth, third-party restricted source not accessed; source map explicitly selected; no public service, paid actions, force push or token uploads.
+9. **Priority / acceptance:** Run actual fixture-based scan→compare→contracts output and full code tests on trusted installed checkout, inspect deterministic JSON and Markdown. Compare against original blueprint for next user-visible capability. Final Windows and security compatibility after baseline feature gap resolution.
+10. **Recorded:** 2026-10-27 KST, reviewed remote branch before write. Source code and manifest commits in this task are not themselves proof of full CLI integration; verify final author/committer, head and test outputs after updating.
+
 ## Latest checkpoint — REA_APP P37 FIFO race minimal fix (2026-10-27 KST)
 
 1. **Goal/requirements/stack:** Complete Gate R for authorized read-only REA_APP scanner/architecture impact tool (Python 3.11+, pinned Node/Babel 7.29.9) before separate Lightning Azent then HAE. Fix unbounded FIFO swap in mutable local scans without altering original user source.

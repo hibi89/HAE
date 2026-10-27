@@ -1,3 +1,14 @@
+
+## Functional contracts export (first blueprint-gap implementation)
+
+From an existing locally generated source-map.json, export a separate versioned, evidence-only interface contract with no additional Node parser invocation:
+
+```powershell
+python -m rea_app contracts C:\reports\source-map.json --output-dir C:\reports\contracts
+```
+
+Writes `functional-contracts.json` and `functional-contracts.md`. Only explicitly observed JS/TS exported callable signatures, package association, and source path/line evidence are included. The output does not contain function bodies, source snippets, default values or invented behavior. Input schema must be rea-app-source-map/v1; report size is bounded at 10 MB. This is an **interface-only blueprint gap closure**, not independent implementation code or n8n reproduction. CLI compatibility and complete Babel suite remain subject to real full-checkout verification.
+
 ## P34 — verified local evidence capture (2026-10-27 KST)
 
 In an authorized **clean** `REA_APP` checkout with reviewed `verify_gate_r.py` and installed `@babel/parser@7.29.9`, run `python run_gate_r_evidence.py` from this directory. This runner now pins the reviewed verifier's Git blob, requires clean scoped Git status, exact branch and commit metadata, and exact 15/15/Python/Node success lines including zero exit code. The local output directory contains `evidence.json`, `stdout.txt`, `stderr.txt`; no upload or installation occurs. Synthetic provenance regressions **11/11 PASS** on Linux/Python 3.13.5, but full analyzer/real Babel/Windows integration is still **UNVERIFIED**. See `P34_PROVENANCE_GATE.md`.
