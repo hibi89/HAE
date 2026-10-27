@@ -57,6 +57,23 @@ class TestGateRSourceAttribution(unittest.TestCase):
         (self.root / "tests/test_extra.py").write_text("pass\n", encoding="utf-8")
         self.assertFalse(self.checked())
 
+    def test_installed_parser_version_mismatch_blocks_node_suite(self) -> None:
+        from subprocess import CompletedProcess
+        observed = CompletedProcess(args=["node"], returncode=0, stdout="7.30.0\n", stderr="")
+        with patch.object(verifier.shutil, "which", return_value="/usr/bin/node"), \
+                patch.object(verifier.subprocess, "run", return_value=observed) as runner:
+            self.assertFalse(verifier.parser_dependency_pinned())
+        self.assertEqual(runner.call_count, 1)
+
+    def test_exact_installed_parser_version_is_accepted(self) -> None:
+        from subprocess import CompletedProcess
+        observed = CompletedProcess(args=["node"], returncode=0, stdout="7.29.9\n", stderr="")
+        with patch.object(verifier.shutil, "which", return_value="/usr/bin/node"), \
+                patch.object(verifier.subprocess, "run", return_value=observed) as runner:
+            self.assertTrue(verifier.parser_dependency_pinned())
+        self.assertEqual(runner.call_count, 1)
+        self.assertIn("@babel/parser/package.json", runner.call_args.args[0][2])
+
     def test_symlink_in_manifest_is_rejected(self) -> None:
         source = self.root / "tests/test_smoke.py"
         source.unlink()
