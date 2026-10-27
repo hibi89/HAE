@@ -82,3 +82,62 @@ def inspect_business_ledger(business_path: Path) -> None:
                 raise RunLogError("business SQLite ledger integrity check failed")
     except sqlite3.DatabaseError as exc:
         raise RunLogError("invalid or unreadable business SQLite ledger") from exc
+
+
+def inspect_completed_business_receipts(
+    state_path: Path, business_path: Path, run_id: str, plan: dict
+) -> None:
+    """Fail closed when a completed write checkpoint lost its business receipt.
+
+    Reads both existing SQLite databases in read-only mode. Incomplete writes
+    may legitimately have no receipt and are left to Engine's idempotent retry.
+    """
+    from .engine import IDENTIFIER
+    import json
+
+    if not isinstance(run_id, str) or not IDENTIFIER.fullmatch(run_id):
+        raise RunLogError("run_id must be a safe identifier")
+    state = Path(state_path).expanduser().resolve(strict=False)
+    business = Path(business_path).expanduser().resolve(strict=False)
+    if not state.is_file() or not business.is_file():
+        raise RunLogError("required SQLite ledger is missing")
+    s_uri = "file:" + quote(state.as_posix(), safe="/:") + "?mode=ro"
+    b_uri = "file:" + quote(business.as_posix(), safe="/:") + "?mode=ro"
+    try:
+        with closing(sqlite3.connect(s_uri, uri=True, timeout=2)) as s, closing(
+            sqlite3.connect(b_uri, uri=True, timeout=2)
+        ) as b:
+            for step in plan["steps"]:
+                op = step["op"]
+                if op not in {"sqlite_put", "sqlite_import_csv"}:
+                    continue
+                receipt = s.execute(
+                    "SELECT status,output_json FROM steps WHERE run_id=? AND step_id=?",
+                    (run_id, step["id"]),
+                ).fetchone()
+                if receipt is None or receipt[0] != "completed":
+                    continue
+                if op == "sqlite_put":
+                    found = b.execute(
+                        "SELECT 1 FROM records WHERE run_id=? AND step_id=?",
+                        (run_id, step["id"]),
+                    ).fetchone()
+                    if found is None:
+                        raise RunLogError("completed SQLite write receipt is missing")
+                else:
+                    output = json.loads(receipt[1])
+                    expected = output.get("imported_rows") if isinstance(output, dict) else None
+                    if type(expected) is not int or not 0 <= expected <= 1000:
+                        raise RunLogError("completed CSV import receipt is invalid")
+                    actual = b.execute(
+                        "SELECT COUNT(*) FROM csv_records WHERE run_id=? AND import_step_id=?",
+                        (run_id, step["id"]),
+                    ).fetchone()[0]
+                    if actual != expected:
+                        raise RunLogError("completed CSV import row receipts are missing or inconsistent")
+    except sqlite3.DatabaseError as exc:
+        raise RunLogError("invalid or unreadable completed write receipts") from exc
+    except (ValueError, TypeError) as exc:
+        if isinstance(exc, RunLogError):
+            raise
+        raise RunLogError("malformed completed write receipt") from exc
