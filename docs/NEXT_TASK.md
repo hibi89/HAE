@@ -1,3 +1,10 @@
+## REA_APP P39 — next priority is integrated MVP execution (2026-10-27 KST)
+
+1. Verified exact-source `contracts` CLI on synthetic source-map: **9/9 local Python checks PASS** including 4 CLI process scenarios, generated JSON/Markdown and deterministic rerun; new test `tools/rea-app/tests/test_contracts_cli.py`. Provenance `STATUS.md` P39.
+2. P38 had stale synthetic Gate R QA pin/count; QA now derives pin/source count from current runner. Manifest increases 18→19. QA fix remains **unexecuted**, complete current-HEAD parser and `scan/compare` still **not run**.
+3. NEXT **functional acceptance only**: on already authorized checkout with exact `@babel/parser@7.29.9` run `python -m unittest discover -s tests -v`, `npm run test:parser`, then synthetic fixture `scan → compare → contracts`, verify output files, evidence path:line, same-input determinism and source immutability. Record Windows restrictions separately. Do not add speculative hardening loops or start paid CI without explicit approval.
+4. After functional pipeline passes, continue original blueprint feature gaps. Core order remains **MVP first → blueprint gap completion → security/stability/compatibility finalization**.
+
 ## REA_APP P38 — functionality-first next work (2026-10-27 KST)
 
 - MVP scan/compare exist, and blueprint's independent exported function interface contract gap is now implemented as `contracts` CLI command (new `rea_app/contracts.py` + tests). Source map input used without rescanning; deterministic JSON + Markdown output. No commercial/n8n source transplant.

@@ -32,6 +32,7 @@ SOURCE_BLOBS = {
     "tests/test_cli.py": "6035ccc58fcfc8f2d8eceeba95b8d969ec257dc4",
     "tests/test_report_write_safety.py": "f3dc3251e560f739325343b71039e628321e7446",
     "tests/test_contracts.py": "64ea0c82b787ce76cdeaba526fbe21355647dd83",
+    "tests/test_contracts_cli.py": "a39b0139b64157a6d138dde01c833e18bc3fd771",
     "tests/test_scan_open_races.py": "59aa669caadcbb31fc5a96629002196728c31a80",
     "tests/test_scan_snapshot_integrity.py": "a309e31b5b6c015d993fe39da90fcf93088261f0",
     "tests/test_scan_sensitive_exclusions.py": "3f40479907fe923137f9c018a57b2d3df08ba023",

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -10,8 +11,11 @@ import unittest
 from pathlib import Path
 
 SOURCE = Path(__file__).resolve().parents[1] / "run_gate_r_evidence.py"
+RUNNER_TEXT = SOURCE.read_text(encoding="utf-8")
+SOURCE_COUNT = re.search(r"SOURCE VERIFIED: (\d+/\d+) Git blobs match", RUNNER_TEXT).group(1)
+REVIEWED_PIN = re.search(r'EXPECTED_VERIFIER_BLOB = "([0-9a-f]{40})"', RUNNER_TEXT).group(1)
 PASS_TEXT = (
-    "SOURCE VERIFIED: 16/16 Git blobs match reviewed baseline\n"
+    f"SOURCE VERIFIED: {SOURCE_COUNT} Git blobs match reviewed baseline\n"
     "PYTHON_ALL: PASS (exit 0)\n"
     "DEPENDENCY VERIFIED: @babel/parser@7.29.9\n"
     "NODE_PARSER: PASS (exit 0)\n"
@@ -49,9 +53,9 @@ class TestEvidenceRunner(unittest.TestCase):
         data = verifier_script.encode("utf-8")
         (self.repo / "verify_gate_r.py").write_bytes(data)
         original = SOURCE.read_text(encoding="utf-8")
-        self.assertIn('EXPECTED_VERIFIER_BLOB = "65f9534fd0669e545aa3acf0b78781ccb324f2d8"', original)
+        self.assertIn(f'EXPECTED_VERIFIER_BLOB = "{REVIEWED_PIN}"', original)
         custom = original.replace(
-            'EXPECTED_VERIFIER_BLOB = "65f9534fd0669e545aa3acf0b78781ccb324f2d8"',
+            f'EXPECTED_VERIFIER_BLOB = "{REVIEWED_PIN}"',
             'EXPECTED_VERIFIER_BLOB = "' + blob_id(data) + '"',
         )
         (self.repo / "run_gate_r_evidence.py").write_text(custom, encoding="utf-8")
@@ -87,7 +91,7 @@ class TestEvidenceRunner(unittest.TestCase):
         self.assertEqual(x["python_unittest_skipped_counts"], [1])
 
     def test_missing_marker_fail_closed(self):
-        r = self.execute('print("SOURCE VERIFIED: 16/16 Git blobs match baseline")\n')
+        r = self.execute(f'print("SOURCE VERIFIED: {SOURCE_COUNT} Git blobs match baseline")\n')
         self.assertEqual(r.returncode, 1)
         self.assertEqual(self.latest()["status"], "PARTIAL_OR_FAIL")
 
@@ -97,7 +101,7 @@ class TestEvidenceRunner(unittest.TestCase):
         self.assertFalse(self.latest()["required_markers"]["python"])
 
     def test_source_counter_prefix_cannot_forge_success(self):
-        r = self.execute(self.success_script().replace("16/16 Git blobs", "16/160 Git blobs"))
+        r = self.execute(self.success_script().replace(f"{SOURCE_COUNT} Git blobs", f"{SOURCE_COUNT}0 Git blobs"))
         self.assertEqual(r.returncode, 1)
         self.assertFalse(self.latest()["required_markers"]["source"])
 
