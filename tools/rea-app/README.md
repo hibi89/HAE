@@ -1,3 +1,7 @@
+## P49 — CommonJS default callable aliases
+
+The exported callable comparison follows a direct CommonJS identifier assignment such as `module.exports = createUser` back to the unique `createUser` function declaration in the same module. An ESM default function and its CommonJS default assignment can therefore be compared with their explicit signature and export-kind evidence. This does not infer object-export contents, alias chains, reassignment, or runtime compatibility. The real-parser regression and full Gate R results are recorded in `STATUS.md` under P49.
+
 ## P48 — Unicode paths and dynamic import coverage limits
 
 The source map preserves statically observed dynamic imports written as a string literal or a template without substitutions. When the relative target exists inside the selected project, the edge resolves like other imports. Computed imports such as `import(name)` or interpolated templates are recorded with `resolution: unresolved_dynamic`; the report does not expose the expression text or guess a target. Their source file and line remain available as evidence. This is syntax-level coverage and does not predict runtime module loading.

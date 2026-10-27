@@ -1,3 +1,12 @@
+## P49 — CommonJS default callable alias is retained (2026-10-27 KST)
+
+- **FUNCTIONAL DEFECT FIXED:** Real Babel acceptance found that `module.exports = namedFunction` produced a default export observation but no linked callable contract. The adapter now records a direct identifier on the assignment RHS for CommonJS default and named exports, allowing the existing unique-function match to attach its explicit signature.
+- **REGRESSION:** Added a real baseline/current bundle case changing an ESM default function to a named CommonJS function assigned through `module.exports`. It first reproduced as a false “removed” contract; after repair it verifies one changed `default` contract, export-kind delta, signature fields, definition/export path:line evidence, no body leakage, deterministic rerun and unchanged sources. The Node adapter fixture directly checks the default alias.
+- **GATE R:** Windows 10 build 10.0.26200; Python 3.11.9, Node 24.21.0, npm 11.19.0, exact Babel 7.29.9. Real-parser bundle suite **5/5 PASS**. Gate R: **SOURCE 23/23; 67 Python tests, 61 passed, 6 skipped, 0 failed/errors; Node parser PASS; exit 0**. QA **11/11 PASS**. Workspace-local `TEMP`/`TMP` used for sandbox-compatible test writes.
+- **EVIDENCE:** Evidence runner PASS on clean `REA_APP@c78869ab1862e54933e91e3e9d40ca1d3c127b97`, JSON `E:\HAE\REA_APP_GATE_EVIDENCE\gate-r-mwm0oahv\evidence.json`; verifier fingerprint matched.
+- **GITHUB:** Base `4ea46b78d26e80d9376b1d153eef330b11e414df`; commit `c78869ab1862e54933e91e3e9d40ca1d3c127b97` by `hibi89 <godls5898@gmail.com>`, pushed fast-forward and confirmed at `origin/REA_APP`.
+- **LIMITS / NEXT:** Six Windows privilege/POSIX-only skips remain; physical junction behavior is unverified. No Python wheel/install metadata exists. Next implement and execute a clean wheel install with the pinned Node parser; no paid CI, customer data, or deployment.
+
 ## P48 — Unicode module paths and explicit dynamic-import limits (2026-10-27 KST)
 
 - **FUNCTIONAL GAP CLOSED:** The Babel adapter now preserves dynamic-import call sites for static strings, no-substitution templates, and computed expressions. Static forms are resolved; computed/interpolated forms are emitted as `unresolved_dynamic` without retaining expression text or inventing a target. Coverage and Markdown describe this bounded behavior.
