@@ -187,3 +187,16 @@ Recovery: read this latest appended block before older 21-week historical notes.
 8. **Safety:** no customer data, credentials, OAuth, external API, public deployment, database mutation or DBVORA repository update.
 9. **Next:** continue only with user-authorized bounded work. Keep the independent execution-engine implementation on the existing chief-review hold; do not infer P5 customer readiness from this synthetic test.
 10. **Checkpoint:** test result and source pins are reflected in the latest STATUS.md and docs/NEXT_TASK.md entries; latest branch commit is reported after the follow-up documentation commits.
+
+## 2026-10-27 KST — P5 synthetic AX FLOW → DBVORA → UI acceptance
+
+1. **Goal:** prove AX FLOW-written synthetic business data is discoverable through the actual DBVORA read-only service and visible in AX FLOW's local DBVORA panel.
+2. **Source revisions:** DBVORA `feature/p0-db-map@31b8257468d28743fb2d3767d1caa56938df756c`; AX FLOW adapter integration commit `54b4c9336dc9a0dee0cd0418364b89fc1f34dc59`; UI used committed `feature/axflow-mvp` source (client blob `6c2aa46fee4ddb417b9cc05b3b790c7be3b81ae9`, web blob `90518cbe7e13c6ccc470069fc1d1e72a8eee83f6`, frontend blob `118837663db856b4b71157d6ab682220cafd3878)).
+3. **Run:** generated a deterministic `csv_to_sqlite` plan, validated it, and ran with `--synthetic --approve-writes`; AX FLOW returned `completed` and imported 2 rows to its business DB. Uvicorn served the pinned DBVORA FastAPI source on loopback; AX FLOW web UI connected through `127.0.0.1`.
+4. **Verification:** one complete CLI→service→UI scenario passed. API returned `csv_records`, its columns/PK positions, and measured 20,480-byte main DB size. The visible panel showed connected status and schema; the refresh button produced a new observation timestamp.
+5. **Read-only check:** response contained no CSV row values or database path; business DB SHA-256 and mtime were identical before/after, with no WAL/SHM files created. This business DB declares no FK, so the panel correctly showed no relationships. A separate source/API contract fixture tested one declared FK.
+6. **Failure cause/recovery:** first test invocation used a hyphenated run ID, which AX FLOW safely rejected before writes. The fixture was regenerated and an underscore-only synthetic ID passed. A previous API-only harness had attempted service startup before the selected DB existed; DBVORA correctly returned `FILE_UNAVAILABLE`, then passed after fixture-first setup.
+7. **Test status:** Windows Python 3.11.9 suite on the matching AX FLOW feature branch **60/60 PASS**; synthetic CLI import and live localhost API/UI assertions PASS. No customer database or DBVORA source mutation.
+8. **Limits:** this verifies one explicitly selected SQLite file in a synthetic flow. In-app database listing, real customer DBs, packaged Windows service, backup/restore, security assessment and release gates remain open. Product is PARTIAL.
+9. **Next:** preserve the scope gates; do not infer customer readiness or permission to mutate/restore DBVORA data.
+10. **Preview:** visible user-facing AX FLOW panel `http://127.0.0.1:8767/`; DBVORA loopback API `127.0.0.1:18766`, both serving only this synthetic fixture during review.
