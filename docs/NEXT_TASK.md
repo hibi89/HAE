@@ -1,3 +1,9 @@
+## REA_APP P34 next step — full Gate R on authorized checkout (2026-10-27 KST)
+
+P34 pinned the reviewed verifier Git blob and now refuses a dirty tool worktree or altered verifier, even if it prints false PASS markers. Isolated local regression **11/11 PASS** (Linux/Python 3.13.5), code commit `4e0ce299ebd01fa20c541358ffeaf4f593f56f11`. Evidence: `tools/rea-app/P34_PROVENANCE_GATE.md`.
+
+The **full** REA_APP Python scanner/CLI/graph/impact and real pinned Babel parser suite remain UNRUN; Gate R is PARTIAL. Priority: on an authorized full REA_APP checkout with installed `@babel/parser@7.29.9`, run `cd tools/rea-app && python run_gate_r_evidence.py`, capture 15/15 blobs, actual Python+Node PASS/FAIL/SKIP and exit, exact HEAD and clean Git status. Windows reparse behavior separate. No paid CI or restricted n8n code.
+
 ## REA_APP P32 next task — 2026-10-27 KST
 
 P32 atomic report-write safety is on REA_APP code commit 3892c321e6d5cda9de496d30155f8c92248a4401. Original link-follow overwrite reproduced with a disposable file. New isolated writer test 4/4 PASS; prior P31 verifier 9/9 PASS. SOURCE_BLOBS manifest now expects 15 files. This is not full Gate R.
