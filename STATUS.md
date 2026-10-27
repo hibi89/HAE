@@ -1,3 +1,11 @@
+## P48 — numeric intent threshold precision gate (2026-10-27 KST, PARTIAL verification)
+- Target: `hibi89/AX_FLOW` `feature/axflow-mvp`. Code SHA `45145c2eb581e97a893d4c6259cdf928693e934c`; test SHA `c18c56e5000a730dc17a70efa4fc5d340ed1236a`. Modified only `apps/ax-flow/axflow/planner.py` and `apps/ax-flow/tests/test_planner.py` before this documentation update.
+- Fix: numeric ordered-filter thresholds now use existing engine lossless Decimal-based coercion instead of unguarded `float`; accepts explicit safe exponent notation. Unsupported/precision-losing values like `0.10000000000000001`, `9007199254740993` and exponent over/underflow reject during plan generation, before business writes.
+- Verification: GitHub remote source/test file reread OK. An **isolated local reproduced regular-expression + numeric-coercion contract check** passed 8/8 cases (4 valid, 4 rejected). **Not** a run of the actual repository test suite. Added one parametrized `test_numeric_filter_thresholds_preserve_precision_and_exponents` in GitHub, but it and full suite are **NOT EXECUTED on the changed HEAD**. Previous 81/81 Windows run belongs to P47 only; no new CI workflow result was returned.
+- Safety: synthetic-only plan generation, no provider/OAuth, DBVORA, source database or external network action. Full release readiness remains heuristic **91% PARTIAL**; no release status increase from this patch alone.
+- Next verification: at `apps/ax-flow`, run `python -m unittest discover -s tests -v`, `python -m compileall -q axflow tests`, `node --check axflow/static/app.js`; verify Windows synthetic localhost/UI and numeric-filter no-write rejection, then update this evidence. Avoid claiming P48 complete without actual repository tests.
+- Rollback: revert P48 commits by normal revert on the feature branch only after checking newer work; baseline was previous P47 source. No force push.
+
 ## Latest checkpoint — P47 reject deeply nested JSON (2026-10-27 13:37 KST)
 - Branch: `feature/axflow-mvp`; code commit `59b100488efda792758bf84cc39760ab1f5913b5`, parent `aec4b929338a3a7498c35e3e26d0b8844d2528f3`.
 - `_read_json` now catches `RecursionError` from deeply nested JSON and returns the existing bounded `invalid JSON request` client error. The new regression sends 1,200 nested arrays and verifies HTTP 400, no internal exception detail, and no upload staging directory.
