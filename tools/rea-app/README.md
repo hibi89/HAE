@@ -33,8 +33,9 @@ caps to each snapshot and writes `change-impact.json` and `change-impact.md`.
 It detects added, removed and modified indexed files by SHA-256, then follows
 resolved in-root JS/TS dependency edges from both snapshots to report direct
 and transitive dependents with import-line evidence and affected package
-entrypoints. File contents and absolute source paths are not included in the
-comparison report. It is static reachability: it does not infer runtime impact,
+entrypoints. SHA-256 fingerprints are used internally to detect edits but are
+not included in the report; file contents and absolute source paths are also
+omitted. It is static reachability: it does not infer runtime impact,
 Python dependencies, dynamic resolution or external package internals. Skipped
 paths and scan coverage are called out so excluded or capped files are not
 treated as compared.

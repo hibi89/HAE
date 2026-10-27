@@ -157,8 +157,10 @@ def build_change_impact(
         changed_files.append({
             "path": path,
             "status": status,
-            "baseline": {key: old[key] for key in ("size_bytes", "category", "sha256")} if old else None,
-            "current": {key: new[key] for key in ("size_bytes", "category", "sha256")} if new else None,
+            # Keep fingerprints private to the comparison; reports need the
+            # status and evidence, not reusable content fingerprints.
+            "baseline": {key: old[key] for key in ("size_bytes", "category")} if old else None,
+            "current": {key: new[key] for key in ("size_bytes", "category")} if new else None,
         })
 
     reverse = _reverse_dependencies(named_reports)

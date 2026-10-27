@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
@@ -277,6 +278,8 @@ class ReaAppCliTests(unittest.TestCase):
         self.assertEqual(report["summary"]["modified_files"], 1)
         self.assertIn("src/main.ts", first_markdown.decode("utf-8"))
         self.assertNotIn('"export const load = () =>', first_json.decode("utf-8"))
+        self.assertNotIn(hashlib.sha256(b"export const load = () => 2;\n").hexdigest(), first_json.decode("utf-8"))
+        self.assertNotIn('"sha256"', json.dumps(report["changed_files"][0]))
         self.assertEqual(snapshot(baseline), before_baseline)
         self.assertEqual(snapshot(self.source), before_current)
 
