@@ -34,7 +34,7 @@ SOURCE_BLOBS = {
 
 
 def git_blob_id(data: bytes) -> str:
-    header = b"blob " + str(len(data)).encode("ascii") + b"\\0"
+    header = b"blob " + str(len(data)).encode("ascii") + b"\0"
     return hashlib.sha1(header + data).hexdigest()
 
 
@@ -66,9 +66,9 @@ def execute(label: str, command: list[str]) -> bool:
         print(f"{label} BLOCKED: {type(exc).__name__}: {exc}", file=sys.stderr)
         return False
     if result.stdout:
-        print(result.stdout, end="" if result.stdout.endswith("\\n") else "\\n")
+        print(result.stdout, end="" if result.stdout.endswith("\n") else "\n")
     if result.stderr:
-        print(result.stderr, end="" if result.stderr.endswith("\\n") else "\\n", file=sys.stderr)
+        print(result.stderr, end="" if result.stderr.endswith("\n") else "\n", file=sys.stderr)
     print(f"{label}: {'PASS' if result.returncode == 0 else 'FAIL'} (exit {result.returncode})", flush=True)
     return result.returncode == 0
 
