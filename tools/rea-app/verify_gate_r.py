@@ -20,7 +20,7 @@ BASELINE_COMMIT = "3a1a023533a7c070c35be5abbf06bc185a87471b"
 SOURCE_BLOBS = {
     "rea_app/__init__.py": "e6d7269a82c761c70eda0d52ee1d858711d92b21",
     "rea_app/__main__.py": "bfdcd0c1158dff4fcc25157b317419f0a89dd33f",
-    "rea_app/cli.py": "adf517ebada8af098b7e83cf42cf39f843f53e09",
+    "rea_app/cli.py": "a063550738a047dbe709538fc5ea5db94ad27f3f",
     "rea_app/graph.py": "21ce725e93916ba2582a18663d522eaff00c9228",
     "rea_app/impact.py": "64eb59d63780248cc417bcdbad8d73e1e813d75c",
     "rea_app/scanner.py": "857bec57be22aba53e0d3063a25a1272cc5633ef",
@@ -29,6 +29,7 @@ SOURCE_BLOBS = {
     "package-lock.json": "0bbde3cd132070df076a478a63056673687852d4",
     "tests/parser_adapter.test.cjs": "f55d15130ba19700be858c7e2a2b468c302e5033",
     "tests/test_cli.py": "6035ccc58fcfc8f2d8eceeba95b8d969ec257dc4",
+    "tests/test_report_write_safety.py": "f3dc3251e560f739325343b71039e628321e7446",
     "tests/test_scan_open_races.py": "0601539e0a57807441fa31373339c689b2aa7439",
     "tests/test_scan_sensitive_exclusions.py": "3f40479907fe923137f9c018a57b2d3df08ba023",
     "tests/test_verify_gate_r.py": "f1e9745e3139050e6ef10bf331c91f6431790136",

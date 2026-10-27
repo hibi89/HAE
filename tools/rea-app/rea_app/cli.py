@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import argparse
+import os
+import tempfile
 import json
 import sys
 from pathlib import Path
@@ -56,8 +58,20 @@ def _prepare_compare_paths(baseline: Path, current: Path, output_path: Path) -> 
 
 
 def _write_report(path: Path, content: str) -> None:
-    with path.open("w", encoding="utf-8", newline="\n") as handle:
-        handle.write(content)
+    temp_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", newline="\n", dir=path.parent,
+            prefix=f".{path.name}.", suffix=".tmp", delete=False,
+        ) as handle:
+            temp_path = Path(handle.name)
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temp_path, path)
+    finally:
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)
 
 
 def _scan(args: argparse.Namespace) -> int:
