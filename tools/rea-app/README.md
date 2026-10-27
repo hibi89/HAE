@@ -52,6 +52,10 @@ npm run test:parser
 The synthetic tests cover deterministic output, ESM and CommonJS references,
 alias/external resolution, cyclic imports, entry points, syntax errors, binary and
 secret exclusions, symlink handling where the host allows symlink creation,
-empty repositories, scan caps, missing-parser behavior, local value-flow evidence,
-ambiguous/reassigned binding exclusions, exported callable signatures and
-source-tree integrity.
+Windows reparse-attribute detection, empty repositories, scan caps, missing-parser
+behavior, local value-flow evidence, ambiguous/reassigned binding exclusions,
+exported callable signatures and source-tree integrity.
+
+The Windows host used for the current verification denied junction creation
+(`Access denied`). The reparse-attribute branch is unit-tested with synthetic
+file attributes, but an actual filesystem junction fixture remains unverified.
