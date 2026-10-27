@@ -1,5 +1,13 @@
 # STATUS — 2026-10-27 KST
 
+## Latest P5 synthetic write-to-UI acceptance — 2026-10-27 KST
+- AX FLOW imported two synthetic CSV rows into its separate `business.db` (`run_id=p5_live_dbvora_20261027`; status `completed`; 2 rows). The full Windows Python 3.11.9 AX FLOW suite remained **60/60 PASS** after the CP949 help fix.
+- The pinned DBVORA FastAPI source at `feature/p0-db-map@31b8257468d28743fb2d3767d1caa56938df756c` opened that business DB read-only. The exact AX FLOW UI/client source from `feature/axflow-mvp` called the real loopback service; visible UI at `http://127.0.0.1:8767/` shows connected status, measured 20,480-byte size, `csv_records` columns/PKs, and `records`. Clicking map refresh fetched a new observation.
+- E2E assertions confirmed the imported row count, matching schema/columns, absence of row values and absolute path from the response, unchanged business DB SHA-256/mtime, and no WAL/SHM. This fixture declares no foreign keys; the UI correctly displayed none. The separate API contract cross-check used a synthetic FK fixture.
+- **Failure cause/recovery:** a first workflow attempt used a hyphenated run ID; the safe identifier guard rejected it before writes. Switched to an underscore-only synthetic ID, recreated the fixture, and the complete CLI→DBVORA API→UI path passed. The earlier API harness startup-before-fixture error is documented below and was also corrected.
+- P5 synthetic UI acceptance is verified; customer DB, packaged installation, restore, security review, and release readiness remain unverified. Product status remains PARTIAL.
+
+
 ## Latest P5 source-backed DBVORA API cross-check — 2026-10-27 KST
 - Ran the actual local DBVORA FastAPI app from pinned `hibi89/DBVORA feature/p0-db-map@31b8257468d28743fb2d3767d1caa56938df756c` against a synthetic SQLite fixture, then called it with the committed AX FLOW client from `feature/dbvora-integration` (client blob `682f7078a0b2b72b314f5c8ac220c602d8c12113`).
 - Live `GET /health` and `GET /api/inventory` returned the `p0-01.v1` schema, columns, PK/FK relationship, and measured size. The row sentinel and source path were absent; synthetic DB SHA-256 and mtime stayed unchanged, and no WAL/SHM appeared. Six DBVORA source-file blob hashes matched the pinned branch revision.
@@ -16,10 +24,10 @@
 | Component | State | Evidence |
 | --- | --- | --- |
 | REA_APP static source analyzer | MVP_VERIFIED (BOUNDED SYNTHETIC JS/TS) | `REA_APP@80e8d7aad99c1c40d503848ed620421837b79477`; 10 Python + Node parser tests |
-| AX FLOW local runtime | P5_SYNTHETIC_DBVORA_E2E_VERIFIED (NOT CUSTOMER READY) | `feature/dbvora-integration@54b4c9336dc9a0dee0cd0418364b89fc1f34dc59`; Windows Python 3.11 full suite 42/42 PASS; actual synthetic UI→DBVORA API smoke passes; pinned-source HTTP/client recheck also passes with row/path redaction and unchanged DB hash/mtime |
+| AX FLOW local runtime | P5_SYNTHETIC_DBVORA_E2E_VERIFIED (NOT CUSTOMER READY) | `feature/dbvora-integration@54b4c9336dc9a0dee0cd0418364b89fc1f34dc59`; Windows Python 3.11 full suite 42/42 PASS; actual synthetic UI→DBVORA API and visible schema panel pass; 60/60 AX FLOW suite; business DB hash/mtime unchanged |
 | Natural-language planner and file input | PARTIAL | bounded deterministic Korean/English parser, CSV→SQLite template, localhost UI; one workflow family only |
 | OAuth, Gmail/Sheets connectors | NOT_STARTED | no account credentials, no auth test |
-| DBVORA integration | P5_SYNTHETIC_READ_ONLY_VERIFIED | selected-file `p0-01.v1` API over loopback; tables/columns/PK/FK/size displayed; pinned upstream API source cross-checked; customer DB and packaged service deployment unverified |
+| DBVORA integration | P5_SYNTHETIC_UI_ACCEPTANCE_VERIFIED | selected-file `p0-01.v1` API over loopback; tables/columns/PK/FK/size displayed; pinned upstream source shown in AX FLOW UI; customer DB, packaged service and restore unverified |
 | Recovery, resilience and performance | PARTIAL | handled failure status, resume/idempotent SQLite replay and threaded claims tested; hard-kill recovery and multi-process stress unverified |
 | Windows install, customer tests, security assessment | NOT_STARTED | no releases |
 | Vercel/Production | NOT_APPLICABLE | local-first product, no hosted service |
