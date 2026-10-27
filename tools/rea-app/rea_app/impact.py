@@ -276,6 +276,26 @@ def _architecture_changes(baseline_report: dict[str, Any], current_report: dict[
     }
 
 
+def _callable_signature(item: dict[str, Any], export_kinds: set[str] | list[str]) -> dict[str, Any]:
+    return {
+        "export_kinds": sorted(export_kinds),
+        "parameters": [
+            {
+                "name": parameter.get("name"),
+                "pattern": parameter.get("pattern"),
+                "type_annotation": parameter.get("type_annotation"),
+                "optional": bool(parameter.get("optional", False)),
+                "rest": bool(parameter.get("rest", False)),
+                "has_default": bool(parameter.get("has_default", False)),
+            }
+            for parameter in item["parameters"]
+        ],
+        "return_type_annotation": item.get("return_type_annotation"),
+        "async": bool(item.get("async", False)),
+        "generator": bool(item.get("generator", False)),
+    }
+
+
 def _callable_contracts(report: dict[str, Any]) -> dict[tuple[str, str], dict[str, Any]]:
     export_kinds: dict[tuple[str, str], set[str]] = {}
     for item in report["exports"]:
@@ -283,31 +303,62 @@ def _callable_contracts(report: dict[str, Any]) -> dict[tuple[str, str], dict[st
         export_kinds.setdefault(key, set()).add(item["kind"])
 
     contracts = {}
+    direct_by_symbol: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for item in report["function_contracts"]:
         module = item["evidence"]["definition"]["path"]
         exported_as = item["exported_as"]
         key = (module, exported_as)
+        direct_by_symbol.setdefault(key, []).append(item)
         contracts[key] = {
             "module": module,
             "exported_as": exported_as,
-            "signature": {
-                "export_kinds": sorted(export_kinds.get(key, set())),
-                "parameters": [
-                    {
-                        "name": parameter.get("name"),
-                        "pattern": parameter.get("pattern"),
-                        "type_annotation": parameter.get("type_annotation"),
-                        "optional": bool(parameter.get("optional", False)),
-                        "rest": bool(parameter.get("rest", False)),
-                        "has_default": bool(parameter.get("has_default", False)),
-                    }
-                    for parameter in item["parameters"]
-                ],
-                "return_type_annotation": item.get("return_type_annotation"),
-                "async": bool(item.get("async", False)),
-                "generator": bool(item.get("generator", False)),
-            },
+            "signature": _callable_signature(item, export_kinds.get(key, set())),
             "evidence": item["evidence"],
+            "assurance": "explicit_syntax_only",
+        }
+
+    reexport_edges: dict[tuple[str, int], list[dict[str, Any]]] = {}
+    for edge in report["dependency_edges"]:
+        if edge["kind"] != "reexport":
+            continue
+        evidence = edge["evidence"]
+        reexport_edges.setdefault((edge["from_path"], evidence["line"]), []).append(edge)
+
+    reexports_by_symbol: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for item in report["exports"]:
+        if item["kind"] != "reexport":
+            continue
+        key = (item["path"], item["name"])
+        reexports_by_symbol.setdefault(key, []).append(item)
+
+    for key, items in reexports_by_symbol.items():
+        if len(items) != 1 or key in contracts:
+            continue
+        exported = items[0]
+        edges = reexport_edges.get((exported["path"], exported["evidence"]["line"]), [])
+        if len(edges) != 1:
+            continue
+        edge = edges[0]
+        if edge["resolution"] not in {"internal", "internal_alias"}:
+            continue
+        target_path = edge["to_path"]
+        target_symbol = exported["source_name"]
+        candidates = direct_by_symbol.get((target_path, target_symbol), [])
+        if not target_path or len(candidates) != 1:
+            continue
+        target = candidates[0]
+        contracts[key] = {
+            "module": exported["path"],
+            "exported_as": exported["name"],
+            "signature": _callable_signature(target, ["reexport"]),
+            "evidence": {
+                "definition": target["evidence"]["definition"],
+                "export": {
+                    "path": exported["path"],
+                    "line": exported["evidence"]["line"],
+                    "name": exported["name"],
+                },
+            },
             "assurance": "explicit_syntax_only",
         }
     return contracts
@@ -319,10 +370,10 @@ def _contract_changes(baseline_report: dict[str, Any], current_report: dict[str,
     before_keys, after_keys = set(before), set(after)
     common = before_keys & after_keys
     return {
-        "comparison_basis": "Module path and exported symbol; explicit parameter and return syntax, async/generator flags, and observed ESM/CommonJS export kind.",
+        "comparison_basis": "Module path and exported symbol; explicit parameter and return syntax, async/generator flags, and observed direct ESM/CommonJS export or ESM re-export kind.",
         "limitations": [
             "Only unambiguous exported callable contracts with observed syntax are compared; absence is not a runtime compatibility verdict.",
-            "Inferred types, default values, function bodies, side effects, and cross-file re-export signatures are not compared.",
+            "Direct, uniquely resolved in-root ESM re-exports inherit one matching target callable signature; re-export chains, wildcard exports, inferred types, default values, function bodies, and side effects are not compared.",
         ],
         "baseline_count": len(before),
         "current_count": len(after),

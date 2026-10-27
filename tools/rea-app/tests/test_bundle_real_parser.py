@@ -412,6 +412,86 @@ class RealBundleMvpAcceptanceTests(unittest.TestCase):
             self.assertEqual(before_bytes, snapshot(before))
             self.assertEqual(after_bytes, snapshot(after))
 
+    def test_bundle_compares_direct_in_root_esm_reexport_contracts(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="rea-bundle-reexport-contract-") as temporary:
+            root = Path(temporary)
+            before, after, output = root / "baseline", root / "current", root / "reports"
+            for directory in (before, after):
+                (directory / "src").mkdir(parents=True)
+                (directory / "package.json").write_bytes(b'{"name":"reexport-contract-fixture"}\n')
+                (directory / "src/facade.ts").write_bytes(
+                    b'export { run as publicRun } from "./api";\n'
+                    b'export { run as chainedRun } from "./middle";\n'
+                    b'export { run as externalRun } from "external-package";\n'
+                    b'export { run as sameLineA } from "./api"; export { run as sameLineB } from "./api";\n'
+                )
+                (directory / "src/middle.ts").write_bytes(
+                    b'export { run } from "./api";\n'
+                )
+            (before / "src/api.ts").write_bytes(
+                b'export function run(id: string): number { return id.length; }\n'
+            )
+            (after / "src/api.ts").write_bytes(
+                b'export function run(id: number): string { return String(id); }\n'
+            )
+
+            def snapshot(directory: Path) -> dict[str, bytes]:
+                return {path.relative_to(directory).as_posix(): path.read_bytes()
+                        for path in sorted(directory.rglob("*")) if path.is_file()}
+
+            before_bytes, after_bytes = snapshot(before), snapshot(after)
+            environment = os.environ.copy()
+            environment["PYTHONPATH"] = str(TOOL_ROOT)
+            command = [sys.executable, "-m", "rea_app", "bundle", str(before),
+                       str(after), "--output-dir", str(output)]
+
+            def run() -> subprocess.CompletedProcess[str]:
+                return subprocess.run(
+                    command, cwd=TOOL_ROOT, env=environment, text=True,
+                    encoding="utf-8", errors="replace", capture_output=True,
+                    check=False, timeout=90,
+                )
+
+            first = run()
+            self.assertEqual(first.returncode, 0, first.stderr + first.stdout)
+            impact = json.loads((output / "change-impact.json").read_text(encoding="utf-8"))
+            changes = impact["contract_changes"]
+            changed = {(item["module"], item["exported_as"]): item
+                       for item in changes["changed"]}
+            self.assertEqual(set(changed), {
+                ("src/api.ts", "run"),
+                ("src/facade.ts", "publicRun"),
+                ("src/middle.ts", "run"),
+            })
+            facade = changed[("src/facade.ts", "publicRun")]
+            self.assertEqual(facade["baseline"]["signature"]["export_kinds"], ["reexport"])
+            self.assertEqual(facade["current"]["signature"]["parameters"][0]["type_annotation"], "number")
+            self.assertEqual(facade["baseline"]["evidence"], {
+                "definition": {"path": "src/api.ts", "line": 1},
+                "export": {"path": "src/facade.ts", "line": 1, "name": "publicRun"},
+            })
+            direct_reexport = changed[("src/middle.ts", "run")]
+            self.assertEqual(direct_reexport["baseline"]["signature"]["export_kinds"], ["reexport"])
+            self.assertEqual(direct_reexport["current"]["signature"]["parameters"][0]["type_annotation"], "number")
+            self.assertEqual(direct_reexport["baseline"]["evidence"], {
+                "definition": {"path": "src/api.ts", "line": 1},
+                "export": {"path": "src/middle.ts", "line": 1, "name": "run"},
+            })
+            self.assertNotIn(("src/facade.ts", "chainedRun"), changed)
+            self.assertNotIn(("src/facade.ts", "externalRun"), changed)
+            self.assertNotIn(("src/facade.ts", "sameLineA"), changed)
+            self.assertNotIn(("src/facade.ts", "sameLineB"), changed)
+            for artifact in output.iterdir():
+                self.assertNotIn(b"return id.length", artifact.read_bytes())
+                self.assertNotIn(b"return String(id)", artifact.read_bytes())
+
+            first_files = {path.name: path.read_bytes() for path in output.iterdir()}
+            again = run()
+            self.assertEqual(again.returncode, 0, again.stderr + again.stdout)
+            self.assertEqual(first_files, {path.name: path.read_bytes() for path in output.iterdir()})
+            self.assertEqual(before_bytes, snapshot(before))
+            self.assertEqual(after_bytes, snapshot(after))
+
 
 if __name__ == "__main__":
     unittest.main()
