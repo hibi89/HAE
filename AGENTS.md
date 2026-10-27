@@ -1,4 +1,6 @@
-# AX FLOW / REA_APP — Agent instructions
+> **Final naming decision (2026-10-27):** The customer-facing product is **HAE — Humanized Automation Ecosystem**, formerly AX FLOW. **Lightning Azent** is its independently built workflow engine; **REA_APP** is the separate source-analysis tool. Legacy repository hibi89/AX_FLOW, apps/ax-flow/ path, Python package/CLI axflow, and schema identifiers are preserved for backward compatibility until an explicitly scoped migration. New customer-facing text/docs must say HAE; historical implementation evidence may retain the old name.
+
+# HAE / Lightning Azent / REA_APP — Agent instructions
 
 ## Single source of truth
 GitHub `hibi89/AX_FLOW` (private). First verify the actual branch and SHA; read HANDOFF → STATUS → AGENTS → REQUIREMENTS → docs and source. User message `ㄱ` authorizes the next safe work unit. Do not assume README claims override code/test/remote evidence.
