@@ -16,7 +16,7 @@ FIXTURES = REPO_ROOT / "docs" / "lightning-azent" / "fixtures"
 sys.path.insert(0, str(PACKAGE_ROOT))
 
 from lightning_azent import LAExecutor, NATIVE_VERSION
-from lightning_azent.engine import Engine, InjectedStop, PlanError
+from lightning_azent.engine import ApprovalRequired, Engine, InjectedStop, PlanError
 from lightning_azent.runlog import RunLogError
 
 
@@ -86,7 +86,7 @@ class ResumeAcceptanceTests(unittest.TestCase):
                 plan, "CrashAfterBusiness", approve_writes=True,
                 inject_stop_after_business=True)
         native = dict(plan, version=NATIVE_VERSION)
-        with self.assertRaises(Exception):
+        with self.assertRaises(ApprovalRequired):
             # Reject a missing approval without mutating the failed ledger.
             self.executor.resume(native, "CrashAfterBusiness")
         self.assertEqual(self.executor.status("CrashAfterBusiness")["status"], "failed")
