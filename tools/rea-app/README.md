@@ -1,3 +1,9 @@
+## P48 — Unicode paths and dynamic import coverage limits
+
+The source map preserves statically observed dynamic imports written as a string literal or a template without substitutions. When the relative target exists inside the selected project, the edge resolves like other imports. Computed imports such as `import(name)` or interpolated templates are recorded with `resolution: unresolved_dynamic`; the report does not expose the expression text or guess a target. Their source file and line remain available as evidence. This is syntax-level coverage and does not predict runtime module loading.
+
+The adapter was verified with the pinned Babel parser using synthetic JavaScript/TypeScript fixtures, including a module with Unicode characters in its path. Gate R ran 66 Python tests (60 passed, 6 platform/environment skips) and the Node parser assertions passed; the separate QA suite passed 11/11. Evidence is recorded in repository `STATUS.md` under P48.
+
 ## P47 — compare exported callable contracts across snapshots
 
 The existing `change-impact.json/.md` now show baseline/current callable API observations in `contract_changes`: added exports, exports no longer observed, and changed explicit signatures. Matching uses relative module path and exported name. Reported syntax fields include export kind, parameter shape/type flags, return annotation, async and generator; changes include evidence from both snapshots. The CLI prints the delta counts.
