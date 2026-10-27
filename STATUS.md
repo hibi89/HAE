@@ -1,5 +1,15 @@
 # STATUS — 2026-10-27 KST
 
+## P18 — all four bounded planner workflows verified in the synthetic browser UI (2026-10-27 KST)
+- In an isolated synthetic fixture folder, exercised the actual local AX FLOW UI and server: filtered import saved **2** matching rows; read-only lookup returned **1** match at source row **1** without row contents; conditional import saved **2** rows; a no-match conditional saved **0**. The full-import path and DBVORA-backed schema/refresh acceptance are recorded in P17.
+- Write approvals were required: the run button stayed disabled after unchecking the synthetic-write approval and enabled after checking it. Read-only lookup remained runnable without write approval.
+- **Tests:** full Windows Python 3.11.9 suite `python -m unittest discover -s tests -v` — **60/60 PASS** after granting localhost loopback permission. Browser receipts showed completed runs and the expected row counts.
+- **Failure/cause:** the first suite invocation in the restricted sandbox produced **8 failures and 10 errors** because local HTTP sockets failed with Windows `WinError 10013`; no localhost test server could bind/connect. The same suite passed 60/60 with loopback test permission. Initial visual inspection seemed to show no plan, but a fresh DOM snapshot showed the preview summary; the plan was inside a collapsed disclosure, so this was not a product failure. Conditional runs report 5/6 steps because one mutually exclusive branch is intentionally skipped; the run ledger records 5 completed and 1 skipped.
+- Temporary UI server on `:8768` has no listening socket. Synthetic fixture/database files were removed; two small server log files remain locked after a targeted cleanup attempt and can be removed when the handle releases.
+- No source change or engine expansion in this unit. P5 review remains open at `http://127.0.0.1:8767/`.
+- **Blueprint progress:** A100/B95/C95/D80/E50, equal-weight tracking heuristic **84%** (supersedes P17's 83%); product remains **PARTIAL**. Customer/production data, verified restore, independent security review, signed Windows distribution and release evidence remain open.
+
+
 ## P17 — synthetic AX FLOW→DBVORA→UI acceptance passed (2026-10-27 KST)
 - AX FLOW generated/validated a native `csv_to_sqlite` workflow and saved **2 synthetic CSV rows** into its separate business SQLite DB. The pinned DBVORA FastAPI source (`hibi89/DBVORA feature/p0-db-map@31b8257468d28743fb2d3767d1caa56938df756c`) read that same DB through loopback; the visible AX FLOW panel at `http://127.0.0.1:8767/` showed connected status, `csv_records` columns/PKs and measured 20,480-byte size. The user-facing refresh completed and advanced the observation time.
 - API/UI assertions confirmed 2 stored rows, exact column match, no row values or absolute path in the response, unchanged business DB SHA-256/mtime, and no WAL/SHM. The imported table has no FK; UI correctly showed none. A separate pinned-source API fixture tested a declared FK.
@@ -57,8 +67,8 @@
 | Component | State | Evidence |
 | --- | --- | --- |
 | REA_APP static source analyzer | MVP_VERIFIED (BOUNDED SYNTHETIC JS/TS) | `REA_APP@80e8d7aad99c1c40d503848ed620421837b79477`; 10 Python + Node parser tests |
-| AX FLOW local runtime | P17_SYNTHETIC_AXFLOW_DBVORA_UI_E2E_VERIFIED (NOT CUSTOMER READY) | `feature/axflow-mvp@86ac854bd633e3a312aa54a5300e2f78f634dbfd`; Windows Python 3.11.9 suite 60/60 PASS; synthetic CSV→SQLite→pinned DBVORA API→visible AX FLOW schema/refresh E2E PASS; row/path withheld, business DB unchanged |
-| Natural-language planner and file input | PARTIAL | four bounded Korean/English CSV intents: full import, filtered import, conditional import, read-only lookup; visible browser E2E remains unverified |
+| AX FLOW local runtime | P18_SYNTHETIC_CSV_UI_AND_P5_DBVORA_E2E_VERIFIED (NOT CUSTOMER READY) | `feature/axflow-mvp@86ac854bd633e3a312aa54a5300e2f78f634dbfd`; Windows Python 3.11.9 suite 60/60 PASS; synthetic CSV→SQLite→pinned DBVORA API→visible AX FLOW schema/refresh E2E PASS; row/path withheld, business DB unchanged |
+| Natural-language planner and file input | FOUR_BOUNDED_INTENTS_SYNTHETIC_BROWSER_E2E_VERIFIED (PARTIAL) | full import and DBVORA-backed schema in P17; filtered save, read-only lookup, conditional save and no-match conditional in P18; unsupported-intent and path-escape visible rejection still pending |
 | OAuth, Gmail/Sheets connectors | NOT_STARTED | no account credentials, no auth test |
 | DBVORA integration | P5_SOURCE_BACKED_UI_E2E_VERIFIED_SYNTHETIC | selected-file `p0-01.v1` API over loopback; tables/columns/PK/FK/size displayed; one selected local SQLite file only; customer DB, packaged service, restore and security review unverified |
 | Recovery, resilience and performance | PARTIAL | real process crash resume, cross-process same-run replay, persisted interval due ticks, crash replay and concurrent tick deduplication are tested; DBVORA restore and broader load bounds remain open |

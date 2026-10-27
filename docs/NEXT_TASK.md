@@ -1,3 +1,13 @@
+## P18 complete — four bounded CSV intents verified through the local UI (2026-10-27 KST)
+Filtered import saved 2 synthetic rows; lookup returned one match at source row 1 without row values; conditional import saved 2; no-match conditional saved 0. The full import and DBVORA-linked schema/refresh flow are recorded in P17. Write flows remained disabled without explicit synthetic-data approval. Full Windows Python 3.11.9 suite: **60/60 PASS** with loopback permission.
+
+The first sandboxed suite attempt was blocked by localhost socket policy (WinError 10013; 8 failures/10 errors); the exact rerun with loopback permission passed. Conditional receipts correctly show one skipped mutually exclusive branch (5 completed / 6 total). The isolated port 8768 server is stopped; synthetic fixture and DB files were removed, but its small captured logs are still held open.
+
+A–E heuristic: **84%** (A100/B95/C95/D80/E50); product remains PARTIAL. No user-visible site needs to be opened for the next task; keep the P5 review panel at `http://127.0.0.1:8767/` open.
+
+## Next atomic task — fail-closed planner/UI acceptance
+Run an isolated synthetic browser check for (1) an unsupported task and (2) absolute/traversal CSV paths. Confirm the UI displays bounded actionable errors, does not enable or produce a run receipt, and leaves the synthetic business DB unchanged. Use a separate temporary fixture/server; do not disturb the open P5 review. If all checks pass, run the full suite and update STATUS/HANDOFF/NEXT_TASK. Fix code only if a reproducible defect is found and within the current authorization. Continue to hold customer data, OAuth, external writes, DBVORA restore/release, and independent-engine expansion behind their review/approval gates.
+
 ## Latest verified fix — Windows CLI help encoding (2026-10-27 KST)
 On `feature/axflow-mvp@86ac854bd633e3a312aa54a5300e2f78f634dbfd`, default CP949 Windows console help now prints successfully after replacing two U+2013 characters with ASCII hyphens. Both `python -m axflow --help` and `python -m axflow serve --help` pass. The full Windows Python 3.11.9 suite is **60/60 PASS** with permitted loopback tests. The first failure was a real help-output encoding defect; no execution logic changed. Overall remains PARTIAL at the existing 79% heuristic.
 

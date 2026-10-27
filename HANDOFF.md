@@ -1,5 +1,17 @@
 # HANDOFF — AX FLOW + REA_APP (bootstrap, 2026-10-27 KST)
 
+## Latest checkpoint — P18 synthetic browser acceptance of all bounded CSV intents (2026-10-27 KST)
+1. **Task:** verify the remaining filtered, lookup and conditional planner paths through the user-facing UI, including explicit write approval; no source-code or standalone-engine expansion.
+2. **Branch/base:** `feature/axflow-mvp` head before this checkpoint: `e907c290a97d838261bbecaba32da3a7924cb557`. Tests exercised the local source corresponding to the branch.
+3. **Synthetic UI evidence:** filtered `sales.csv` request saved 2 rows; lookup of ID 11 in `people.csv` returned one match at original row 1 without row values; conditional amount ≥100 saved 2 rows; conditional amount ≥500 saved 0 rows.
+4. **Approval check:** run stayed disabled when write approval was unchecked and enabled when checked. The read-only lookup executed with no write approval.
+5. **Full regression:** Windows Python 3.11.9, `python -m unittest discover -s tests -v` — **60/60 PASS** with localhost test permission.
+6. **Failure record:** default sandbox first denied localhost sockets (WinError 10013; 8 failures/10 errors). The same command passed after loopback permission was granted. The initial preview appeared absent because its generated plan disclosure was collapsed; fresh DOM inspection verified successful preview. Conditional plans intentionally skip one mutually exclusive branch, so their receipt is completed 5/6 with one skipped step.
+7. **Cleanup:** port 8768 is no longer listening; synthetic input and DB files were removed. Two captured log files remain temporarily locked; targeted deletion was attempted and failed on those open handles.
+8. **Progress:** A100/B95/C95/D80/E50 = **84%** on the equal-weight tracking heuristic; product remains PARTIAL.
+9. **Sites:** leave the P5 DBVORA review panel at `http://127.0.0.1:8767/` open. The P18 test server is stopped and does not need to be opened by the owner.
+10. **Next:** verify visible fail-closed behavior for unsupported requests and path escapes in an isolated synthetic UI, assert there is no run receipt or business DB mutation, then compare remaining evidence to Blueprint A–E. Keep customer credentials/data, DBVORA writes/restore, public release and independent-engine expansion on their existing review gates.
+
 ## Latest checkpoint — P5 source-backed DBVORA data visible in AX FLOW UI (2026-10-27 KST)
 1. **Task:** complete the synthetic AX FLOW CSV→business SQLite→actual DBVORA read-only API→AX FLOW UI flow; no standalone-engine expansion.
 2. **Code/source revisions:** AX FLOW UI code from `feature/axflow-mvp` (UI verified against committed blobs; CP949 CLI fix `86ac854bd633e3a312aa54a5300e2f78f634dbfd`); DBVORA source `feature/p0-db-map@31b8257468d28743fb2d3767d1caa56938df756c`; adapter integration branch `feature/dbvora-integration`.
