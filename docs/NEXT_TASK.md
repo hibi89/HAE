@@ -1,3 +1,10 @@
+## REA_APP P36 — FIFO open-stall risk / next decision (2026-10-27 17:50 KST)
+
+- Current remote source audit on `REA_APP@e3263980e874b7d3b8a5378851d50738dc526d6a`: manifest **16/16 exact matched**, zero unreviewed executable sources, latest changes since P35 code commit documentation only. No current-head full Python/Babel test passed or run.
+- New issue [#1](https://github.com/hibi89/AX_FLOW/issues/1): scanner pre-stat then blocking `os.open` can stall if a mutable local regular file is replaced by a FIFO before open. **Standalone POSIX Python 3.13.5 synthetic demonstration**: blocking open timed out; nonblocking FIFO open returned and `fstat` identified nonregular type. Actual REA_APP scanner swap integration NOT RUN; Windows NOT VERIFIED.
+- Designs compared in issue: A) POSIX `O_NONBLOCK` plus existing `fstat` identity/type guard (targeted 0-cost preferred), B) larger descriptor-relative snapshot redesign (defer), C) accept stall (reject). **Substantive scanner change pending approval.** No code, manifest or dependency modification in P36.
+- Next: approve or decline A; on approval add bounded race regression, update SHA manifest and verifier runner together, and run targeted tests. Full Gate R remains **PARTIAL** until exact-source full Python + installed genuine `@babel/parser@7.29.9` test at authorized clean checkout; do not repeat failed private clone or start paid CI without approval.
+
 ## REA_APP P35 — next verified release gate (2026-10-27 KST)
 
 Current implementation `REA_APP@71e75e5698e5b81755c85e889e658efadc0d0501`: scanner now detects inconsistent file snapshots after read and skips them with `file_changed_during_read`. Local helper regression **5/5 PASS**, evidence runner synthetic QA **11/11 PASS**; remote source manifest updated to **16/16 exact Git blobs**. Full REA_APP scanner/CLI/graph/impact Python and real Babel Node suites remain **UNRUN**. Gate R **PARTIAL**.
