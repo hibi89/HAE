@@ -133,7 +133,10 @@ class LAExecutor:
         normalized = prepare_plan(plan).runtime_plan
         if not isinstance(run_id, str) or not IDENTIFIER.fullmatch(run_id):
             raise PlanError("run_id must be a safe identifier")
-        existing = inspect_run(self.state_path, run_id)
+        try:
+            existing = inspect_run(self.state_path, run_id)
+        except RunLogError as exc:
+            raise PlanError(str(exc)) from exc
         expected_hash = hashlib.sha256(canonical_json(normalized).encode("utf-8")).hexdigest()
         if existing["plan_sha256"] != expected_hash:
             raise PlanError("persisted run plan does not match supplied plan")
