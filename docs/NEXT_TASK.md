@@ -1,3 +1,7 @@
+## P28 next action
+
+Actual Python scanner and verifier tests passed 11/11 on five exact GitHub blob-matched files. Full REA_APP test suite and genuine Babel parser tests remain pending. See `tools/rea-app/P28_FOCUSED_REGRESSION.md`. Next: obtain all 14 source files and installed Babel parser, then run `python verify_gate_r.py` before beginning Lightning Azent implementation.
+
 ## REA_APP P27 — installed Babel dependency provenance gate added (2026-10-27 KST)
 1. Latest P27 verifier code `c60df0fc11f54f65e7b7da2e08590de7b5081737` (Git blob `309510bd01aa01dc8ee6b2defb5498aebc67b0e1`) and two new regression tests `3a1a023533a7c070c35be5abbf06bc185a87471b` (Git blob `c8db5c2957cc365d6e3c4c6cfcc70d5f1351d7fc`). The verifier now checks real installed Node package metadata for exact `@babel/parser@7.29.9` before parser test. Reviewed source manifest is 14 files; local source/test SHA match GitHub.
 2. **Execution evidence:** verifier-focused Python **7/7 PASS**; isolated Node 22.16 with synthetic local package metadata **2/2 PASS**. No full REA_APP exact-source Python/Node suite run. Gate R remains PARTIAL.
