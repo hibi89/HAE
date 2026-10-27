@@ -147,6 +147,14 @@ def main() -> int:
                 "Expected approval gate to reject the CSV run")
         require(not Path(state).exists() and not Path(data).exists(),
                 "Rejected CSV run must not initialize databases")
+        invalid_id = subprocess.run(
+            [python, "-B", "-m", "lightning_azent", "run", plan,
+             *[("bad/id" if x == "CsvSmoke" else x) for x in arguments]],
+            cwd=ROOT, env=env, capture_output=True, text=True, timeout=opts.timeout)
+        require(invalid_id.returncode == 2 and "PlanError" in invalid_id.stderr,
+                "Invalid run ID must be rejected")
+        require(not Path(state).exists() and not Path(data).exists(),
+                "Invalid run ID initialized SQLite files")
         first = command_json("csv_run", ["run", plan, *arguments])
         again = command_json("csv_resume", ["resume", plan, *arguments])
         with sqlite3.connect(data) as db:
