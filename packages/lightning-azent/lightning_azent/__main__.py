@@ -9,10 +9,10 @@ from pathlib import Path
 
 from . import __version__
 from .contract import PreparedPlan, capabilities, preflight_summary, prepare_plan
-from .engine import ApprovalRequired, Engine, IDENTIFIER, PlanError, StepRetryExhausted, StepTimeout, MAX_SPEC_BYTES, validate
+from .engine import ApprovalRequired, IDENTIFIER, PlanError, StepRetryExhausted, StepTimeout, MAX_SPEC_BYTES
 from .runlog import RunLogError, inspect_run
 from .runtime import LAExecutor
-from .scheduler import MAX_SCHEDULE_RUNS, interval_ticks
+from .scheduler import MAX_SCHEDULE_RUNS
 
 
 def _unique(pairs: list[tuple[str, object]]) -> dict:
@@ -104,13 +104,13 @@ def main() -> int:
                     result = LAExecutor(args.state, args.data, args.input_root).resume(
                         plan, args.run_id, approve_writes=args.approve_writes)
                 else:
-                    engine = Engine(args.state, args.data, input_root=args.input_root)
+                    executor = LAExecutor(args.state, args.data, args.input_root)
                     if args.command == "run":
-                        result = engine.execute(plan, args.run_id,
+                        result = executor.execute(plan, args.run_id,
                                                 approve_writes=args.approve_writes)
                     else:
-                        result = list(interval_ticks(
-                            plan, engine, args.schedule_id,
+                        result = list(executor.schedule(
+                            plan, args.schedule_id,
                             max_runs=args.max_runs,
                             approve_writes=args.approve_writes))
         print(json.dumps(result, ensure_ascii=False, sort_keys=True, allow_nan=False))
