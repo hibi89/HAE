@@ -48,6 +48,15 @@ def check_source() -> bool:
         actual = git_blob_id(source.read_bytes())
         if actual != expected:
             wrong.append((relative, actual))
+    # Unreviewed test modules must not be silently executed by discovery.
+    # Byte-exact matching alone is insufficient if extra Python tests exist.
+    for directory in ("rea_app", "tests"):
+        for entry in (ROOT / directory).rglob("*"):
+            if entry.suffix.lower() not in {".py", ".js", ".cjs", ".mjs", ".ts", ".tsx"}:
+                continue
+            relative = entry.relative_to(ROOT).as_posix()
+            if relative not in SOURCE_BLOBS:
+                wrong.append((relative, "UNREVIEWED_EXECUTABLE_SOURCE"))
     if wrong:
         for relative, actual in wrong:
             print(f"SOURCE MISMATCH {relative}: {actual}", file=sys.stderr)
