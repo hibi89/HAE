@@ -1,3 +1,7 @@
+## P32 report-write safety
+
+Reports now write a temporary UTF-8 file under the selected output folder, flush/fsync it and atomically replace each final file. Existing report symlink targets are not followed; on replacement failure the old report remains and the temporary file is removed. Four synthetic focused writer tests PASS on Linux. JSON and Markdown are not committed as one atomic pair, and live output parent-directory races and Windows-native behavior remain unverified. Gate R verifier now pins 15 source/test files. See P32_OUTPUT_WRITE_SAFETY.md.
+
 ## P31 — file-level reparse attributes now rejected (2026-10-27 KST)
 
 The offline `verify_gate_r.py` validates every reviewed manifest path as a regular file via `lstat`, rejecting Windows reparse attributes before reading bytes. One new unittest simulates a flagged regular-file reparse point and a nonregular file: both unexpected acceptances occurred before repair; post-repair exact local verifier/self-test execution **9/9 PASS**. This is a synthetic attribute test on Linux, not actual Windows-junction verification. See `tools/rea-app/P31_FILE_REPARSE_GUARD.md`. The full Python analyzer and genuine Babel parser Gate R suites remain unrun.
