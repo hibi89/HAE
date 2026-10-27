@@ -11,7 +11,7 @@ from typing import Iterator
 
 from .contract import PreparedPlan, capabilities, prepare_plan
 from .engine import ApprovalRequired, Engine, IDENTIFIER, PlanError, canonical_json
-from .runlog import RunLogError, inspect_business_ledger, inspect_run
+from .runlog import RunLogError, inspect_business_ledger, inspect_completed_business_receipts, inspect_run
 from .scheduler import MAX_SCHEDULE_RUNS, interval_ticks
 
 _WRITE_OPS = frozenset(("sqlite_put", "sqlite_import_csv"))
@@ -78,6 +78,7 @@ class LAExecutor:
             raise PlanError("same run id cannot be reused with a different plan")
         try:
             inspect_business_ledger(self.business_path)
+            inspect_completed_business_receipts(self.state_path, self.business_path, run_id, normalized)
         except RunLogError as exc:
             raise PlanError(str(exc)) from exc
         return self._new_engine().execute(normalized, run_id, approve_writes=approve_writes)
