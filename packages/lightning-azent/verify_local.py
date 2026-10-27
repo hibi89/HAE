@@ -16,6 +16,7 @@ import platform
 import re
 import shutil
 import sqlite3
+from contextlib import closing
 import subprocess
 import sys
 import tempfile
@@ -125,7 +126,7 @@ def main() -> int:
                                                  "--run-id", "NativeSmoke"])
         require(first == resumed == {"route": "accepted"} and
                 status.get("status") == "completed", "Native run/resume mismatch")
-        with sqlite3.connect(state) as db:
+        with closing(sqlite3.connect(state)) as db:
             require(db.execute("SELECT COUNT(*) FROM runs").fetchone()[0] == 1,
                     "Native duplicate run record")
         return {"run": "NativeSmoke", "idempotent": True}
@@ -157,14 +158,15 @@ def main() -> int:
                 "Invalid run ID initialized SQLite files")
         first = command_json("csv_run", ["run", plan, *arguments])
         again = command_json("csv_resume", ["resume", plan, *arguments])
-        with sqlite3.connect(data) as db:
+        with closing(sqlite3.connect(data)) as db:
             count = db.execute("SELECT COUNT(*) FROM csv_records").fetchone()[0]
         require(first == again and count == 2, "CSV import or resume mismatch")
         require(hashlib.sha256(source.read_bytes()).hexdigest() == digest,
                 "Synthetic input source changed")
         # Completed business rows must not silently disappear on manual resume.
-        with sqlite3.connect(data) as db:
+        with closing(sqlite3.connect(data)) as db:
             db.execute("DELETE FROM csv_records WHERE rowid = (SELECT MIN(rowid) FROM csv_records)")
+            db.commit()
         tampered = subprocess.run(
             [python, "-B", "-m", "lightning_azent", "resume", plan, *arguments],
             cwd=ROOT, env=env, text=True, encoding="utf-8", errors="replace",
@@ -174,7 +176,7 @@ def main() -> int:
             tampered.stdout + "\n" + tampered.stderr, encoding="utf-8")
         require(tampered.returncode == 2 and "PlanError" in tampered.stderr,
                 "Resume accepted missing completed CSV business receipt")
-        with sqlite3.connect(data) as db:
+        with closing(sqlite3.connect(data)) as db:
             require(db.execute("SELECT COUNT(*) FROM csv_records").fetchone()[0] == count - 1,
                     "Resume unexpectedly rewrote tampered business receipts")
         return {"business_rows_before_tamper": count, "input_unchanged": True,
@@ -190,7 +192,7 @@ def main() -> int:
         require(isinstance(output, list) and len(output) == 2 and
                 [x.get("tick") for x in output] == [0, 1] and
                 all(x.get("advanced") is True for x in output), "Interval replay failed")
-        with sqlite3.connect(data) as db:
+        with closing(sqlite3.connect(data)) as db:
             count = db.execute("SELECT COUNT(*) FROM records").fetchone()[0]
         require(count == 2, "Interval business receipts mismatch")
         return {"ticks": 2, "business_rows": count}
