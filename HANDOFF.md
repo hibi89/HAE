@@ -173,3 +173,17 @@ Recovery: read this latest appended block before older 21-week historical notes.
 8. **Risks/rollback:** Only synthetic DB used; no DBVORA changes. Roll back both P5 commits to `5acc4abfa8c0bd93c31c8e54ecd76133b1ecb9cc` to remove this adapter/panel.
 9. **Next atomic task:** Expand planner support for CSV filter→SQLite, read-only lookup and conditional flow as distinct safe tasks; add real UI preview/run tests and retain fail-closed behavior. Do not introduce customer data.
 10. **Time/owner actions:** 2026-10-27 KST. Local preview remains `http://127.0.0.1:8765/`; service must be started separately on a selected synthetic SQLite file/loopback port for DBVORA panel to show connected. Overall product remains PARTIAL.
+
+
+## 2026-10-27 KST — P5 pinned-source DBVORA API/client recheck
+
+1. **Goal:** Independently verify that the committed AX FLOW read-only adapter interoperates with the actual DBVORA API source, using only a new synthetic SQLite fixture.
+2. **Branch and source revisions:** AX FLOW `feature/dbvora-integration` (pre-checkpoint HEAD `06ba9f011796090b84e4625bcd65ded848412e34`, adapter commit `54b4c9336dc9a0dee0cd0418364b89fc1f34dc59)); DBVORA `feature/p0-db-map@31b8257468d28743fb2d3767d1caa56938df756c`. The client blob and six executed DBVORA module blobs were checked against GitHub.
+3. **Test setup:** Windows Python 3.11.9; actual DBVORA FastAPI application served on loopback with Uvicorn; exact committed AX FLOW `DbvoraClient`; synthetic `customers` and `orders` tables, including a declared foreign key and a sentinel row value.
+4. **Result:** one live API/client E2E passed with exit code 0. `/health` reported local read-only mode; `/api/inventory` returned contract `p0-01.v1`, table/column/PK/FK relationship metadata, and measured size. The sentinel row and absolute source path were absent from the normalized result; source SHA-256/mtime stayed identical and DBVORA created no WAL/SHM.
+5. **Failure cause and recovery:** the initial harness started DBVORA before creating its required selected DB, so its intentional startup validation returned `FILE_UNAVAILABLE`. The fixture is now created first and the same pinned-source test passes. A sandbox-vs-approved TEMP root mismatch was also resolved by keeping scratch files inside the permitted workspace.
+6. **Changes:** no product or DBVORA source files changed for this recheck; evidence is recorded in STATUS and NEXT_TASK. Temporary test data is synthetic and isolated.
+7. **Limits:** API/client interoperability is verified; this run does not add a browser/UI pass, customer database, Windows installation, backup/restore, security review or release evidence. The product remains PARTIAL.
+8. **Safety:** no customer data, credentials, OAuth, external API, public deployment, database mutation or DBVORA repository update.
+9. **Next:** continue only with user-authorized bounded work. Keep the independent execution-engine implementation on the existing chief-review hold; do not infer P5 customer readiness from this synthetic test.
+10. **Checkpoint:** test result and source pins are reflected in the latest STATUS.md and docs/NEXT_TASK.md entries; latest branch commit is reported after the follow-up documentation commits.
