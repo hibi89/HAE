@@ -1,3 +1,10 @@
+## REA_APP P27 — Babel installed-version verification (2026-10-27 KST)
+- Implemented exact installed `@babel/parser@7.29.9` verification before Node test in offline `verify_gate_r.py`, rejecting uninstalled/mismatched dependency. Prior lockfile alone did not prove installed version.
+- GitHub code `c60df0fc11f54f65e7b7da2e08590de7b5081737` blob `309510bd01aa01dc8ee6b2defb5498aebc67b0e1`; two tests added in `test_verify_gate_r.py` `3a1a023533a7c070c35be5abbf06bc185a87471b` blob `c8db5c2957cc365d6e3c4c6cfcc70d5f1351d7fc`. Local tested copies byte-identical to GitHub blobs, 14-file manifest updated.
+- Actual local Python 3.13.5 **7/7 verifier self-tests PASS**. Real Node 22.16.0 subprocess with disposable synthetic metadata accepted `7.29.9` and rejected `7.30.0`: **2/2 PASS**. Initial self-test 6/7 due to wrong expectation on command text, repaired and rerun.
+- **Real REA_APP full analyzer Python suite + real installed Babel parser tests NOT RUN on this HEAD**. Private GitHub checkout blocked by DNS; Gate R PARTIAL. Sequence REA_APP → Lightning Azent → HAE unchanged, no other product code touched.
+- Next execute `python verify_gate_r.py` on authorized exact source+installed parser to close Gate R, record SHA and Windows SKIPs.
+
 ## REA_APP P26 — real pinned verifier self-test 5/5 PASS (2026-10-27 KST)
 - Reconstructed byte-exact original `verify_gate_r.py` in local Python 3.13.5/Linux and compared with GitHub blob; wrote and actually ran `tests/test_verify_gate_r.py` in isolated temp fixtures: **5/5 PASS**. Tests cover known SHA, valid source, changed source, added unreviewed test, and symlink rejection. GitHub new test source blob **745e1b5486c9d98dbcfcb1bf5d7ec5ca940f5ca3** matches the copy tested; initial remote escaping mismatch was corrected before final SHA pin.
 - `verify_gate_r.py` now checks **14** reviewed source/package/test blobs including the new self-test. Blob **75a760810b0a369f5e2a870f20af38fbc0b6fe38** matches the updated local copy, and the five tests were rerun successfully. Source baseline now `e6775a5b3bc17c2049238e0d505ec31e384d53ff`; manifest change `6b6081c29ddc5ab7c57b49d29bd0e42b332749e6`.
