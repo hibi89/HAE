@@ -1,5 +1,12 @@
 # STATUS — 2026-10-27 KST
 
+## Windows CP949 CLI help fix — 2026-10-27 KST
+- The default Windows console initially failed on `python -m axflow serve --help`: CP949 could not encode U+2013 in the help/error text.
+- Replaced the two en dashes in range text with ASCII hyphens. This changes help output only; no workflow or engine behavior changed.
+- **Tests:** `python -m axflow --help` PASS; `python -m axflow serve --help` PASS; Windows Python 3.11.9 full suite `python -m unittest discover -s tests -v` **60/60 PASS** with loopback test permission.
+- **Commit:** `feature/axflow-mvp@86ac854bd633e3a312aa54a5300e2f78f634dbfd`. This quality fix does not change the 79% heuristic product estimate; overall remains PARTIAL.
+
+
 ## P16 — browser E2E and read-only approval gate fixed (2026-10-27 KST)
 - Fixed `apps/ax-flow/axflow/static/app.js`: read-only plans no longer return early when the hidden write-approval checkbox is unchecked; their progress message now describes a read-only search.
 - Visible browser E2E at `http://127.0.0.1:8765/` used only `C:\\Users\\haein\\AppData\\Local\\Temp\\axflow-ui-e2e-20261027-01` synthetic fixtures. Read-only query for id 2 returned one match at source row 2 without returning row values. Explicitly approved full import returned a completed receipt, 2/2 steps, and 2 saved rows.
