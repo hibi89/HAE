@@ -1,3 +1,14 @@
+## P53 — direct ESM re-export contracts across all reports (2026-10-27 KST)
+
+- One shared graph-stage enrichment now adds explicit, unique, direct in-root ESM re-export callables. `source-map`, `functional-contracts`, and `change-impact` use the same façade module/export identity with target-definition and export-row evidence. Six/eight output sets and schema IDs are unchanged.
+- Real Babel regression confirms direct alias and direct intermediate re-export signatures; it omits chains, external targets and two re-exports sharing one source row. It verifies both source-map and standalone contract inventories, exact evidence, body exclusion, deterministic artifacts and unchanged inputs.
+- Design: enrich `graph.function_contracts` once rather than repeat edge traversal in each report builder; no added parser call, dependency, runtime service or license change.
+- Gate R on Windows 10 build 10.0.26200 / Python 3.11.9: **SOURCE 25/25; 72 tests, 66 pass, 6 skip; exact Babel 7.29.9 Node PASS; exit 0**. QA **11/11 PASS**. Actual junction tests both ran and passed in the elevated evidence run.
+- Gate R evidence `E:\HAE\REA_APP_GATE_EVIDENCE\gate-r-vd4gdxam\evidence.json`, clean commit with matching verifier pin.
+- Packaging follow-through: wheel **45,166 bytes**, SHA-256 `006604be4da67fd3a9b4924c4de61b40dd58e21113c50b0f5f77e6f627a08465`; installed offline into a fresh Python 3.11.9 venv. Exact locked Babel `npm ci` passed from the installed wheel; installed `rea-app bundle --with-diagram` produced 8 reports, including the façade signature, byte-identically on rerun with source hashes unchanged.
+- Commit `1ae3dac263a1a5c866434c8418fe7dbb1d3f1d48` is fast-forward pushed and read back at `origin/REA_APP`. Wheel was not published; no customer data, paid CI or deployment.
+- Next functional slice: bounded static wildcard re-export callable reporting; namespace exports, collisions and chains remain excluded.
+
 ## P52 — native Windows directory junctions verified (2026-10-27 KST)
 
 - Added a PowerShell-backed junction fixture helper plus real scanner and Gate R tests. The scanner ignores an outside-root junction and does not index its target file; Gate R rejects `rea_app/` and `tests/` when either is a real Windows junction.
