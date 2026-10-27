@@ -303,62 +303,15 @@ def _callable_contracts(report: dict[str, Any]) -> dict[tuple[str, str], dict[st
         export_kinds.setdefault(key, set()).add(item["kind"])
 
     contracts = {}
-    direct_by_symbol: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for item in report["function_contracts"]:
-        module = item["evidence"]["definition"]["path"]
+        module = item["evidence"]["export"]["path"]
         exported_as = item["exported_as"]
         key = (module, exported_as)
-        direct_by_symbol.setdefault(key, []).append(item)
         contracts[key] = {
             "module": module,
             "exported_as": exported_as,
             "signature": _callable_signature(item, export_kinds.get(key, set())),
             "evidence": item["evidence"],
-            "assurance": "explicit_syntax_only",
-        }
-
-    reexport_edges: dict[tuple[str, int], list[dict[str, Any]]] = {}
-    for edge in report["dependency_edges"]:
-        if edge["kind"] != "reexport":
-            continue
-        evidence = edge["evidence"]
-        reexport_edges.setdefault((edge["from_path"], evidence["line"]), []).append(edge)
-
-    reexports_by_symbol: dict[tuple[str, str], list[dict[str, Any]]] = {}
-    for item in report["exports"]:
-        if item["kind"] != "reexport":
-            continue
-        key = (item["path"], item["name"])
-        reexports_by_symbol.setdefault(key, []).append(item)
-
-    for key, items in reexports_by_symbol.items():
-        if len(items) != 1 or key in contracts:
-            continue
-        exported = items[0]
-        edges = reexport_edges.get((exported["path"], exported["evidence"]["line"]), [])
-        if len(edges) != 1:
-            continue
-        edge = edges[0]
-        if edge["resolution"] not in {"internal", "internal_alias"}:
-            continue
-        target_path = edge["to_path"]
-        target_symbol = exported["source_name"]
-        candidates = direct_by_symbol.get((target_path, target_symbol), [])
-        if not target_path or len(candidates) != 1:
-            continue
-        target = candidates[0]
-        contracts[key] = {
-            "module": exported["path"],
-            "exported_as": exported["name"],
-            "signature": _callable_signature(target, ["reexport"]),
-            "evidence": {
-                "definition": target["evidence"]["definition"],
-                "export": {
-                    "path": exported["path"],
-                    "line": exported["evidence"]["line"],
-                    "name": exported["name"],
-                },
-            },
             "assurance": "explicit_syntax_only",
         }
     return contracts

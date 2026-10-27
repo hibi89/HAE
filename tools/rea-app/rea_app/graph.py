@@ -279,6 +279,65 @@ def _call_import_binding(callee: str, bindings: list[dict[str, Any]]) -> tuple[d
     return None, None
 
 
+def _direct_reexport_contracts(
+    function_contracts: list[dict[str, Any]],
+    exports: list[dict[str, Any]],
+    dependency_edges: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    direct_by_symbol: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    existing_exports = set()
+    for contract in function_contracts:
+        definition = contract["evidence"]["definition"]
+        exported = contract["evidence"]["export"]
+        key = (exported["path"], contract["exported_as"])
+        existing_exports.add(key)
+        if definition["path"] == exported["path"]:
+            direct_by_symbol.setdefault(key, []).append(contract)
+
+    edges_by_row: dict[tuple[str, int], list[dict[str, Any]]] = {}
+    for edge in dependency_edges:
+        if edge["kind"] == "reexport":
+            evidence = edge["evidence"]
+            edges_by_row.setdefault((edge["from_path"], evidence["line"]), []).append(edge)
+
+    exports_by_symbol: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for exported in exports:
+        if exported["kind"] == "reexport":
+            key = (exported["path"], exported["name"])
+            exports_by_symbol.setdefault(key, []).append(exported)
+
+    contracts = []
+    for key, items in exports_by_symbol.items():
+        if key in existing_exports or len(items) != 1:
+            continue
+        exported = items[0]
+        edges = edges_by_row.get((exported["path"], exported["evidence"]["line"]), [])
+        if len(edges) != 1:
+            continue
+        edge = edges[0]
+        if edge["resolution"] not in {"internal", "internal_alias"}:
+            continue
+        target_path = edge["to_path"]
+        source_name = exported["source_name"]
+        candidates = direct_by_symbol.get((target_path, source_name), [])
+        if not target_path or len(candidates) != 1:
+            continue
+        target = candidates[0]
+        contracts.append({
+            **target,
+            "exported_as": exported["name"],
+            "evidence": {
+                "definition": target["evidence"]["definition"],
+                "export": {
+                    "path": exported["path"],
+                    "line": exported["evidence"]["line"],
+                    "name": exported["name"],
+                },
+            },
+        })
+    return contracts
+
+
 def build_report(scan: ScanResult, parser_timeout: int) -> dict[str, Any]:
     files = {item.path: item for item in scan.files}
     parsed = _parse_with_typescript(scan, parser_timeout)
@@ -356,6 +415,8 @@ def build_report(scan: ScanResult, parser_timeout: int) -> dict[str, Any]:
                 },
             })
         value_flow_edges.extend(parse_result.get("value_flows", []))
+
+    function_contracts.extend(_direct_reexport_contracts(function_contracts, exports, dependency_edges))
 
     exports_by_path: dict[str, list[dict[str, Any]]] = {}
     for item in exports:
@@ -476,7 +537,7 @@ def build_report(scan: ScanResult, parser_timeout: int) -> dict[str, Any]:
             "other_languages": "inventory only",
             "call_resolution": "direct imported calls with a unique in-root module edge and matching export are linked; other calls remain syntactic references",
             "data_flow": "same-scope simple identifier aliases, call results, direct call arguments and returns; duplicate or reassigned bindings are omitted; control flow and cross-module value flow are not analyzed",
-            "function_contracts": "exported callable signatures from explicit parameter and return type syntax; inferred types, defaults, function behavior and class methods are not included",
+            "function_contracts": "exported callable signatures from explicit parameter and return type syntax, including direct uniquely resolved in-root ESM re-exports; re-export chains, wildcard exports, inferred types, defaults, function behavior and class methods are not included",
             "file_paths": "direct string-literal arguments to recognized Node fs APIs; shadowed/reassigned bindings and dynamic, absolute, escaping, sensitive or unsupported path expressions are omitted or redacted; runtime working directory is not inferred",
         },
     }

@@ -59,9 +59,7 @@ def build_functional_contracts(source_map: dict[str, Any]) -> dict[str, Any]:
             raise ContractError("invalid callable")
         definition = _evidence(item["evidence"].get("definition"))
         exported = _evidence(item["evidence"].get("export"))
-        module = definition["path"]
-        if exported["path"] != module:
-            raise ContractError("cross-file re-export signatures are not inferred")
+        module = exported["path"]
         params = item.get("parameters")
         if not isinstance(params, list) or len(params) > 100:
             raise ContractError("invalid callable parameters")
@@ -100,7 +98,7 @@ def build_functional_contracts(source_map: dict[str, Any]) -> dict[str, Any]:
         "contracts": output,
         "limitations": [
             "Observed interfaces only; behavior, side effects and executable replacement code are not inferred.",
-            "No inferred types, source bodies, default values, dynamic dispatch or cross-file re-exports.",
+            "No inferred types, source bodies, default values, dynamic dispatch, wildcard or chained re-exports, or unresolved/ambiguous re-export targets.",
         ],
     }
 

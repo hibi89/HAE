@@ -1,3 +1,13 @@
+## P53 — direct ESM re-exports in the current callable inventory
+
+The current `source-map` and `functional-contracts` reports include explicit
+`export { sourceName as publicName } from "./module"` callable signatures when
+one re-export edge is uniquely resolved inside the selected root and the target
+contains one matching direct callable. The contract records both the target
+definition and façade export path:line evidence. Re-export chains, wildcard,
+external, unresolved and ambiguous same-line exports are omitted. This bounded
+rule also feeds baseline/current contract comparison without reparsing.
+
 ## P50 — installable Python wheel
 
 REA_APP now builds a pure-Python wheel with a `rea-app` console command. The
@@ -27,7 +37,7 @@ The adapter was verified with the pinned Babel parser using synthetic JavaScript
 
 The existing `change-impact.json/.md` now show baseline/current callable API observations in `contract_changes`: added exports, exports no longer observed, and changed explicit signatures. Matching uses relative module path and exported name. Reported syntax fields include export kind, parameter shape/type flags, return annotation, async and generator; changes include evidence from both snapshots. The CLI prints the delta counts.
 
-The current-snapshot `functional-contracts.json/.md` output remains unchanged. Function bodies, actual default values, inferred types, side effects, and cross-file re-export signatures are omitted. A missing static contract is not a runtime compatibility verdict. No new files or parser runs were added; the existing six/eight bundle file counts remain intact.
+The current-snapshot `functional-contracts.json/.md` output uses the export-bearing module path; for direct ESM re-exports it also keeps a separate target-definition path and façade export path:line. Function bodies, actual default values, inferred types, side effects, and chained/wildcard/unresolved/ambiguous re-exports are omitted. A missing static contract is not a runtime compatibility verdict. The existing six/eight bundle file counts remain intact.
 
 Verified with real Babel on a synthetic ESM-to-CommonJS API change: added/removed/changed exports, signature fields and path:line evidence; repeatable artifacts; source preservation; and no body/default-value leakage. P47 Gate R: 23/23 source pins, 65 Python tests (59 pass, 6 platform/environment skips), Node parser pass; QA 11/11 pass. See `STATUS.md` P47 for the evidence path and limits.
 

@@ -35,6 +35,20 @@ class FunctionalContractsTests(unittest.TestCase):
         fixture["function_contracts"] = []
         self.assertEqual(build_functional_contracts(fixture)["summary"]["exported_callable_contracts"], 0)
 
+    def test_direct_reexport_uses_facade_module_and_preserves_definition_evidence(self):
+        fixture = self.sample()
+        fixture["function_contracts"][0]["evidence"]["export"] = {
+            "path": "pkg/facade.ts", "line": 8,
+        }
+        document = build_functional_contracts(fixture)
+        contract = document["contracts"][0]
+        self.assertEqual(contract["module"], "pkg/facade.ts")
+        self.assertEqual(contract["package"], "nested")
+        self.assertEqual(contract["evidence"], {
+            "definition": {"path": "pkg/a.ts", "line": 3},
+            "export": {"path": "pkg/facade.ts", "line": 8},
+        })
+
     def test_rejects_bad_schema(self):
         fixture = self.sample()
         fixture["schema_version"] = "wrong"
@@ -43,11 +57,12 @@ class FunctionalContractsTests(unittest.TestCase):
 
     def test_rejects_escaping_paths(self):
         for name in ("/tmp/a.ts", "../a.ts", "C:/a.ts", "pkg/../a.ts"):
-            with self.subTest(name=name):
-                fixture = self.sample()
-                fixture["function_contracts"][0]["evidence"]["definition"]["path"] = name
-                with self.assertRaises(ContractError):
-                    build_functional_contracts(fixture)
+            for evidence_name in ("definition", "export"):
+                with self.subTest(name=name, evidence=evidence_name):
+                    fixture = self.sample()
+                    fixture["function_contracts"][0]["evidence"][evidence_name]["path"] = name
+                    with self.assertRaises(ContractError):
+                        build_functional_contracts(fixture)
 
     def test_loader_rejects_invalid_json_and_large_report(self):
         with tempfile.TemporaryDirectory() as directory:

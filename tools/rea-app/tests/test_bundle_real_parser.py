@@ -454,7 +454,9 @@ class RealBundleMvpAcceptanceTests(unittest.TestCase):
 
             first = run()
             self.assertEqual(first.returncode, 0, first.stderr + first.stdout)
+            source = json.loads((output / "source-map.json").read_text(encoding="utf-8"))
             impact = json.loads((output / "change-impact.json").read_text(encoding="utf-8"))
+            contracts_report = json.loads((output / "functional-contracts.json").read_text(encoding="utf-8"))
             changes = impact["contract_changes"]
             changed = {(item["module"], item["exported_as"]): item
                        for item in changes["changed"]}
@@ -481,6 +483,25 @@ class RealBundleMvpAcceptanceTests(unittest.TestCase):
             self.assertNotIn(("src/facade.ts", "externalRun"), changed)
             self.assertNotIn(("src/facade.ts", "sameLineA"), changed)
             self.assertNotIn(("src/facade.ts", "sameLineB"), changed)
+            self.assertEqual(source["summary"]["function_contracts"], 3)
+            observed_source_contracts = {
+                (item["evidence"]["export"]["path"], item["exported_as"]): item
+                for item in source["function_contracts"]
+            }
+            self.assertEqual(set(observed_source_contracts), set(changed))
+            observed_interfaces = {
+                (item["module"], item["exported_as"]): item
+                for item in contracts_report["contracts"]
+            }
+            self.assertEqual(set(observed_interfaces), set(changed))
+            interface = observed_interfaces[("src/facade.ts", "publicRun")]
+            self.assertEqual(interface["package"], "reexport-contract-fixture")
+            self.assertEqual(interface["symbol"], "run")
+            self.assertEqual(interface["evidence"], {
+                "definition": {"path": "src/api.ts", "line": 1},
+                "export": {"path": "src/facade.ts", "line": 1},
+            })
+            self.assertIn("src/facade.ts::publicRun", (output / "functional-contracts.md").read_text(encoding="utf-8"))
             for artifact in output.iterdir():
                 self.assertNotIn(b"return id.length", artifact.read_bytes())
                 self.assertNotIn(b"return String(id)", artifact.read_bytes())
