@@ -1,3 +1,11 @@
+## Lightning Azent P2 execution gate — 2026-10-28 KST
+
+- `feature/lightning-azent` now includes versioned `azent.ir.v0` adapter, typed LAExecutor API, lazy SQLite initialization after approved/validated request, local-only CLI, stand-alone wheel metadata, native conditional fixture and **21 unexecuted** Python unittest definitions across 3 files. No feature work on frozen REA_APP P54.
+- **FIRST:** On a connected Python 3.11+ checkout, run `python -m compileall -q packages/lightning-azent`; set `$env:PYTHONPATH="packages/lightning-azent"` and run `python -m unittest discover -s packages/lightning-azent/tests -v`. Record exact branch SHA, OS, Python version, outcomes, source/input SHA. Fix only reproducing defects and rerun.
+- **SECOND:** Run original `apps/ax-flow/tests` on the unchanged original HAE engine. Compare old `axflow.ir.v0` vs new `azent.ir.v0` three distinct fixtures (CSV filtered 2-row import with ID replay; branch route; interval two ticks plus restart and third tick). Assert no source CSV mutation, redacted run status, no DB file created on denial.
+- **THIRD:** Install isolated `packages/lightning-azent` wheel in fresh venv and execute `lightning-azent --version`, `capabilities`, `validate`, `run`, `status`, `schedule`. Only then migrate the HAE consumer to LA native version with schema handshake and non-write preflight; preserve old HAE CLI/imports until E2E pass.
+- **DO NOT:** report unexecuted tests as pass; expose shell/network/OAuth, bypass approval, merge to main or change production/customer data, use paid CI, or copy n8n source.
+
 ## LA P1b — execute source-pinned current tests, then three E2E flows (2026-10-28 KST)
 
 - New code is on `feature/lightning-azent`. CLI preflights identifiers, trigger match, schedule bounds, and explicit SQLite write approval before Engine opens SQLite; **12 new-branch Python test definitions** exist across two files but no real execution result yet. Do not call this 12 PASS.
