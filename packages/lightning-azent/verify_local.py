@@ -228,8 +228,12 @@ def main() -> int:
 
     summary = {state: sum(x["status"] == state for x in checks)
                for state in ("PASS", "FAIL", "SKIP")}
+    skipped_cases = sum(item.get("detail", {}).get("skipped", 0) for item in checks)
+    partial = summary["SKIP"] > 0 or skipped_cases > 0
+    overall = "FAIL" if failed else ("PARTIAL" if partial else "PASS")
     report.update(finished_utc=dt.datetime.now(dt.timezone.utc).isoformat(),
-                  overall="FAIL" if failed else "PASS", summary=summary)
+                  overall=overall, summary=summary,
+                  skipped_test_cases=skipped_cases, release_ready=(overall == "PASS"))
     destination = work / "verify_result.json"
     destination.write_text(json.dumps(report, indent=2, ensure_ascii=False),
                            encoding="utf-8")
@@ -237,7 +241,7 @@ def main() -> int:
           f"FAIL={summary['FAIL']} SKIP={summary['SKIP']}")
     print(f"SHA {report['sha'] or 'not verified'}")
     print(f"REPORT {destination}")
-    return int(failed)
+    return 1 if failed else (3 if partial else 0)
 
 
 if __name__ == "__main__":
