@@ -1,3 +1,7 @@
+## NEXT — HAE product name supersedes legacy AX FLOW (owner decision, 2026-10-27)
+Use **HAE (Humanized Automation Ecosystem)** in all new customer-facing docs/UI and planning. Keep **Lightning Azent** for the independently developed workflow engine and **REA_APP** for technology analysis. Old AX_FLOW repository, axflow code/CLI/IR identifiers remain unchanged; do not silently rename any imported module, branch, package, endpoint or schema.
+Continue active REA_APP → Lightning Azent → HAE acceptance order; no release or completion score changes from brand update. The remainder below is retained history/task context.
+
 ## Next — REA_APP → LIGHTNING AZENT → AX FLOW (owner 2026-10-27)
 **Latest architectural order and source of truth:** `docs/LIGHTNING_AZENT_MASTER_PLAN.md`, naming/sequence adopted in `docs/DECISIONS.md` ADR-010 to ADR-012. This is the current plan; previous P49 small-feature task queue remains historical, not authorization to continue expanding AX FLOW first.
 
