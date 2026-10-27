@@ -1,3 +1,18 @@
+## P50 — installable Python wheel
+
+REA_APP now builds a pure-Python wheel with a `rea-app` console command. The
+wheel includes the Babel adapter, npm package manifest, and pinned lockfile.
+Python requires 3.11 or newer; JS/TS parsing also requires Node.js 20 or newer
+and `@babel/parser@7.29.9`. After installing the wheel, run `npm ci` with the
+installed `rea_app` package directory as its prefix, then use `rea-app scan`,
+`rea-app compare`, or `rea-app bundle`.
+
+The local wheel was built and installed into a clean Python 3.11.9 venv; the
+installed version command, synthetic scan, and six-report bundle worked with
+the exact local Babel version. This host could not resolve `registry.npmjs.org`,
+so the wheel's registry-based `npm ci` step has not been verified here. See
+`STATUS.md` P50 for the wheel hash, Gate R counts, and evidence path.
+
 ## P49 — CommonJS default callable aliases
 
 The exported callable comparison follows a direct CommonJS identifier assignment such as `module.exports = createUser` back to the unique `createUser` function declaration in the same module. An ESM default function and its CommonJS default assignment can therefore be compared with their explicit signature and export-kind evidence. This does not infer object-export contents, alias chains, reassignment, or runtime compatibility. The real-parser regression and full Gate R results are recorded in `STATUS.md` under P49.
