@@ -1,3 +1,4 @@
+import base64
 import hashlib
 import json
 import sqlite3
@@ -66,10 +67,12 @@ class WebUITests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn("Content-Security-Policy", headers)
         self.assertIn(b"/app.js", body)
+        self.assertIn(b'id="csv-file"', body)
         self.assertIn(b"localhost only", body)
         script_status, _, script = self.request("/app.js")
         css_status, _, css = self.request("/app.css")
         self.assertEqual((script_status, css_status), (200, 200))
+        self.assertIn(b"/api/upload", script)
         self.assertNotIn(b"https://", script)
         self.assertNotIn(b"https://", css)
         self.assertIn(b"duplicate_count", script)
@@ -78,6 +81,78 @@ class WebUITests(unittest.TestCase):
         self.assertIn(b"/api/dbvora", script)
         self.assertFalse(self.state.exists())
         self.assertFalse(self.business.exists())
+
+
+    def test_bounded_csv_upload_runs_through_existing_preview_and_is_cleaned(self):
+        source = b"id,name\n11,SyntheticUpload\n"
+        original_hash = hashlib.sha256((self.inputs / "contacts.csv").read_bytes()).hexdigest()
+        status, _, uploaded = self.post_json("/api/upload", {
+            "filename": "synthetic.csv",
+            "content_base64": base64.b64encode(source).decode("ascii"),
+        })
+        self.assertEqual(status, 201, uploaded)
+        csv_path = uploaded["csv_path"]
+        self.assertRegex(csv_path, r"^axflow-upload-[^/]+/[a-f0-9]{32}\.csv$")
+        self.assertEqual(uploaded["size_bytes"], len(source))
+        self.assertNotIn("SyntheticUpload", json.dumps(uploaded))
+        self.assertNotIn(str(self.inputs), json.dumps(uploaded))
+        staged = self.inputs / csv_path
+        self.assertEqual(staged.read_bytes(), source)
+
+        status, _, preview = self.post_json("/api/preview", {
+            "task": "Import this CSV into local SQLite", "csv_path": csv_path,
+        })
+        self.assertEqual(status, 200, preview)
+        status, _, result = self.post_json("/api/run", {
+            "task": "Import this CSV into local SQLite", "csv_path": csv_path,
+            "preview_id": preview["preview_id"], "approve_writes": True,
+        })
+        self.assertEqual(status, 200, result)
+        self.assertEqual(result["result"]["imported_rows"], 1)
+        self.assertEqual(
+            hashlib.sha256((self.inputs / "contacts.csv").read_bytes()).hexdigest(),
+            original_hash,
+        )
+
+        upload_dir = staged.parent
+        self._stop_server()
+        self.assertFalse(upload_dir.exists())
+
+    def test_csv_upload_rejects_unsafe_names_bad_encoding_and_excess_size(self):
+        valid = base64.b64encode(b"id\n1\n").decode("ascii")
+        for filename in ("../escape.csv", "folder\\\\escape.csv", "data.json"):
+            with self.subTest(filename=filename):
+                status, _, body = self.post_json("/api/upload", {
+                    "filename": filename, "content_base64": valid,
+                })
+                self.assertEqual(status, 415, body)
+
+        status, _, body = self.post_json("/api/upload", {
+            "filename": "data.csv", "content_base64": "!!!!",
+        })
+        self.assertEqual(status, 400, body)
+        status, _, body = self.post_json("/api/upload", {
+            "filename": "data.csv",
+            "content_base64": base64.b64encode(b"\xff").decode("ascii"),
+        })
+        self.assertEqual(status, 415, body)
+
+        too_large = base64.b64encode(b"x" * (512 * 1024 + 1)).decode("ascii")
+        status, _, body = self.post_json("/api/upload", {
+            "filename": "large.csv", "content_base64": too_large,
+        })
+        self.assertEqual(status, 413, body)
+
+    def test_csv_upload_caps_staged_files_per_server_session(self):
+        payload = {
+            "filename": "small.csv",
+            "content_base64": base64.b64encode(b"id\\n1\\n").decode("ascii"),
+        }
+        for _ in range(10):
+            status, _, body = self.post_json("/api/upload", payload)
+            self.assertEqual(status, 201, body)
+        status, _, body = self.post_json("/api/upload", payload)
+        self.assertEqual(status, 429, body)
 
     def test_dbvora_endpoint_reports_unconfigured_without_network(self):
         status, _, raw = self.request("/api/dbvora")

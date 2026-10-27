@@ -1,8 +1,11 @@
 """Loopback-only local UI/API for the bounded synthetic CSV template."""
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import re
+import tempfile
 import threading
 import time
 import uuid
@@ -18,6 +21,9 @@ from .planner import plan_request, requires_write_approval, workflow_name
 from .runlog import RunLogError, inspect_run
 
 MAX_BODY_BYTES = 8192
+MAX_UPLOAD_BYTES = 512 * 1024
+MAX_UPLOAD_BODY_BYTES = ((MAX_UPLOAD_BYTES + 2) // 3) * 4 + 4096
+MAX_UPLOADS_PER_SERVER = 10
 MAX_REQUESTS_PER_MINUTE = 60
 _RUN_ID = re.compile(r"^Gui[A-Fa-f0-9]{12}$")
 _PREVIEW_ID = re.compile(r"^[a-f0-9]{32}$")
@@ -116,15 +122,15 @@ def create_server(
             body = json.dumps(value, ensure_ascii=False, sort_keys=True, allow_nan=False).encode("utf-8")
             self._send_bytes(status, body, "application/json; charset=utf-8")
 
-        def _read_json(self) -> dict:
+        def _read_json(self, *, max_bytes: int = MAX_BODY_BYTES) -> dict:
             if self.headers.get_content_type() != "application/json":
                 raise RequestError(415, "Content-Type must be application/json")
             length = self.headers.get("Content-Length")
             if length is None or not length.isdigit():
                 raise RequestError(411, "Content-Length is required")
             size = int(length)
-            if size > MAX_BODY_BYTES:
-                raise RequestError(413, "request body exceeds 8 KiB")
+            if size > max_bytes:
+                raise RequestError(413, "request body exceeds configured limit")
             if size == 0:
                 raise RequestError(400, "JSON request body is required")
             raw = self.rfile.read(size)
@@ -178,7 +184,7 @@ def create_server(
             if not self._check_local_request(require_origin=True):
                 return
             route = urlsplit(self.path).path
-            if route not in {"/api/preview", "/api/run"}:
+            if route not in {"/api/upload", "/api/preview", "/api/run"}:
                 self._send_json(404, {"error": "route not found"})
                 return
             run_id = None
@@ -194,7 +200,45 @@ def create_server(
                 self._send_json(status_code, payload)
 
             try:
-                body = self._read_json()
+                body = self._read_json(
+                    max_bytes=MAX_UPLOAD_BODY_BYTES if route == "/api/upload" else MAX_BODY_BYTES
+                )
+                if route == "/api/upload":
+                    self._require_fields(body, {"filename", "content_base64"})
+                    filename = body["filename"]
+                    encoded = body["content_base64"]
+                    if (
+                        not isinstance(filename, str)
+                        or not filename
+                        or len(filename) > 255
+                        or "/" in filename
+                        or "\\" in filename
+                        or any(ord(character) < 32 for character in filename)
+                        or filename in {".", ".."}
+                        or not filename.casefold().endswith(".csv")
+                    ):
+                        raise RequestError(415, "only a plain CSV file is supported")
+                    max_encoded = ((MAX_UPLOAD_BYTES + 2) // 3) * 4
+                    if not isinstance(encoded, str) or len(encoded) > max_encoded:
+                        raise RequestError(413, "uploaded CSV exceeds 512 KiB")
+                    try:
+                        data = base64.b64decode(encoded, validate=True)
+                    except (binascii.Error, ValueError) as exc:
+                        raise RequestError(400, "invalid CSV upload encoding") from exc
+                    if not data:
+                        raise RequestError(400, "CSV file is empty")
+                    if len(data) > MAX_UPLOAD_BYTES:
+                        raise RequestError(413, "uploaded CSV exceeds 512 KiB")
+                    try:
+                        text = data.decode("utf-8-sig")
+                    except UnicodeDecodeError as exc:
+                        raise RequestError(415, "CSV must be UTF-8 text") from exc
+                    if "\x00" in text:
+                        raise RequestError(415, "CSV must be UTF-8 text")
+                    content = text.encode("utf-8")
+                    csv_path = self.server.save_csv_upload(content)
+                    self._send_json(201, {"csv_path": csv_path, "size_bytes": len(content)})
+                    return
                 if route == "/api/preview":
                     self._require_fields(body, {"task", "csv_path"})
                     plan = plan_request(body["task"], body["csv_path"])
@@ -252,6 +296,30 @@ def create_server(
             self._rate_lock = threading.Lock()
             self._preview_lock = threading.Lock()
             self._previews: OrderedDict[str, tuple[float, str, str, str]] = OrderedDict()
+            self._upload_lock = threading.Lock()
+            self._upload_dir: tempfile.TemporaryDirectory | None = None
+            self._upload_count = 0
+
+        def save_csv_upload(self, content: bytes) -> str:
+            with self._upload_lock:
+                if self._upload_count >= MAX_UPLOADS_PER_SERVER:
+                    raise RequestError(429, "local CSV upload limit reached; restart the server")
+                if self._upload_dir is None:
+                    self._upload_dir = tempfile.TemporaryDirectory(prefix="axflow-upload-", dir=root)
+                token = uuid.uuid4().hex
+                path = Path(self._upload_dir.name) / f"{token}.csv"
+                with path.open("xb") as output:
+                    output.write(content)
+                self._upload_count += 1
+                return path.relative_to(root).as_posix()
+
+        def server_close(self) -> None:
+            try:
+                super().server_close()
+            finally:
+                if self._upload_dir is not None:
+                    self._upload_dir.cleanup()
+                    self._upload_dir = None
 
         def allow_request(self, client: str) -> bool:
             if client not in {"127.0.0.1", "::1"}:

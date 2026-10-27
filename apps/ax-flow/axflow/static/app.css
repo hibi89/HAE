@@ -38,6 +38,8 @@ label { display: block; margin: 17px 0 7px; font-size: 13px; font-weight: 700; }
 textarea, input[type="text"] { width: 100%; border: 1px solid #cad7df; border-radius: 9px; outline: none; background: #fff; color: var(--ink); font: inherit; transition: border-color .15s, box-shadow .15s; }
 textarea { padding: 12px 13px; resize: vertical; min-height: 74px; }
 input[type="text"] { height: 46px; padding: 0 12px; }
+input[type="file"] { width: 100%; padding: 10px; border: 1px dashed #cad7df; border-radius: 9px; background: #fff; color: var(--ink); font: inherit; }
+input[type="file"]::file-selector-button { margin-right: 12px; border: 0; border-radius: 7px; padding: 8px 12px; background: #eef3ff; color: var(--ink); font: inherit; cursor: pointer; }
 textarea:focus, input[type="text"]:focus { border-color: #6d98ff; box-shadow: 0 0 0 3px rgba(21, 94, 239, .12); }
 .hint { margin: 6px 0 15px; color: #7b8a95; font-size: 12px; }
 .path-field { display: flex; align-items: center; gap: 9px; border: 1px solid #cad7df; border-radius: 9px; padding-left: 12px; }

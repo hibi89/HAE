@@ -1,5 +1,6 @@
-import json
+import base64
 import hashlib
+import json
 import os
 import socket
 import sqlite3
@@ -303,6 +304,28 @@ class ZipappSmokeTests(unittest.TestCase):
             self.assertNotIn("Fixture", json.dumps(result))
             with closing(sqlite3.connect(business)) as con:
                 self.assertEqual(con.execute("SELECT COUNT(*) FROM csv_records").fetchone()[0], 1)
+
+            uploaded_bytes = b"id,name\n2,UploadedFixture\n"
+            upload = post_json("/api/upload", {
+                "filename": "synthetic.csv",
+                "content_base64": base64.b64encode(uploaded_bytes).decode("ascii"),
+            })
+            self.assertEqual(upload["size_bytes"], len(uploaded_bytes))
+            self.assertNotIn("UploadedFixture", json.dumps(upload))
+            uploaded_path = upload["csv_path"]
+            upload_preview = post_json("/api/preview", {
+                "task": task, "csv_path": uploaded_path,
+            })
+            self.assertEqual(upload_preview["workflow"], "csv_to_sqlite")
+            upload_result = post_json("/api/run", {
+                "task": task, "csv_path": uploaded_path,
+                "preview_id": upload_preview["preview_id"], "approve_writes": True,
+            })
+            self.assertEqual(upload_result["status"]["status"], "completed")
+            self.assertEqual(upload_result["result"]["imported_rows"], 1)
+            self.assertNotIn("UploadedFixture", json.dumps(upload_result))
+            with closing(sqlite3.connect(business)) as con:
+                self.assertEqual(con.execute("SELECT COUNT(*) FROM csv_records").fetchone()[0], 2)
         finally:
             if process.poll() is None:
                 process.terminate()

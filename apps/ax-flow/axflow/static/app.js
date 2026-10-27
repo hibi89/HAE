@@ -1,5 +1,6 @@
 const taskInput = document.querySelector("#task");
 const csvInput = document.querySelector("#csv-path");
+const csvFileInput = document.querySelector("#csv-file");
 const previewButton = document.querySelector("#preview");
 const runButton = document.querySelector("#run");
 const approvalInput = document.querySelector("#approval");
@@ -53,6 +54,15 @@ async function api(path, options = {}) {
     throw error;
   }
   return body;
+}
+
+async function fileToBase64(file) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = "";
+  for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+  }
+  return btoa(binary);
 }
 
 function showStatus(status) {
@@ -219,6 +229,47 @@ for (const input of [taskInput, csvInput]) {
     resultCard.hidden = true;
   });
 }
+csvFileInput.addEventListener("change", async () => {
+  const file = csvFileInput.files?.[0];
+  if (!file) return;
+  previewKey = "";
+  previewId = "";
+  requiresApproval = true;
+  resultCard.hidden = true;
+  csvInput.value = "";
+  updateRunButton();
+  if (!file.name.toLowerCase().endsWith(".csv")) {
+    setMessage("UTF-8 CSV 파일만 선택할 수 있습니다.", "error");
+    return;
+  }
+  if (file.size === 0 || file.size > 512 * 1024) {
+    setMessage("CSV 파일은 비어 있지 않아야 하며 512 KiB 이하여야 합니다.", "error");
+    return;
+  }
+  previewButton.disabled = true;
+  setMessage("CSV를 이 PC의 임시 폴더에 복사하고 있습니다…");
+  try {
+    const response = await api("/api/upload", {
+      method: "POST",
+      body: JSON.stringify({
+        filename: file.name,
+        content_base64: await fileToBase64(file),
+      }),
+    });
+    csvInput.value = response.csv_path;
+    setMessage(
+      file.name + " · " + Number(response.size_bytes).toLocaleString() +
+      " bytes를 임시 저장했습니다. 서버 종료 때 삭제됩니다.",
+      "success",
+    );
+  } catch (error) {
+    setMessage(error.message, "error");
+  } finally {
+    previewButton.disabled = false;
+    updateRunButton();
+  }
+});
+
 approvalInput.addEventListener("change", updateRunButton);
 
 runButton.addEventListener("click", async () => {

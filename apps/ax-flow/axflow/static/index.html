@@ -44,6 +44,10 @@
         </div>
         <p class="hint">상대 경로만 입력할 수 있습니다. 절대 경로와 폴더 이탈 경로는 거부됩니다.</p>
 
+        <label for="csv-file">또는 CSV 파일 선택 <span class="label-note">UTF-8 · 최대 512 KiB</span></label>
+        <input id="csv-file" type="file" accept=".csv,text/csv">
+        <p class="hint">선택한 CSV는 이 PC의 입력 폴더 아래 임시 복사본으로 처리되고 서버 종료 때 삭제됩니다.</p>
+
         <div class="action-row">
           <button id="preview" class="button button-secondary" type="button">흐름 미리보기</button>
           <span id="connection" class="connection" role="status">로컬 서버에 연결 중…</span>
