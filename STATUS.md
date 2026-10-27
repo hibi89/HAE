@@ -1,5 +1,14 @@
 # STATUS — 2026-10-27 KST
 
+## REA_APP parser verification checkpoint (2026-10-27 KST)
+- Re-ran the bounded analyzer against synthetic fixtures after installing the pinned public `@babel/parser@7.29.9` required by this branch's README. `python -m unittest discover -s tests -v`: **10/10 PASS**; `npm run test:parser`: PASS. Checked the analyzer/parser implementation files against `REA_APP`; local and remote source blobs matched exactly.
+- The regression now copies only the Python package and parser adapter to an isolated temporary tool root to prove missing-parser fail-closed behavior. It no longer assumes that clearing `NODE_PATH` hides a package installed beside the real adapter.
+- Failure causes/resolution: first run lacked `node_modules`, so five Python checks and the Node assertion reported parser unavailable; local npm cache was empty. Installed the exact public pinned package using `--ignore-scripts --no-audit --no-fund --package-lock=false` (four packages, no lockfile; `node_modules` is git-ignored). With it present, the missing-parser test exposed its incorrect isolation assumption; corrected and reran Python 10/10 plus Node successfully.
+- Test-only commit on `REA_APP`: `b815e72f3f0c9e0e1aad117b7db7b6cad9f84bc1`. No analyzer behavior changed.
+- Blueprint A remains **MVP_VERIFIED** for the supported synthetic JS/TS scope. Overall A–E estimate stays **77% / PARTIAL** due unrelated UI, restore, security, installer and customer/release gates.
+- n8n's allowed official-source structure review is recorded on `feature/axflow-mvp` at `8e8f89b5f797fdf77790a2fea57d6d7ad7b344a6`; no source/assets were copied.
+
+
 ## Verified by GitHub at start of bootstrap
 - Repository `hibi89/AX_FLOW`: **Private** (renamed from user-created REA_APP), default branch `main`, read/write admin available.
 - Initial state was **empty repository**, zero branches, zero product code. Bootstrap README initialized main commit `8d528821097fcf6b983e52d9de804613cd8d8c3d`.
