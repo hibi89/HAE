@@ -1,3 +1,9 @@
+## REA_APP P35 — next verified release gate (2026-10-27 KST)
+
+Current implementation `REA_APP@71e75e5698e5b81755c85e889e658efadc0d0501`: scanner now detects inconsistent file snapshots after read and skips them with `file_changed_during_read`. Local helper regression **5/5 PASS**, evidence runner synthetic QA **11/11 PASS**; remote source manifest updated to **16/16 exact Git blobs**. Full REA_APP scanner/CLI/graph/impact Python and real Babel Node suites remain **UNRUN**. Gate R **PARTIAL**.
+
+Next: authorized complete private REA_APP checkout and installed exact `@babel/parser@7.29.9` → `cd tools/rea-app && python run_gate_r_evidence.py` → record full Python/Node PASS/FAIL/SKIP, actual exact HEAD and Windows caveats. Do not label synthetic tests as full acceptance. No paid CI, source copying from restricted n8n code, production deployment or customer data.
+
 ## REA_APP P34 next step — full Gate R on authorized checkout (2026-10-27 KST)
 
 P34 pinned the reviewed verifier Git blob and now refuses a dirty tool worktree or altered verifier, even if it prints false PASS markers. Isolated local regression **11/11 PASS** (Linux/Python 3.13.5), code commit `4e0ce299ebd01fa20c541358ffeaf4f593f56f11`. Evidence: `tools/rea-app/P34_PROVENANCE_GATE.md`.
