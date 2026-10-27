@@ -1,3 +1,14 @@
+## Latest checkpoint — P30 Windows zipapp visible workflow
+1. **Source:** `feature/axflow-mvp@99058617d8b35806b02be41a84fcd7ec5bee1c66`; no product source changed. Documentation branch before P30: `d7e22423315ad8f5b2607a003f10cc309632ba32`.
+2. **Artifact:** standard-library `.pyz`, 32,191 bytes, SHA-256 `2c1f6f15af81c6cf302bd2e7f4bcb6753a2dc0b67d2126d820431b50c5964155`.
+3. **Flow:** Windows 3.11.9 package on isolated loopback; synthetic CSV → Korean UI request → generated plan → explicit write approval → visible completed receipt (2/2 steps, 2 rows, `Guid1b92442f973`).
+4. **Integrity/privacy:** business DB has exact rows 1–2; runtime DB has no input marker bytes; files are separate. No external connection or DBVORA URL.
+5. **Verification:** zipapp build, browser workflow and read-only SQLite assertions PASS. Latest full Python suite is P27 **61/61**; not rerun for this packaged-browser-only slice.
+6. **Failure/cause:** none at product/test level; local server required loopback permission and started normally.
+7. **Cleanup/site:** zipapp, fixture and tab removed; port 8774 closed. P5 at `http://127.0.0.1:8767/` remains open.
+8. **Progress:** **88% PARTIAL** (A100/B95/C95/D95/E55). A signed installer, customer deployment, external consent, restore, independent security and commercial evidence remain open.
+9. **Next:** test the packaged provenance bridge only against a synthetic loopback DBVORA contract stub, or select another permission-free evidence gap; do not touch the real DBVORA repo/database.
+
 ## Latest checkpoint — P29 current-source browser workflow replay
 1. **Source under test:** `feature/axflow-mvp@99058617d8b35806b02be41a84fcd7ec5bee1c66`; no source changed. Documentation branch head before P29: `c2f4dcd462eb5828e49b456439c4b189c79313cc`.
 2. **Flow:** Windows app on isolated loopback port 8773, synthetic two-row CSV. Browser entered Korean task → generated `csv_read → sqlite_import_csv` plan → run remained disabled until explicit synthetic-write approval → completed.

@@ -1,3 +1,13 @@
+## P30 — packaged Windows zipapp browser workflow verified (2026-10-27 KST)
+- Built the standard-library `.pyz` on Windows Python 3.11.9 with `python tools\\package_axflow.py --output <temporary-path>\\axflow.pyz`; artifact SHA-256 `2c1f6f15af81c6cf302bd2e7f4bcb6753a2dc0b67d2126d820431b50c5964155` (32,191 bytes).
+- Launched that exact artifact on loopback port 8774, opened its bundled UI in a temporary browser tab, entered a supported Korean task for a two-row synthetic CSV, inspected the generated plan, and confirmed the run remained disabled until synthetic write approval.
+- **Visible result:** completed receipt, 2/2 steps, 2 rows, run `Guid1b92442f973`.
+- **Integrity/privacy:** business SQLite contained exactly source rows 1–2; runtime SQLite contained neither input marker; the DB files were separate. No DBVORA endpoint or external connection was configured.
+- **Cleanup:** server stopped, temporary browser tab closed, exact fixture and zipapp removed, port 8774 confirmed closed. P5 at `http://127.0.0.1:8767/` remained open.
+- **Tests:** package build PASS; browser preview/approval/run PASS; SQLite integrity and runtime-redaction assertions PASS. Latest complete Python suite remains P27 **61/61 PASS**; it was not rerun for this packaged browser check.
+- **Failure/cause:** no application/test failure. Local loopback service required the already-authorized loopback permission; it then started normally.
+- **Progress:** **88% PARTIAL** (A100/B95/C95/D95/E55). The Windows zipapp now has a visible synthetic workflow proof, but this is not a signed installer or customer deployment. D2 restore, OAuth, independent security, customer/release and commercial gates remain open.
+
 ## P29 — current source UI workflow reverified in a real browser (2026-10-27 KST)
 - Ran the current `feature/axflow-mvp` app from code commit `99058617d8b35806b02be41a84fcd7ec5bee1c66` on isolated loopback port 8773 with only a two-row synthetic `contacts.csv`.
 - In the browser, entered a supported Korean task, inspected the generated `csv_read → sqlite_import_csv` plan, confirmed run stayed disabled before the explicit synthetic-write approval, then ran it.

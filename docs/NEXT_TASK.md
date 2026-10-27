@@ -1,3 +1,9 @@
+## P30 complete — Windows zipapp browser workflow
+The built zipapp (SHA-256 `2c1f6f15af81c6cf302bd2e7f4bcb6753a2dc0b67d2126d820431b50c5964155`) completed the synthetic browser flow with explicit write approval and a 2/2-step, 2-row receipt. Read-only checks confirmed separate business/runtime SQLite files and no input data in runtime storage. Temporary package, server, browser tab and fixture were removed; port 8774 is closed. A–E estimate is **88% PARTIAL** (A100/B95/C95/D95/E55).
+
+## Next atomic task — packaged provenance via synthetic contract stub
+If continuing, run the packaged UI against a loopback-only synthetic DBVORA API fixture and verify the provenance labels and offline state. Do not change DBVORA source or use a customer database; keep restore and external consent gated.
+
 ## P29 complete — current-source browser workflow replay
 The visible browser ran a Korean natural-language CSV request through preview and explicit write approval to a completed 2-row SQLite receipt. Separate DB integrity check confirmed exact business rows and no input values in runtime storage. The temporary loopback server, tab, fixture and port were cleaned up. P27 remains the latest full Python suite at 61/61. A–E progress remains **87% PARTIAL**; P16/P19 already verified this bounded Blueprint C requirement.
 
