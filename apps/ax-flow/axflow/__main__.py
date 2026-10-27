@@ -36,7 +36,7 @@ def main() -> int:
     p.add_argument("--input-root", type=Path, help="explicit directory containing allowed synthetic CSV inputs")
     p.add_argument("--run-id")
     p.add_argument("--schedule-id", help="durable identifier for an interval-triggered synthetic workflow")
-    p.add_argument("--max-runs", type=int, help="stop after this many due interval ticks (1–1000)")
+    p.add_argument("--max-runs", type=int, help="stop after this many due interval ticks (1-1000)")
     p.add_argument("--port", type=int, default=8765, help="loopback UI port for serve")
     p.add_argument("--dbvora-url", help="optional DBVORA loopback API origin, e.g. http://127.0.0.1:8766")
     p.add_argument("--approve-writes", action="store_true")
@@ -53,7 +53,7 @@ def main() -> int:
                     a.approve_writes or a.input_root is None or a.state is None or a.data is None or
                     not 1 <= a.port <= 65535):
                 raise PlanError(
-                    "serve requires --input-root, --state, --data, --synthetic and port 1–65535; no plan or run options"
+                    "serve requires --input-root, --state, --data, --synthetic and port 1-65535; no plan or run options"
                 )
             from .web import create_server
 
