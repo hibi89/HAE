@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools==84.1.0", "wheel==0.48.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lightning-azent"
+version = "0.1.0.dev0"
+description = "Local-only versioned deterministic workflow executor; synthetic MVP"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+lightning-azent = "lightning_azent.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["lightning_azent", "lightning_azent.*"]
