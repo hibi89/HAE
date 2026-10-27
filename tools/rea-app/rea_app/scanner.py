@@ -22,6 +22,13 @@ EXCLUDED_DIRS = {
 }
 SOURCE_SUFFIXES = {".cjs", ".cts", ".js", ".jsx", ".mjs", ".mts", ".ts", ".tsx"}
 MANIFEST_NAMES = {"package.json"}
+# These are user/environment authentication stores, not project source inputs.
+# Skip directories before walking them and files before opening descriptors.
+PRIVATE_DIRS = {".ssh", ".aws", ".azure", ".docker", ".kube", ".gnupg", "secrets", "credentials"}
+PRIVATE_FILES = {
+    ".npmrc", ".pypirc", ".netrc", ".git-credentials", ".envrc",
+    ".bash_history", ".zsh_history", "terraform.tfstate", "terraform.tfstate.backup",
+}
 
 
 class ScanError(Exception):
@@ -55,7 +62,7 @@ class ScanResult:
 
 def _is_secret_name(name: str) -> bool:
     lowered = name.casefold()
-    if lowered == ".env" or lowered.startswith(".env.") or lowered.endswith(".env"):
+    if lowered in PRIVATE_FILES or lowered == ".env" or lowered.startswith(".env.") or lowered.endswith(".env"):
         return True
     if any(fragment in lowered for fragment in ("secret", "credential", "private_key")):
         return True
@@ -124,7 +131,9 @@ def walk_source(root_path: Path, limits: ScanLimits) -> ScanResult:
         for name in sorted(directory_names):
             candidate = current_path / name
             relative = (relative_directory / name).as_posix()
-            if name.casefold() in EXCLUDED_DIRS:
+            if name.casefold() in PRIVATE_DIRS or _is_secret_name(name):
+                skipped.append({"path": relative, "reason": "secret_directory"})
+            elif name.casefold() in EXCLUDED_DIRS:
                 skipped.append({"path": relative, "reason": "excluded_directory"})
             elif _is_link_or_reparse_point(candidate):
                 skipped.append({"path": relative, "reason": "symlink"})
@@ -135,7 +144,7 @@ def walk_source(root_path: Path, limits: ScanLimits) -> ScanResult:
         for name in sorted(file_names):
             candidate = current_path / name
             relative = (relative_directory / name).as_posix()
-            if _is_secret_name(name) or any(part.casefold() in {"secrets", "credentials"} for part in Path(relative).parts):
+            if _is_secret_name(name) or any(part.casefold() in PRIVATE_DIRS for part in Path(relative).parts):
                 skipped.append({"path": relative, "reason": "secret_name"})
                 continue
             try:
