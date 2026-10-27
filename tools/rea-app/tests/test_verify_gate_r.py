@@ -43,7 +43,7 @@ class TestGateRSourceAttribution(unittest.TestCase):
             return verifier.check_source()
 
     def test_matches_known_github_blob_fingerprint(self) -> None:
-        data = b'\"\"\"Read-only, bounded source analysis for REA_APP.\"\"\"\n\n__version__ = "0.3.0"\n'
+        data = b'"""Read-only, bounded source analysis for REA_APP."""\n\n__version__ = "0.3.0"\n'
         self.assertEqual(verifier.git_blob_id(data), "e6d7269a82c761c70eda0d52ee1d858711d92b21")
 
     def test_matching_source_is_accepted(self) -> None:
