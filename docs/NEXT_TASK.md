@@ -1,3 +1,12 @@
+## P24 complete — DBVORA FK relationship verified in isolated UI
+The current AX FLOW UI was connected to a separate synthetic SQLite database through the pinned DBVORA read-only API. The browser rendered employees.department_id → departments.id, and the FK persisted after schema-map refresh. API/UI redaction assertions passed; the database hash and mtime did not change and no WAL/SHM files were created. Both test servers and the synthetic DB were removed. P5 at http://127.0.0.1:8767/ remains open and unchanged. See STATUS/HANDOFF for exact source SHAs and evidence. Tracking estimate: **87% PARTIAL** (A100/B95/C95/D95/E50).
+
+## Current boundary — evidence matrix and gated release items
+The acceptance matrix had become stale and reported every test as NOT RUN; it is being reconciled with P17–P24 and the REA_APP P22/P23 evidence. Current strict release status is **PARTIAL**, not customer-ready. D2 source-preserving restore, OAuth consent, customer/security validation, signed Windows distribution and commercial proof remain unstarted or approval-gated. Keep independent AX FLOW engine implementation on hold pending chief review. No new design document is needed.
+
+## Next atomic task
+After the evidence matrix update is committed, select one permission-free verification gap against the original blueprint, use only synthetic local fixtures, run the relevant real test, capture any failure and cause, then update STATUS/HANDOFF/NEXT_TASK and commit. Avoid broadening scope; do not touch customer data, credentials, DBVORA writes/restore, public deployment, signing, or independent security certification without approval.
+
 ## P23 complete — REA_APP self-scan is deterministic and read-only
 Two scans of `tools/rea-app` itself indexed 12 files, found 6 dependency edges and had no syntax errors. JSON and Markdown reports were byte-identical, and a full source-tree SHA-256 stayed unchanged. Reports and fixtures were removed without upload. Python tests 11/11 and Node parser tests passed in P22.
 

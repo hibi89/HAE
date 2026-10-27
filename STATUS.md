@@ -1,3 +1,12 @@
+## P24 — DBVORA foreign-key relation shown in the isolated UI (2026-10-27 KST)
+- Tested the current AX FLOW UI source from feature/axflow-mvp@86ac854bd633e3a312aa54a5300e2f78f634dbfd with pinned DBVORA source hibi89/DBVORA feature/p0-db-map@31b8257468d28743fb2d3767d1caa56938df756c; documentation branch head before this checkpoint was 9dd3405e23e479adafd48093f457b758149785f9.
+- Created a separate synthetic SQLite database with departments and employees, two synthetic rows, and declared FK employees.department_id → departments.id. An isolated DBVORA API on 127.0.0.1:18768 and AX FLOW UI on 127.0.0.1:8771 inspected only this file.
+- **Visible browser result:** the UI rendered the FK relationship and retained it after “구조 맵 새로고침”; table/column/PK and measured file-size metadata also rendered.
+- **Privacy/integrity:** API and UI omitted synthetic row marker values and the absolute database path. DB SHA-256 stayed f0527ec23c551c12ee3c30399de96b92df5ffd7b13292c4606dae3af53db3580, mtime was unchanged, and no WAL/SHM files appeared.
+- **Cleanup/site:** both isolated servers were stopped and the synthetic database folder removed. The connected P5 page at http://127.0.0.1:8767/ was rechecked and remained open with its original csv_records / records schema and 20,480-byte observation.
+- **Verification:** browser UI and API assertions PASS. No product source changed, so the complete AX FLOW suite was not rerun; the most recent full Windows Python 3.11.9 suite remains P19 60/60 PASS. No P24 test failure.
+- **Blueprint progress:** A100/B95/C95/D95/E50 = **87% PARTIAL** by the existing equal-weight tracking heuristic. D1 remains PARTIAL: only a selected synthetic SQLite file and pinned local API are verified; customer DBs, packaged service and provenance/release evidence remain open. DBVORA restore, independent security assessment, signed Windows distribution and customer/release validation remain approval/owner gates.
+
 # STATUS — 2026-10-27 KST
 
 ## P23 — REA_APP scanned its own source without mutation (2026-10-27 KST)
@@ -112,17 +121,24 @@
 ## Product readiness
 | Component | State | Evidence |
 | --- | --- | --- |
-| REA_APP static source analyzer | MVP_VERIFIED (BOUNDED SYNTHETIC JS/TS) | `REA_APP@80e8d7aad99c1c40d503848ed620421837b79477`; 10 Python + Node parser tests |
-| AX FLOW local runtime | P18_SYNTHETIC_CSV_UI_AND_P5_DBVORA_E2E_VERIFIED (NOT CUSTOMER READY) | `feature/axflow-mvp@86ac854bd633e3a312aa54a5300e2f78f634dbfd`; Windows Python 3.11.9 suite 60/60 PASS; synthetic CSV→SQLite→pinned DBVORA API→visible AX FLOW schema/refresh E2E PASS; row/path withheld, business DB unchanged |
-| Natural-language planner and file input | FOUR_BOUNDED_INTENTS_SYNTHETIC_BROWSER_E2E_VERIFIED (PARTIAL) | full import and DBVORA-backed schema in P17; filtered save, read-only lookup, conditional save and no-match conditional in P18; unsupported-intent and path-escape visible rejection still pending |
-| OAuth, Gmail/Sheets connectors | NOT_STARTED | no account credentials, no auth test |
-| DBVORA integration | P21_CONNECTED_AND_UNAVAILABLE_UI_E2E_VERIFIED_SYNTHETIC | pinned-source `p0-01.v1` API; connected UI renders schema/PK/FK/size and configured-offline UI reports unavailable; selected local SQLite only; customer DB, packaged service, restore and security review unverified |
-| Recovery, resilience and performance | PARTIAL | real process crash resume, cross-process same-run replay, persisted interval due ticks, crash replay and concurrent tick deduplication are tested; DBVORA restore and broader load bounds remain open |
-| Windows package, customer tests, security assessment | PARTIAL (STDlib ZIPAPP SMOKE) | package CLI, synthetic SQLite workflow and packaged localhost preview/run tested; no signed installer or customer/release evidence |
-| Vercel/Production | NOT_APPLICABLE | local-first product, no hosted service |
+| REA_APP static source analyzer | PASS (BOUNDED SYNTHETIC JS/TS) | REA_APP@1409d9d383e1515a1c19350252a1c7a6f534d04d; 11 Python tests and Node parser assertions PASS; deterministic fixture and self-scan evidence in P22/P23 |
+| AX FLOW local runtime | PARTIAL (SYNTHETIC ONLY) | Product source feature/axflow-mvp@86ac854bd633e3a312aa54a5300e2f78f634dbfd; latest full Windows Python 3.11.9 suite 60/60 PASS in P19; bounded local SQLite CLI and browser flows verified; backup/restore gate remains open |
+| Natural-language planner and file input | PARTIAL | Four bounded CSV intents and explicit write approval verified in P18; unsupported intent, traversal and absolute paths refused in P19; no general AI, arbitrary attachments or bounded AI repair |
+| OAuth, Gmail/Sheets connectors | NOT_STARTED (CONSENT/CREDENTIALS REQUIRED) | No OAuth account, provider credentials or external calls |
+| DBVORA integration | PARTIAL (READ-ONLY SYNTHETIC SQLITE) | P17/P21/P24: connected and unavailable UI states; visible schema/PK/FK/size and refresh; raw rows and path withheld; selected synthetic SQLite only |
+| Recovery, resilience and performance | PARTIAL | Process-crash resume, cross-process same-run replay, interval tick deduplication, migrations and bounded retry tested; restore and broader load evidence remain open |
+| Windows package, customer tests, security assessment | PARTIAL | stdlib zipapp CLI/UI smoke and local synthetic workflows tested; no signed installer, independent security assessment or customer/release evidence |
+| Commercial model | NOT_STARTED | No scoped customer pilot/support or commercial validation |
+| Vercel/Production | NOT_APPLICABLE | Product is local-first; no hosted service |
+
+### Current release state
+- MVP_INTERNAL: **PARTIAL** under the strict matrix because runtime backup/restore acceptance is absent.
+- PILOT_CANDIDATE: **NOT READY**; OAuth/customer authentication and remaining F4/F6/F7 gates are incomplete.
+- CUSTOMER_READY: **NOT READY**; D2 restore, independent security review, signed Windows distribution, customer/release evidence and commercial validation remain open.
+- Tracking estimate: **87% PARTIAL** (A100/B95/C95/D95/E50, equal weights). This is a progress heuristic, not release certification.
 
 ## Next
-P9 fixed fail-closed handling for oversized/malformed DBVORA response lengths and deeply nested JSON. Static checks confirm the AX FLOW UI binds to 127.0.0.1, validates Host/Origin, caps requests, and uses textContent for untrusted display fields; the DBVORA client makes only bounded loopback GETs with redirects disabled. This is a limited self-review, not an independent security assessment. Remaining gates: actual browser rendering/click, DBVORA restore, Windows symlink fixture, signed installer, customer/release evidence, and independent security review. Keep customer data, OAuth, public deploy and DBVORA writes behind approval.
+Reconcile docs/ACCEPTANCE_MATRIX.md with executed evidence and keep approval-gated items explicitly open. Continue permission-free synthetic validation only; preserve the hold on independent AX FLOW engine work pending chief review. Do not use customer data, OAuth credentials, DBVORA writes/restore, public deployment, signing, or independent security claims without the required owner approval.
 
 ## Bootstrap verified after GitHub writes (2026-10-27 KST)
 - GitHub repository visibility independently rechecked: **private**.

@@ -1,5 +1,19 @@
 # HANDOFF — AX FLOW + REA_APP (bootstrap, 2026-10-27 KST)
 
+## Latest checkpoint — P24 DBVORA FK visible UI acceptance
+1. **Task/source:** tested AX FLOW UI source feature/axflow-mvp@86ac854bd633e3a312aa54a5300e2f78f634dbfd with pinned DBVORA feature/p0-db-map@31b8257468d28743fb2d3767d1caa56938df756c; docs branch head before this checkpoint was 9dd3405e23e479adafd48093f457b758149785f9.
+2. **Fixture:** isolated synthetic SQLite file with departments/employees tables, two rows, and an FK from employees.department_id to departments.id.
+3. **Visible test:** isolated DBVORA API at 127.0.0.1:18768 and AX FLOW UI at 127.0.0.1:8771 rendered the relationship; it remained after a UI schema-map refresh. Table, column, PK and size metadata rendered.
+4. **Redaction/integrity:** API and UI omitted row marker values and the absolute DB path. DB SHA-256 f0527ec23c551c12ee3c30399de96b92df5ffd7b13292c4606dae3af53db3580 and mtime were unchanged; no WAL/SHM files appeared.
+5. **Cleanup:** both isolated servers stopped and the fixture folder was removed. P5 http://127.0.0.1:8767/ stayed open and retained its original connected csv_records / records schema and 20,480-byte observation.
+6. **Tests:** P24 browser/API assertions PASS. Product source did not change, so the complete suite was not rerun; most recent full Windows Python 3.11.9 suite is P19 at 60/60 PASS.
+7. **Failure record:** no P24 test failure. This acceptance covers synthetic SQLite and the pinned local DBVORA API only.
+8. **Progress:** **87% PARTIAL** (A100/B95/C95/D95/E50 equal-weight heuristic). D1 remains PARTIAL; D2 and customer/packaged-service evidence are not complete.
+9. **Release gates:** DBVORA restore, independent security assessment, signed Windows distribution and customer/release validation remain approval/owner gated. OAuth/provider access and commercial proof are not started.
+10. **Next:** reconcile docs/ACCEPTANCE_MATRIX.md with the executed evidence. Continue permission-free synthetic validation; preserve the hold on independent AX FLOW engine implementation pending chief review.
+
+# HANDOFF — AX FLOW + REA_APP (bootstrap, 2026-10-27 KST)
+
 ## Latest checkpoint — P23 REA_APP self-scan acceptance
 1. **Task:** run REA_APP against its own source tree without executing inspected code or transmitting reports.
 2. **Source:** authorized local `tools/rea-app`; reports stored in sibling temporary output folders, outside source root, then removed.
