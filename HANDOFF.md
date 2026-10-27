@@ -2,7 +2,7 @@
 
 ## P15 — review site currently available
 1. **Environment:** synthetic AX FLOW UI is running in managed session `32804`, listener `127.0.0.1:8765` (observed PID `22416`). Temporary fixture root: `C:\Users\haein\AppData\Local\Temp\axflow-review-cada4201409a49208b052e25b014152c`.
-2. **Evidence:** startup emitted “AX FLOW local UI ready”; loopback listener was present and GET returned HTTP 200 with `text/html; charset=utf-8`. Two synthetic CSV contacts only; no user initiated writes.
+2. **Evidence:** startup emitted “AX FLOW local UI ready”; loopback listener was present and GET returned HTTP 200 with `text/html; charset=utf-8`. Live `POST /api/preview` returned 200, workflow `csv_to_sqlite`, 2 steps, and explicit approval required; runtime/business DB files remained absent. Two synthetic contacts only; no run/write was initiated.
 3. **Failure/pivot:** detached hidden `Start-Process` was no longer present on a later check; moved the server into a managed tool session and rechecked. A PowerShell setup typo was parsed before execution and had no side effects.
 4. **Browser state:** `open_in_codex` queued the URL. This is not visual/browser-click E2E; keep that gate unverified. No automation bypass was used.
 5. **Next:** keep this service/session available for morning review. Stop session `32804` only when no longer needed or if the owner asks.
