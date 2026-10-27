@@ -117,6 +117,16 @@ class LAExecutor:
 
         return scheduled_runs()
 
+    def validate(self, plan: object, *, allow_legacy: bool = True) -> dict[str, object]:
+        """Validate an IR plan without creating runtime or business state."""
+        prepared = prepare_plan(plan, allow_legacy=allow_legacy)
+        return {
+            "valid": True,
+            "version": prepared.source_version,
+            "runtime_compat_version": prepared.runtime_plan["version"],
+            "steps": len(prepared.runtime_plan["steps"]),
+        }
+
     def status(self, run_id: str) -> dict[str, object]:
         """Read-only status query; never initializes an absent runtime DB."""
         return inspect_run(self.state_path, run_id)
