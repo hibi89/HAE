@@ -1,0 +1,26 @@
+{
+  "version": "axflow.ir.v0",
+  "trigger": {
+    "type": "interval",
+    "every_seconds": 1
+  },
+  "steps": [
+    {
+      "id": "source",
+      "op": "literal",
+      "value": {
+        "source": "synthetic"
+      }
+    },
+    {
+      "id": "saved",
+      "op": "sqlite_put",
+      "from": "source"
+    },
+    {
+      "id": "read",
+      "op": "sqlite_get",
+      "from": "saved"
+    }
+  ]
+}
