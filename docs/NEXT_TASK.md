@@ -1,3 +1,9 @@
+## P27 complete — provenance API/UI boundary verified
+Code/test commit `e4cf683ce061645ee5400b7eb0e6f7f8fd45888e` allowlists DBVORA provenance at the adapter and renders fixed safe descriptions in the browser. Windows Python suite **61/61 PASS**; JS syntax PASS. An isolated synthetic API/UI check confirmed customer-like paths and hostile markup are omitted, with no injected DOM node. Failure causes and recovery are recorded in STATUS/HANDOFF. Progress remains **87% PARTIAL**.
+
+## Next atomic task — continue only with a permission-free Blueprint gap
+Compare the remaining acceptance rows with the original blueprint and code, pick a synthetic local test that closes evidence, then run it and record the actual outcome. Do not access customer data, create OAuth consent, restore DBs, request elevation, sign/release, deploy publicly, or expand the independent engine. No new design document or open website is needed; P5 at `http://127.0.0.1:8767/` remains open.
+
 ## P26 complete — Windows junction fixture could not be created
 An unprivileged PowerShell directory-junction attempt returned Access is denied before link creation. AX FLOW did not run; the synthetic target stayed intact and no DB write occurred. Fixture cleanup passed. Do not elevate. This is SKIPPED, not an acceptance pass. P20's file-symlink creation was separately denied with WinError 1314. Progress remains **87% PARTIAL**.
 

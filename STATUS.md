@@ -1,3 +1,13 @@
+## P27 — DBVORA provenance is allowlisted and visible in the UI (2026-10-27 KST)
+- Fixed a D1 boundary gap: the API had normalized known schema fields but passed arbitrary raw `provenance` keys and values through to clients.
+- `dbvora_client.normalize_inventory` now keeps only four fixed provenance labels (CPU availability, declared SQLite foreign keys, measured filesystem size, and measured SQLite catalog). Unknown keys and unapproved values are dropped. The UI shows an opaque DB ID and these fixed descriptions using `textContent`.
+- Added `test_provenance_allowlist_drops_paths_and_untrusted_markup`, covering an injected customer-like path, HTML/event-handler markup, and a malformed known value.
+- **Tests:** Windows Python 3.11.9, from `apps/ax-flow`, `python -m unittest discover -s tests -v` — **61/61 PASS** in 27.366 seconds with loopback enabled. `node --check axflow\\static\\app.js` — PASS.
+- **Isolated UI/API verification:** a temporary stub DBVORA API returned the hostile fields above. `/api/dbvora` omitted both the path and markup; the browser displayed the four safe Korean provenance labels and opaque ID, with zero injected `img` nodes. Synthetic-only data was used. P24's selected-file DBVORA FK UI verification remains separate evidence.
+- **Failure causes and recovery:** browser read-only evaluation does not expose `fetch`, so the API assertion used a local shell GET and the visible assertion used browser DOM locators. The first isolated page attempt timed out under the default sandbox; restarting the local loopback-only fixture with permission resolved it. Neither was an application failure.
+- **Scope:** no customer database, external service, OAuth, DBVORA write, or production site was used. P5 at `http://127.0.0.1:8767/` remains open and unchanged.
+- **Commit:** code/test `e4cf683ce061645ee5400b7eb0e6f7f8fd45888e`. Progress remains **87% PARTIAL** (A100/B95/C95/D95/E50); synthetic provenance evidence does not close packaged, customer, restore, security-review, installer, or commercial gates.
+
 ## P26 — Windows junction boundary fixture skipped by host (2026-10-27 KST)
 - Attempted an unprivileged directory-junction fixture under the isolated synthetic test folder, linking input/linked to a sibling outside directory containing one synthetic CSV.
 - Windows PowerShell New-Item -ItemType Junction returned **Access is denied**. No junction was created, so AX FLOW did not read the outside CSV or execute the workflow.

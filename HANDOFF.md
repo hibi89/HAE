@@ -1,3 +1,13 @@
+## Latest checkpoint — P27 DBVORA provenance boundary/UI
+1. **Code/test commit:** `e4cf683ce061645ee5400b7eb0e6f7f8fd45888e` on `feature/axflow-mvp`.
+2. **Change:** the DBVORA API adapter now allowlists provenance keys and fixed source labels; unknown paths, HTML, and unapproved values are dropped. The UI renders only fixed descriptions and an opaque DB ID through `textContent`.
+3. **Evidence:** Windows Python 3.11.9 full AX FLOW suite **61/61 PASS**; `node --check axflow\\static\\app.js` PASS. A local hostile-response stub was checked through both `/api/dbvora` and visible DOM; no path/markup leaked and no injected image node appeared.
+4. **Failure causes/resolution:** browser read-only evaluate has no `fetch`, replaced with local shell HTTP GET plus DOM locators. Initial sandboxed local page timed out; loopback-enabled isolated server passed. No product failure remained.
+5. **Limits:** synthetic stub and P24 selected synthetic SQLite only. Customer/multi-asset/packaged behavior remains unverified. D2 restore, OAuth, independent security review, signed installer and release/commercial evidence remain gated or unstarted.
+6. **Progress:** **87% PARTIAL**, unchanged on A100/B95/C95/D95/E50; this security boundary improvement does not close the remaining acceptance gates.
+7. **Site:** keep the already-open P5 page at `http://127.0.0.1:8767/`; no additional site is required.
+8. **Next:** select one remaining permission-free Blueprint verification. Do not perform restore, OAuth, external/customer-data operations, signing, public deployment, or independent engine expansion without the applicable approval.
+
 # HANDOFF — AX FLOW + REA_APP (bootstrap, 2026-10-27 KST)
 
 ## Latest checkpoint — P26 Windows junction probe skipped
