@@ -52,9 +52,30 @@ class LAExecutor:
             raise ApprovalRequired("explicit SQLite write approval required")
         return self._new_engine().execute(normalized, run_id, approve_writes=approve_writes)
 
+    def resume(self, plan: object, run_id: str, *, approve_writes: bool = False) -> object:
+        """Resume an existing manual run; never create a new run by accident.
+
+        SQLite business receipts are idempotent for the supported local steps.
+        This is not an exactly-once guarantee for external connectors.
+        """
+        # Ensure a matching plan and permission before touching the existing state.
+        prepared = prepare_plan(plan)
+        normalized = prepared.runtime_plan
+        if not isinstance(run_id, str) or not IDENTIFIER.fullmatch(run_id):
+            raise PlanError("run_id must be a safe identifier")
+        if normalized.get("trigger", {"type": "manual"})["type"] != "manual":
+            raise PlanError("schedule runs must resume through schedule()")
+        if any(step["op"] == "csv_read" for step in normalized["steps"]) and self.input_root is None:
+            raise PlanError("CSV workflows require an explicit input_root")
+        if not approve_writes and any(step["op"] in _WRITE_OPS for step in normalized["steps"]):
+            raise ApprovalRequired("explicit SQLite write approval required")
+        # A read-only lookup rejects missing ledgers and run IDs, without DB creation.
+        inspect_run(self.state_path, run_id)
+        return self._new_engine().execute(normalized, run_id, approve_writes=approve_writes)
+
     def schedule(self, plan: object, schedule_id: str, *, max_runs: int = 1,
                  approve_writes: bool = False, clock=None, sleeper=None) -> Iterator[dict[str, object]]:
-        """Return a lazily executing iterator; validate before DB creation on iteration."""
+        """Return an interval iterator after validating input and initializing local state."""
         prepared = prepare_plan(plan)
         normalized = prepared.runtime_plan
         if not isinstance(schedule_id, str) or not IDENTIFIER.fullmatch(schedule_id):
