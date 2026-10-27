@@ -11,7 +11,7 @@ from typing import Iterator
 
 from .contract import PreparedPlan, capabilities, prepare_plan
 from .engine import ApprovalRequired, Engine, IDENTIFIER, PlanError, canonical_json
-from .runlog import inspect_run
+from .runlog import RunLogError, inspect_business_ledger, inspect_run
 from .scheduler import MAX_SCHEDULE_RUNS, interval_ticks
 
 _WRITE_OPS = frozenset(("sqlite_put", "sqlite_import_csv"))
@@ -76,8 +76,10 @@ class LAExecutor:
         expected_hash = hashlib.sha256(canonical_json(normalized).encode("utf-8")).hexdigest()
         if existing["plan_sha256"] != expected_hash:
             raise PlanError("same run id cannot be reused with a different plan")
-        if not self.business_path.is_file():
-            raise PlanError("existing business SQLite ledger is missing; refusing to recreate it")
+        try:
+            inspect_business_ledger(self.business_path)
+        except RunLogError as exc:
+            raise PlanError(str(exc)) from exc
         return self._new_engine().execute(normalized, run_id, approve_writes=approve_writes)
 
     def schedule(self, plan: object, schedule_id: str, *, max_runs: int = 1,
