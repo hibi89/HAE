@@ -1,3 +1,11 @@
+## P39 — typed CSV conversion and zipapp failure exit fixed (2026-10-27 11:50 KST)
+- **Planner:** added one-column English/Korean `number` and `string` conversion phrases that generate existing `csv_normalize` IR. Unrecognized conversion targets and ambiguous multi-column actions remain fail-closed.
+- **Validation:** API tests convert decimal input to a numeric JSON value; invalid text fails during normalization before any business write. Original CSV bytes remain unchanged.
+- **Packaging defect found/fixed:** the first packaged invalid-number test printed a safe conversion error but the zipapp exited 0 because zipapp's imported-main wrapper discarded `main()`'s return code. Added an explicit `zipapp_main()` that raises `SystemExit(main())` and pointed the package builder at it. Packaged invalid input now exits 2 and writes no business row.
+- **Tests:** Windows Python 3.11.9 full suite `python -m unittest discover -s tests -v` — **70/70 PASS** in 30.156 s with authorized synthetic loopback. Planner 5/5; API conversion success/failure and packaged numeric checks PASS. Node syntax/UI regression and `git diff --check` PASS.
+- **Failure record:** package-only test first failed because the CLI printed `number transform received an invalid number` while returning code 0; fixed at the actual zipapp entrypoint. The retest and complete suite passed. No synthetic invalid row was written.
+- **Progress remains 90% PARTIAL** (A100/B95/C95/D95/E65), heuristic; no entire Blueprint release criterion closes. D2 restore, OAuth, independent security and customer/commercial release remain open.
+
 ## P38 — packaged normalization/filter/import path verified (2026-10-27 11:45 KST)
 - **Package:** the test suite built the current Windows standard-library zipapp outside the source tree and ran the normalization workflow using the packaged CLI with no `PYTHONPATH`.
 - **Flow:** synthetic CSV → trim `name` → filter `active=yes` → SQLite import. The packaged result reported 2 imported rows and duplicate row 2. Both duplicate records remained stored with original row numbers [1, 2].

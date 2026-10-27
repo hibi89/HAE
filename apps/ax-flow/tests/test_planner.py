@@ -48,6 +48,27 @@ class PlannerTests(unittest.TestCase):
         self.assertEqual(filtered["steps"][2]["from"], "normalized")
         self.assertEqual(filtered["steps"][1]["transforms"], {"email": "lower"})
 
+    def test_explicit_numeric_and_string_column_conversions_are_planned(self):
+        for request, field, transform in (
+            ("Convert the amount column to a number, then import this CSV into SQLite", "amount", "number"),
+            ("CSV의 amount 열을 숫자로 변환하고 로컬 SQLite에 저장해줘", "amount", "number"),
+            ("Convert the name column to string, then import this CSV into SQLite", "name", "string"),
+            ("CSV의 name 열을 문자열로 변환하고 로컬 SQLite에 저장해줘", "name", "string"),
+        ):
+            with self.subTest(request=request):
+                plan = plan_request(request, "contacts.csv")
+                self.assertEqual([step["op"] for step in plan["steps"]], [
+                    "csv_read", "csv_normalize", "sqlite_import_csv",
+                ])
+                self.assertEqual(plan["steps"][1]["transforms"], {field: transform})
+
+        numeric_filter = plan_request(
+            "Convert amount to number and import this CSV where amount > 10 into SQLite",
+            "contacts.csv",
+        )
+        self.assertEqual(numeric_filter["steps"][1]["transforms"], {"amount": "number"})
+        self.assertEqual(numeric_filter["steps"][2]["from"], "normalized")
+
     def test_unsupported_compound_negated_or_oversized_requests_fail_closed(self):
         for request in (
             "send the imported CSV over email into SQLite",
@@ -57,6 +78,7 @@ class PlannerTests(unittest.TestCase):
             "CSV 파일을 SQLite에 저장한 다음 결제해줘",
             "clean this CSV into SQLite",
             "deduplicate this CSV into SQLite",
+            "convert CSV values to arbitrary objects and import into SQLite",
             "Trim the name column and lowercase the email column in this CSV before saving to SQLite",
             "Trim this CSV name column",
             " ", "x" * 513,

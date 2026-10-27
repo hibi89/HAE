@@ -121,5 +121,10 @@ def main() -> int:
         return 2
 
 
+def zipapp_main() -> None:
+    """Preserve CLI exit status through zipapp's imported-main wrapper."""
+    raise SystemExit(main())
+
+
 if __name__ == "__main__":
     raise SystemExit(main())

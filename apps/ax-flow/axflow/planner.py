@@ -20,7 +20,7 @@ _LOOKUP_ACTION = re.compile(
 _CONDITIONAL = re.compile(r"\b(?:if|when|only\s+if|only\s+when)\b|경우에만|때만", re.IGNORECASE)
 _UNSUPPORTED = re.compile(
     r"\b(?:email|e-mail|http|https|api|webhook|gmail|sheets?|payment|pay|purchase|"
-    r"delete|remove|drop|schedule|trigger|shell|command|script|browser|n8n|ai|llm|"
+    r"delete|remove|drop|schedule|trigger|shell|command|script|browser|n8n|ai|llm|convert|coerce|cast|"
     r"translate|classify|deduplicate|clean|transform|upload|send)\b|"
     r"이메일|메일|결제|송금|구매|삭제|외부|웹훅|예약|스케줄|쉘|명령|스크립트|"
     r"번역|분류|중복제거|정리|변환|업로드|전송|실행|드롭",
@@ -33,15 +33,19 @@ _NEGATION = re.compile(
 _FIELD = r"[A-Za-z_][A-Za-z0-9_]{0,63}"
 _NORMALIZE_FIELD = r"[A-Za-z_][A-Za-z0-9_]{0,31}"
 _ENGLISH_NORMALIZE = re.compile(
-    rf"\b(?P<action>trim|strip|lowercase|lower|uppercase|upper)\s+"
+    rf"(?:\b(?P<action>trim|strip|lowercase|lower|uppercase|upper)\s+"
     rf"(?:(?:the\s+)?(?:whitespace|spaces)\s+(?:in|from|around)\s+)?"
-    rf"(?:the\s+)?(?P<field>{_NORMALIZE_FIELD})(?:\s+(?:column|field))?\b",
+    rf"(?:the\s+)?(?P<field>{_NORMALIZE_FIELD})(?:\s+(?:column|field))?\b|"
+    rf"\bconvert\s+(?:the\s+)?(?P<converted_field>{_NORMALIZE_FIELD})"
+    rf"(?:\s+(?:column|field))?\s+to\s+(?:a\s+)?"
+    r"(?P<target>number|numeric|string)(?:\s+value)?\b)",
     re.IGNORECASE,
 )
 _KOREAN_NORMALIZE = re.compile(
-    rf"(?P<field>{_NORMALIZE_FIELD})\s*(?:열|컬럼)(?:의)?\s*"
+    rf"(?P<field>{_NORMALIZE_FIELD})\s*(?:열|컬럼)(?:의|을|를)?\s*"
     r"(?P<instruction>(?:(?:앞뒤)\s*)?공백\s*(?:을\s*)?(?:제거|정리)|"
-    r"소문자(?:로\s*)?(?:변환|변경)|대문자(?:로\s*)?(?:변환|변경))",
+    r"소문자(?:로\s*)?(?:변환|변경)|대문자(?:로\s*)?(?:변환|변경)|"
+    r"(?:숫자|수치)(?:형)?(?:으로|로)\s*(?:변환|변경)|문자열(?:로)?\s*(?:변환|변경))",
     re.IGNORECASE,
 )
 _VALUE = r'(?:\"[^\"\r\n]{1,80}\"|\'[^\'\r\n]{1,80}\'|-?\d+(?:\.\d+)?|[A-Za-z가-힣_][A-Za-z0-9가-힣_-]{0,63})'
@@ -85,8 +89,8 @@ def _condition(task: str) -> tuple[str, str, object, str] | None:
     return match.group("field"), operator, value, transform
 
 
-def _normalization(task: str) -> tuple[re.Match[str], str] | None:
-    matches = [(match, match.group("action").casefold())
+def _normalization(task: str) -> tuple[re.Match[str], str, str] | None:
+    matches = [(match, "english")
                for match in _ENGLISH_NORMALIZE.finditer(task)]
     matches.extend((match, "korean") for match in _KOREAN_NORMALIZE.finditer(task))
     if not matches:
@@ -96,12 +100,29 @@ def _normalization(task: str) -> tuple[re.Match[str], str] | None:
     match, action = matches[0]
     if action == "korean":
         instruction = match.group("instruction")
-        transform = "trim" if "공백" in instruction else ("lower" if "소문자" in instruction else "upper")
+        if "공백" in instruction:
+            transform = "trim"
+        elif "소문자" in instruction:
+            transform = "lower"
+        elif "대문자" in instruction:
+            transform = "upper"
+        elif "문자열" in instruction:
+            transform = "string"
+        else:
+            transform = "number"
+        field = match.group("field")
     else:
-        transform = "trim" if action in {"trim", "strip"} else (
-            "lower" if action in {"lower", "lowercase"} else "upper"
-        )
-    return match, transform
+        english_action = match.group("action")
+        if english_action is None:
+            transform = "string" if match.group("target").casefold() == "string" else "number"
+            field = match.group("converted_field")
+        else:
+            english_action = english_action.casefold()
+            transform = "trim" if english_action in {"trim", "strip"} else (
+                "lower" if english_action in {"lower", "lowercase"} else "upper"
+            )
+            field = match.group("field")
+    return match, field, transform
 
 
 def _base_steps(csv_path: str) -> list[dict]:
@@ -140,7 +161,7 @@ def plan_request(task: str, csv_path: str) -> dict:
     normalization = _normalization(task)
     unsupported_task = task
     if normalization is not None:
-        match, _ = normalization
+        match, _, _ = normalization
         unsupported_task = task[:match.start()] + task[match.end():]
     if _UNSUPPORTED.search(unsupported_task):
         raise PlanError("this request includes an unsupported or negated action")
@@ -159,9 +180,9 @@ def plan_request(task: str, csv_path: str) -> dict:
     def normalized_source(steps: list[dict]) -> str:
         if normalization is None:
             return "input"
-        match, transform = normalization
+        match, field, transform = normalization
         steps.append({"id": "normalized", "op": "csv_normalize", "from": "input",
-                      "transforms": {match.group("field"): transform}})
+                      "transforms": {field: transform}})
         return "normalized"
 
     if conditional:

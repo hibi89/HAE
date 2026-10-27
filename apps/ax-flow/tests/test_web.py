@@ -278,6 +278,51 @@ class WebUITests(unittest.TestCase):
                 (response["run_id"],),
             ).fetchone()[0], '{"id":"21","name":"PrivateMarker"}')
 
+    def test_natural_language_numeric_conversion_fails_before_invalid_rows_are_saved(self):
+        valid_path = self.inputs / "amounts.csv"
+        invalid_path = self.inputs / "invalid-amounts.csv"
+        valid_bytes = b"amount\n3.75\n"
+        invalid_bytes = b"amount\nNOT-A-NUMBER-MARKER\n"
+        valid_path.write_bytes(valid_bytes)
+        invalid_path.write_bytes(invalid_bytes)
+        task = "Convert the amount column to a number, then import this CSV into local SQLite"
+
+        code, _, preview = self.post_json("/api/preview", {"task": task, "csv_path": "amounts.csv"})
+        self.assertEqual(code, 200, preview)
+        self.assertEqual(preview["plan"]["steps"][1]["transforms"], {"amount": "number"})
+        code, _, result = self.post_json("/api/run", {
+            "task": task, "csv_path": "amounts.csv", "preview_id": preview["preview_id"],
+            "approve_writes": True,
+        })
+        self.assertEqual(code, 200, result)
+        self.assertEqual(result["result"]["imported_rows"], 1)
+        with closing(sqlite3.connect(self.business)) as business:
+            stored = business.execute(
+                "SELECT payload_json FROM csv_records WHERE run_id=? AND row_number=1",
+                (result["run_id"],),
+            ).fetchone()[0]
+        self.assertEqual(json.loads(stored), {"amount": 3.75})
+
+        code, _, invalid_preview = self.post_json("/api/preview", {
+            "task": task, "csv_path": "invalid-amounts.csv",
+        })
+        self.assertEqual(code, 200, invalid_preview)
+        code, _, failure = self.post_json("/api/run", {
+            "task": task, "csv_path": "invalid-amounts.csv",
+            "preview_id": invalid_preview["preview_id"], "approve_writes": True,
+        })
+        self.assertEqual(code, 422, failure)
+        self.assertEqual(failure["error_type"], "PlanError")
+        self.assertEqual(failure["status"]["status"], "failed")
+        self.assertEqual(valid_path.read_bytes(), valid_bytes)
+        self.assertEqual(invalid_path.read_bytes(), invalid_bytes)
+        with closing(sqlite3.connect(self.business)) as business:
+            self.assertEqual(business.execute(
+                "SELECT COUNT(*) FROM csv_records WHERE run_id=?", (failure["run_id"],)
+            ).fetchone()[0], 0)
+            self.assertEqual(business.execute("SELECT COUNT(*) FROM csv_records").fetchone()[0], 1)
+        self.assertNotIn("NOT-A-NUMBER-MARKER", json.dumps(failure["status"]))
+
     def test_run_rejects_missing_or_mismatched_preview_token(self):
         _, _, preview = self.post_json("/api/preview", {
             "task": "Import this CSV into local SQLite", "csv_path": "contacts.csv",

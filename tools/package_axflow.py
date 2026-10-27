@@ -33,7 +33,7 @@ def build_zipapp(output: Path) -> Path:
         zipapp.create_archive(
             Path(temp),
             target=target,
-            main="axflow.__main__:main",
+            main="axflow.__main__:zipapp_main",
             interpreter=None,
             compressed=True,
         )

@@ -1,3 +1,11 @@
+## P39 complete — natural-language numeric/string normalization and zipapp exit status
+Added bounded English/Korean number/string column conversion planning. The API stores valid decimal input as a numeric JSON value; malformed numeric input fails before business writes with unchanged CSV. A packaged test exposed a real reporting bug: zipapp invoked the CLI but dropped its returned exit status, so a safe failure looked successful to scripts. The package now calls a wrapper that raises `SystemExit(main())`; invalid packaged conversion exits 2 and writes no business rows.
+
+**Verification:** Windows Python full suite **70/70 PASS** in 30.156 s with authorized synthetic loopback; Node syntax/UI regression PASS. Progress remains **90% PARTIAL**.
+
+## Next atomic task — numeric transform boundary validation
+Add a small table-driven synthetic regression across engine, API and packaged CLI for finite decimals, integer notation, exponent notation, leading/trailing whitespace, blank values, NaN/Infinity and overflow. Confirm accepted values are finite/canonical and every invalid value fails before business writes with source bytes unchanged. Make code changes only if tests expose a concrete defect. Update the test/failure record and commit.
+
 ## P38 complete — packaged normalization/import verified
 The current Windows zipapp was built outside the source tree and ran a synthetic normalization → filter → SQLite import from its packaged CLI. It reported 2 imported rows and duplicate source row 2, preserved source rows [1, 2], stored both duplicates, left the CSV hash/size/mtime unchanged, and kept row values out of the runtime DB and receipt. Package tests 4/4 PASS; full suite 67/67 PASS in 28.694 s; Node checks/UI regression PASS. No listener or site remains open. Progress remains **90% PARTIAL**.
 

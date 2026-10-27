@@ -1,3 +1,15 @@
+## Latest checkpoint — P39 typed CSV normalization and package failure status fixed
+1. **Branch/base:** `hibi89/AX_FLOW` `feature/axflow-mvp`; P38 parent `18d94b29bfa93731de70d5e83c4e0b5137739eb3`.
+2. **Planner:** English/Korean explicit one-column conversion to number/string now creates validated `csv_normalize` IR. Unsupported/multi-column conversions still reject.
+3. **Data validation:** decimal string converted to JSON number through API; invalid text fails before business SQLite writes; source bytes remain unchanged.
+4. **Zipapp defect fixed:** packaged CLI previously printed a bounded numeric error but exited 0 because zipapp ignored the imported `main()` return. Added a `SystemExit` wrapper and updated package entrypoint; packaged invalid input now exits 2 with zero business rows.
+5. **Tests:** Windows Python 3.11.9 full suite **70/70 PASS** in 30.156 s with authorized synthetic loopback; Node syntax checks/UI regression and diff check PASS.
+6. **Failure cause/recovery:** targeted package test exposed false-zero exit; exact cause and fix recorded in STATUS. The final targeted checks and full suite passed.
+7. **Current estimate:** 90% PARTIAL (A100/B95/C95/D95/E65), heuristic.
+8. **Remaining gates:** P36 Windows synthetic DBVORA snapshot failed safely before publish and no restore ran; D2 remains NOT_STARTED. OAuth, independent security, signed/customer distribution and commercial proof are open.
+9. **Site/environment:** no site or external auth needed; no active TCP listener. Synthetic-only data. P33 old six logs remain locked under .verification-temp; no listener/Python process visible and no process was force-killed.
+10. **Next:** test numeric transform boundaries (NaN, infinities, exponent notation, surrounding whitespace, blank/currency text) at engine/API/package levels; assert invalid values always fail before writes and successful values are exact. Keep supported conversions explicit and run the full suite.
+
 ## Latest checkpoint — P38 packaged normalization workflow verified
 1. **Branch/base:** `hibi89/AX_FLOW` `feature/axflow-mvp`; P37 parent `90e083d04f68f4f7eb068db2aeba82c6103179e8`. P38 adds a packaged workflow regression and current status documentation.
 2. **Packaged flow:** current stdlib Windows zipapp built outside the source tree; its CLI ran synthetic CSV → trim name → filter active=yes → SQLite import, with no source-tree `PYTHONPATH`.
