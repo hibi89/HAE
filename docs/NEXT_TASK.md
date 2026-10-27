@@ -1,3 +1,6 @@
+## Latest verified fix — Windows CLI help encoding (2026-10-27 KST)
+On `feature/axflow-mvp@86ac854bd633e3a312aa54a5300e2f78f634dbfd`, default CP949 Windows console help now prints successfully after replacing two U+2013 characters with ASCII hyphens. Both `python -m axflow --help` and `python -m axflow serve --help` pass. The full Windows Python 3.11.9 suite is **60/60 PASS** with permitted loopback tests. The first failure was a real help-output encoding defect; no execution logic changed. Overall remains PARTIAL at the existing 79% heuristic.
+
 ## P10 complete — interval hard-crash replay (60/60 full-suite pass)
 
 ## P16 — local UI read-only and import E2E verified
