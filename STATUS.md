@@ -23,7 +23,7 @@
 ## Product readiness
 | Component | State | Evidence |
 | --- | --- | --- |
-| REA_APP static source analyzer | MVP_VERIFIED (BLUEPRINT A, BOUNDED SYNTHETIC SCOPE) | feature `991fe3d908377a70a451013262449a8ad001d0d2`; UTF-8 repair `0a4b446bda6b78c3e5c7cbda2865cf061a64b6b9`; 10 Python tests + Node parser assertions pass; tool 0.3.0 |
+| REA_APP static source analyzer | MVP_VERIFIED (BLUEPRINT A, BOUNDED SYNTHETIC SCOPE) | feature `991fe3d908377a70a451013262449a8ad001d0d2`; UTF-8 repair `0a4b446bda6b78c3e5c7cbda2865cf061a64b6b9`; 11 Python tests + Node parser assertions pass; tool 0.3.0 |
 | n8n architecture study | COMPLETE (DOCS ONLY) | official docs and Help Center evidence recorded below; no n8n source/runtime used |
 | AX FLOW local runtime | NOT_STARTED (USER HOLD) | independent engine explicitly held for chief review |
 | Natural-language planner and file input | NOT_STARTED | no code/tests |
