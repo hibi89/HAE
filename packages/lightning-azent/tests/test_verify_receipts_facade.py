@@ -1,0 +1,21 @@
+import tempfile
+import unittest
+from pathlib import Path
+
+from lightning_azent.engine import PlanError
+from lightning_azent.runtime import LAExecutor
+
+
+class VerifyReceiptsFacadeTests(unittest.TestCase):
+    def test_invalid_run_id_does_not_create_sqlite(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            executor = LAExecutor(root / 'state.sqlite', root / 'business.sqlite')
+            with self.assertRaises(PlanError):
+                executor.verify_receipts({'version': 'axflow.ir.v0', 'steps': []}, '../unsafe')
+            self.assertFalse((root / 'state.sqlite').exists())
+            self.assertFalse((root / 'business.sqlite').exists())
+
+
+if __name__ == '__main__':
+    unittest.main()
