@@ -1,3 +1,9 @@
+## P26 complete — Windows junction fixture could not be created
+An unprivileged PowerShell directory-junction attempt returned Access is denied before link creation. AX FLOW did not run; the synthetic target stayed intact and no DB write occurred. Fixture cleanup passed. Do not elevate. This is SKIPPED, not an acceptance pass. P20's file-symlink creation was separately denied with WinError 1314. Progress remains **87% PARTIAL**.
+
+## Next atomic task — identify a permission-free Blueprint gap
+Use the existing TARGET_BLUEPRINT_V1 and ACCEPTANCE_MATRIX to select one remaining acceptance that needs no customer data, OAuth, DBVORA write/restore, deployment, signing, independent security approval, OS elevation, or new design document. Run its actual synthetic test, record failures and causes, then update STATUS/HANDOFF/NEXT_TASK and commit.
+
 ## P25 complete — full synthetic AX FLOW suite passes
 Windows Python 3.11.9: python -m unittest discover -s tests -v from apps/ax-flow — **60/60 PASS** in 25.384 seconds with loopback permission enabled. The default-sandbox attempt had 9 failures / 10 errors: WinError 10013 blocked loopback mocks/UI; seven DBVORA assertions therefore saw UNAVAILABLE. Cross-process replay also hit its SQLite busy cap once, then passed on rerun. No source changed. See STATUS/HANDOFF for the full failure record. Progress remains **87% PARTIAL**.
 

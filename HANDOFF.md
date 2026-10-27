@@ -1,5 +1,19 @@
 # HANDOFF — AX FLOW + REA_APP (bootstrap, 2026-10-27 KST)
 
+## Latest checkpoint — P26 Windows junction probe skipped
+1. **Task:** attempt a Windows directory junction without elevation to validate the existing CSV path guard against a reparse-point escape.
+2. **Fixture:** one synthetic CSV outside a synthetic input root; no customer or external data.
+3. **Result:** PowerShell New-Item -ItemType Junction returned **Access is denied** before the link was created.
+4. **Workflow:** not run; AX FLOW did not read the outside CSV and no database write occurred.
+5. **Cleanup:** synthetic target was confirmed intact before the isolated folder was removed.
+6. **Failure/cause:** host permissions blocked fixture creation. This is a test setup SKIP, not a product pass/failure. The separate P20 file symlink attempt had WinError 1314.
+7. **Safety:** no elevation, Windows policy change, product source change, or customer data.
+8. **Site:** P5 http://127.0.0.1:8767/ remained open and unchanged.
+9. **Progress:** **87% PARTIAL**, A100/B95/C95/D95/E50; unchanged.
+10. **Next:** audit the original Blueprint for a remaining permission-free, synthetic acceptance gap; test it before updating the evidence record. Keep approval-gated work and the independent engine hold intact.
+
+# HANDOFF — AX FLOW + REA_APP (bootstrap, 2026-10-27 KST)
+
 ## Latest checkpoint — P25 full regression suite rerun
 1. **Source:** local app code corresponding to feature/axflow-mvp@86ac854bd633e3a312aa54a5300e2f78f634dbfd; docs branch head before this checkpoint af2a54aa7fe4a684cb7d3ab4e1313cb17cb3163d. No product source changed.
 2. **Command:** from apps/ax-flow, Windows Python 3.11.9, python -m unittest discover -s tests -v.

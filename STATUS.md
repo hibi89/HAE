@@ -1,3 +1,10 @@
+## P26 — Windows junction boundary fixture skipped by host (2026-10-27 KST)
+- Attempted an unprivileged directory-junction fixture under the isolated synthetic test folder, linking input/linked to a sibling outside directory containing one synthetic CSV.
+- Windows PowerShell New-Item -ItemType Junction returned **Access is denied**. No junction was created, so AX FLOW did not read the outside CSV or execute the workflow.
+- The synthetic target file was confirmed intact before cleanup; the temporary fixture folder was removed. No privilege elevation, policy change, product-source change, or database write occurred.
+- **Result:** SKIPPED due to host permissions. P20's file-symlink attempt was separately skipped with WinError 1314; neither test demonstrates product acceptance or failure.
+- P5 at http://127.0.0.1:8767/ stayed open and unchanged. **Progress remains 87% PARTIAL** (A100/B95/C95/D95/E50).
+
 ## P25 — full AX FLOW regression suite passes with loopback enabled (2026-10-27 KST)
 - Ran from the local app source corresponding to the unchanged product code commit feature/axflow-mvp@86ac854bd633e3a312aa54a5300e2f78f634dbfd; documentation branch head before this checkpoint was af2a54aa7fe4a684cb7d3ab4e1313cb17cb3163d.
 - **Passing command/environment:** Windows Python 3.11.9, from apps/ax-flow: python -m unittest discover -s tests -v — **60/60 PASS** in 25.384 seconds, with local loopback permission enabled. All DBVORA client, engine, package, planner, runlog, scheduler and web tests passed.

@@ -20,7 +20,7 @@
 | F8 | Install/customer release | native Windows/NTFS + UI/CLI + network + repeatable packaged install, three real-world-shaped workflows | PARTIAL — stdlib zipapp and synthetic local CLI/UI smoke; no signed installer or customer installation/release evidence |
 | B1 | Commercial model | scoped customer pilot feedback/support time, legal/license review; price is a hypothesis | NOT_STARTED — no scoped pilot or commercial validation |
 
-**Platform-specific unverified item:** creating an unprivileged Windows symlink fixture was skipped because Path.symlink_to returned OSError [WinError 1314] before the workflow ran. Do not elevate to claim this acceptance.
+**Platform-specific unverified items:** an unprivileged Windows file-symlink fixture was skipped because Path.symlink_to returned OSError [WinError 1314]. A directory-junction fixture was also skipped because PowerShell New-Item -ItemType Junction returned Access is denied. Neither workflow ran and neither result is a pass. Do not elevate to claim either acceptance.
 
 **Full AX FLOW + DBVORA product completion requires F1–F8 and D1–D2, not merely R1 or F2.** External SaaS provider features only within granted API permissions. Each API/DB feature must declare tested supported versions; do not call a limited SQLite-only result universal multi-DB support.
 
