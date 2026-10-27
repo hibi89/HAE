@@ -1,5 +1,17 @@
 # HANDOFF — AX FLOW + REA_APP (bootstrap, 2026-10-27 KST)
 
+## Latest checkpoint — Windows CP949 CLI help fixed (2026-10-27 KST)
+1. **Task:** fixed Windows default-console help output for the existing CLI.
+2. **Branch/code commit:** `feature/axflow-mvp@86ac854bd633e3a312aa54a5300e2f78f634dbfd`, based on P16 `c62448d473caa77c088b651e93b5fc96967fd98f`.
+3. **Changed product path:** `apps/ax-flow/axflow/__main__.py`; only two U+2013 range separators became ASCII hyphens.
+4. **Failure and cause:** default CP949 console raised `UnicodeEncodeError` on `python -m axflow serve --help`; the punctuation was not representable in that code page.
+5. **Fix:** replaced the two non-CP949 dash characters. No workflow/engine logic changed.
+6. **Tests:** Windows Python 3.11.9, default-console `python -m axflow --help` and `python -m axflow serve --help` both PASS. Full `python -m unittest discover -s tests -v` — **60/60 PASS** (loopback tests permitted).
+7. **State:** product estimate remains 79% on the existing equal-weight heuristic and overall PARTIAL; this is a portability bug fix.
+8. **Safety:** synthetic/local tests only; no customer data, credentials, external API, deployment, or DBVORA writes.
+9. **Next:** continue only verified, already-authorized tasks; retain the explicit hold on new independent-engine implementation pending chief review.
+10. **Checkpoint:** code commit above; latest documentation commit SHA is available from the current remote branch.
+
 ## Latest checkpoint — P16 local UI E2E and read-only execution
 1. **Task:** fixed the hidden write-approval guard so a read-only preview can execute without a write checkbox; the UI now reports the correct read-only action.
 2. **Branch/base:** `feature/axflow-mvp`, previous HEAD `788868c3568d891d4bbaadf6976464d2894117af`.
