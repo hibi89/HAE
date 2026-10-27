@@ -1,5 +1,14 @@
 # STATUS — 2026-10-27 KST
 
+## P17 — synthetic AX FLOW→DBVORA→UI acceptance passed (2026-10-27 KST)
+- AX FLOW generated/validated a native `csv_to_sqlite` workflow and saved **2 synthetic CSV rows** into its separate business SQLite DB. The pinned DBVORA FastAPI source (`hibi89/DBVORA feature/p0-db-map@31b8257468d28743fb2d3767d1caa56938df756c`) read that same DB through loopback; the visible AX FLOW panel at `http://127.0.0.1:8767/` showed connected status, `csv_records` columns/PKs and measured 20,480-byte size. The user-facing refresh completed and advanced the observation time.
+- API/UI assertions confirmed 2 stored rows, exact column match, no row values or absolute path in the response, unchanged business DB SHA-256/mtime, and no WAL/SHM. The imported table has no FK; UI correctly showed none. A separate pinned-source API fixture tested a declared FK.
+- **Tests:** AX FLOW run completed; live DBVORA API + AX FLOW `/api/dbvora` + visible browser schema/refresh PASS. Windows Python 3.11.9 full suite `python -m unittest discover -s tests -v` **60/60 PASS**; CLI help passes in default CP949.
+- **Failures/recovery:** first live API attempt started before its synthetic DB existed; DBVORA correctly rejected with `FILE_UNAVAILABLE`. In the workflow, a hyphenated run ID was also rejected by the safe-ID guard before writes. The fixture-first order and underscore-only ID passed; no product failure remained.
+- **Blueprint progress:** A100/B95/C90/**D80**/E50, equal-weight heuristic **83%** (supersedes P16's 79%). Product remains PARTIAL: only a selected local synthetic SQLite file is verified; in-app DB listing, customer DB, packaged service, restore, security review, and signed release remain open. No standalone engine expansion.
+- Preview services are loopback only: AX FLOW UI `http://127.0.0.1:8767/`; original review site `http://127.0.0.1:8765/` remains open.
+
+
 ## Windows CP949 CLI help fix — 2026-10-27 KST
 - The default Windows console initially failed on `python -m axflow serve --help`: CP949 could not encode U+2013 in the help/error text.
 - Replaced the two en dashes in range text with ASCII hyphens. This changes help output only; no workflow or engine behavior changed.
@@ -48,10 +57,10 @@
 | Component | State | Evidence |
 | --- | --- | --- |
 | REA_APP static source analyzer | MVP_VERIFIED (BOUNDED SYNTHETIC JS/TS) | `REA_APP@80e8d7aad99c1c40d503848ed620421837b79477`; 10 Python + Node parser tests |
-| AX FLOW local runtime | P9_LOCAL_BOUNDARY_FIXES_VERIFIED (NOT CUSTOMER READY) | DBVORA response fix `30be45331ea71b5a39cd2530764664dd8620d565`; regression tests `2da4b40ebfeec92b0fb589c75392c3e962e5ffb7`; Windows Python 3.11 full suite 59/59 PASS |
+| AX FLOW local runtime | P17_SYNTHETIC_AXFLOW_DBVORA_UI_E2E_VERIFIED (NOT CUSTOMER READY) | `feature/axflow-mvp@86ac854bd633e3a312aa54a5300e2f78f634dbfd`; Windows Python 3.11.9 suite 60/60 PASS; synthetic CSV→SQLite→pinned DBVORA API→visible AX FLOW schema/refresh E2E PASS; row/path withheld, business DB unchanged |
 | Natural-language planner and file input | PARTIAL | four bounded Korean/English CSV intents: full import, filtered import, conditional import, read-only lookup; visible browser E2E remains unverified |
 | OAuth, Gmail/Sheets connectors | NOT_STARTED | no account credentials, no auth test |
-| DBVORA integration | P5_SYNTHETIC_READ_ONLY_VERIFIED | selected-file `p0-01.v1` API over loopback; tables/columns/PK/FK/size displayed; customer DB and packaged service deployment unverified |
+| DBVORA integration | P5_SOURCE_BACKED_UI_E2E_VERIFIED_SYNTHETIC | selected-file `p0-01.v1` API over loopback; tables/columns/PK/FK/size displayed; one selected local SQLite file only; customer DB, packaged service, restore and security review unverified |
 | Recovery, resilience and performance | PARTIAL | real process crash resume, cross-process same-run replay, persisted interval due ticks, crash replay and concurrent tick deduplication are tested; DBVORA restore and broader load bounds remain open |
 | Windows package, customer tests, security assessment | PARTIAL (STDlib ZIPAPP SMOKE) | package CLI, synthetic SQLite workflow and packaged localhost preview/run tested; no signed installer or customer/release evidence |
 | Vercel/Production | NOT_APPLICABLE | local-first product, no hosted service |
