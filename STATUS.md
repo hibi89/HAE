@@ -1,5 +1,13 @@
 # STATUS — 2026-10-27 KST
 
+## P20 — Windows symlink acceptance attempted; host denied fixture creation (2026-10-27 KST)
+- Attempted to create a synthetic symlink from `.verification-temp/p20-symlink/input/link.csv` to a sibling synthetic CSV using unprivileged Python 3.11 `Path.symlink_to`.
+- **Result: SKIPPED** before AX FLOW execution. Windows returned `OSError: [WinError 1314]` (“A required privilege is not held by the client”). The link was not created, no workflow ran, and the temporary fixture folder was removed.
+- No elevation or OS policy change was requested. Existing normal traversal and absolute-path checks still pass in P19; a real symlink-follow rejection remains unverified on this host.
+- No source changed. Progress remains **84% PARTIAL** (A100/B95/C95/D80/E50, equal-weight heuristic).
+- **Next:** verify DBVORA's explicit unavailable state in an isolated UI configured to a closed loopback endpoint; keep the connected P5 panel untouched.
+
+
 ## P19 — unsupported intent and path escape rejected in the visible synthetic UI (2026-10-27 KST)
 - Tested the live AX FLOW browser against an isolated synthetic input root. Unsupported task `email this CSV to someone` returned a bounded “unsupported or negated action” error, left the run button disabled, and created no receipt.
 - Both `../escape.csv` and a Windows absolute CSV path were refused during preview with `csv_read path must be a relative .csv path under --input-root`; the run button stayed disabled and no receipt appeared.

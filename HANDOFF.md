@@ -1,5 +1,14 @@
 # HANDOFF — AX FLOW + REA_APP (bootstrap, 2026-10-27 KST)
 
+## Latest checkpoint — P20 Windows symlink check skipped by host privilege boundary (2026-10-27 KST)
+1. **Task:** attempt a real Windows symlink fixture to validate the engine's no-symlink CSV rule.
+2. **Fixture:** temporary synthetic input path under `.verification-temp/p20-symlink`; no customer data or external paths.
+3. **Result:** Python 3.11 `Path.symlink_to` returned Windows `OSError [WinError 1314]`; the symlink was never created, so the engine path and business write were not executed.
+4. **Safety:** did not elevate or change OS policy. The fixture directory was removed. Mark real Windows symlink acceptance **SKIPPED**, not passed.
+5. **Related evidence:** P19 visible UI rejected traversal and absolute paths; the full suite passed **60/60** with loopback permission.
+6. **Progress:** still **84% PARTIAL** (A100/B95/C95/D80/E50).
+7. **Next:** test the DBVORA panel's unavailable response from a separate synthetic UI configured to a closed loopback port. Do not disturb the open P5 DBVORA panel.
+
 ## Latest checkpoint — P19 fail-closed browser acceptance (2026-10-27 KST)
 1. **Task:** test the visible planner's unsupported-request and CSV path boundary; no product source changes.
 2. **Test setup:** isolated local AX FLOW server, `--synthetic`, one harmless synthetic CSV in its input root.

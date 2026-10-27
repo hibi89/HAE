@@ -1,3 +1,9 @@
+## P20 complete — Windows symlink fixture blocked by OS privilege (2026-10-27 KST)
+Unprivileged Python `Path.symlink_to` failed with `OSError [WinError 1314]`, so no link was created and AX FLOW did not run. The synthetic fixture was removed. Do not elevate for this check. Normal path traversal and absolute-path preview rejection passed in P19; real symlink traversal remains SKIPPED.
+
+## Next atomic task — DBVORA unavailable-state UI acceptance
+Run an isolated synthetic AX FLOW UI with `--dbvora-url` set to a closed loopback endpoint. Confirm the panel explicitly reports unavailable state, remains bounded, and does not leak file paths or row contents. Do not alter the connected P5 preview at `http://127.0.0.1:8767/`. Stop the temporary server and remove its fixture after verification. Then update STATUS/HANDOFF/NEXT_TASK; no app source change unless a reproducible defect is found.
+
 ## P19 complete — UI rejects unsupported requests and path escape (2026-10-27 KST)
 In an isolated synthetic browser run, an unsupported email request was rejected with no run receipt and a disabled run button. Traversal (`../escape.csv`) and an absolute Windows path were rejected during preview. No runtime/business database appeared and no run was invoked. Full Windows Python 3.11.9 suite: **60/60 PASS** with localhost permission.
 
