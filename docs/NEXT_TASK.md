@@ -1,3 +1,8 @@
+## REA_APP P26 — next gate after real verifier self-test (2026-10-27 KST)
+- New reviewed `tests/test_verify_gate_r.py` **5/5 PASS** on exact GitHub-matching source bytes in local Linux/Python 3.13.5. Verifier now expects 14 tracked Git blobs, so `SOURCE VERIFIED: 14/14` is required. See Gate R review for evidence.
+- **Do not confuse this narrow verified success with full REA_APP acceptance.** Next highest priority remains source-complete connected Python+Node integration: run `python verify_gate_r.py` with existing pinned Babel 7.29.9, record OS, current HEAD, Python total/pass/fail/skip and parser result.
+- On source mismatches, restore reviewed source and do not bypass manifest. Do not create paid CI, touch customer data, study restricted n8n source, or expand HAE first.
+
 ## REA_APP P25 — use source-pinned offline verifier before Gate R sign-off (2026-10-27 KST)
 
 1. Verified current branch source baseline `REA_APP@33f6d345f8d4577194248eed4543d602819d3192`; P25 added `tools/rea-app/verify_gate_r.py` with 13 Git blob IDs and fail-closed Python/JS executable-file allowlist. Verifier guard commit `3cc5b0783142cc387d9f68265e5fdd5d8c96d6b3`.
