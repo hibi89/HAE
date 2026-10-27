@@ -1,5 +1,17 @@
 # HANDOFF — AX FLOW + REA_APP (bootstrap, 2026-10-27 KST)
 
+## Latest checkpoint — P5 source-backed DBVORA data visible in AX FLOW UI (2026-10-27 KST)
+1. **Task:** complete the synthetic AX FLOW CSV→business SQLite→actual DBVORA read-only API→AX FLOW UI flow; no standalone-engine expansion.
+2. **Code/source revisions:** AX FLOW UI code from `feature/axflow-mvp` (UI verified against committed blobs; CP949 CLI fix `86ac854bd633e3a312aa54a5300e2f78f634dbfd`); DBVORA source `feature/p0-db-map@31b8257468d28743fb2d3767d1caa56938df756c`; adapter integration branch `feature/dbvora-integration`.
+3. **Data flow:** deterministic native `csv_to_sqlite` plan validated and run with `--synthetic --approve-writes`; 2 rows committed to a synthetic business DB. DBVORA inspected that same file read-only.
+4. **Results:** visible AX FLOW UI at `http://127.0.0.1:8767/` showed DBVORA connected, 20,480-byte measured size, `csv_records` table/columns/PKs and `records`; refresh generated a newer observation timestamp. AX FLOW row payloads and DB paths were absent from the API/UI data.
+5. **Integrity:** direct synthetic row count was 2; DB SHA-256 and mtime unchanged across DBVORA inspection, no WAL/SHM. No FK exists in this import schema and the UI correctly said so; separate source-backed API test verified an FK fixture.
+6. **Tests:** Windows Python 3.11.9 full suite **60/60 PASS** with loopback permission; default CP949 `axflow --help` and `axflow serve --help` PASS; P5 API/client and visible UI/refresh E2E PASS.
+7. **Failures/recovery:** earlier service-before-fixture attempt returned expected `FILE_UNAVAILABLE`; the initial workflow run used an invalid hyphenated run ID and was safely rejected before writes. Fixture-first server startup and underscore-only run ID passed. No unresolved test failure.
+8. **Progress:** equal-weight A–E estimate now **83%** (A100/B95/C90/D80/E50; P16's 79% is historical). Product remains PARTIAL; selected synthetic DB only, no in-app DB listing/customer use, installer, restore, security review or release proof.
+9. **Safety/approval:** no customer DB, credentials, OAuth, external service, paid API, DBVORA source mutation, or public deployment. Keep the explicit hold on independent engine expansion.
+10. **Open preview:** keep `http://127.0.0.1:8767/` visible for DBVORA-backed schema; original `http://127.0.0.1:8765/` receipt remains available.
+
 ## Latest checkpoint — Windows CP949 CLI help fixed (2026-10-27 KST)
 1. **Task:** fixed Windows default-console help output for the existing CLI.
 2. **Branch/code commit:** `feature/axflow-mvp@86ac854bd633e3a312aa54a5300e2f78f634dbfd`, based on P16 `c62448d473caa77c088b651e93b5fc96967fd98f`.
