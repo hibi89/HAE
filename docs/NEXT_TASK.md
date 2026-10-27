@@ -1,3 +1,10 @@
+## REA_APP P47 next — baseline/current exported contract comparison (2026-10-27 KST)
+
+- P46 closed the module-architecture comparison gap: the existing `change-impact.json/.md` now expose module, package-boundary, and resolved internal-edge changes with source evidence. Genuine Babel-backed E2E verifies nested package replacement, deterministic output and source preservation. P46 code commit `3f6a5e67754a2424d84a7b8e565c400cee768c58` is pushed; evidence is at `E:\HAE\REA_APP_GATE_EVIDENCE\gate-r-k6a1huat\evidence.json`.
+- **Next P1 capability:** Compare baseline and current `function_contracts` by relative module and exported symbol. Report added, removed, and signature-changed callables using only explicit syntax and path:line evidence. Keep the existing current-snapshot `functional-contracts.json/.md` contract and 6/8 bundle file counts intact; add the delta to the existing comparison report and test it through the real Babel bundle E2E.
+- Cover safe deterministic normalization (parameter names/types/optional/rest/default-presence, return annotation, async/generator/export kind) without bodies or default values. Distinguish “no longer observed” from a claim of runtime API breakage; document that inference is static and bounded. Update verifier pins and rerun complete Gate R + QA before pushing.
+- After that functional gap: add independent fixture cases for Unicode paths and supported/unresolved dynamic imports; then perform physical symlink/junction verification if the Windows privilege is available and assess fresh-PC package/bootstrap. No paid CI, customer source upload, or external deployment.
+
 ## REA_APP P45 next — blueprint gap audit on verified real-parser baseline (2026-10-27 KST)
 
 - **Completed gate:** P45 ran against the exact clean Windows checkout with pinned `@babel/parser@7.29.9`. `python verify_gate_r.py` passed with 23/23 source pins, 63 tests (57 pass, 6 platform/environment skips, 0 failures), Node parser PASS; the genuine Babel-backed `bundle` E2E passed for default six-report and optional eight-report output, deterministic reruns, evidence path/line, and source preservation. Evidence is recorded in `STATUS.md`.

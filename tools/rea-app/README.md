@@ -1,3 +1,11 @@
+## P46 — compare module architecture across snapshots
+
+`compare` and `bundle` now show how the resolved JS/TS module architecture differs between baseline and current snapshots. The existing `change-impact.json` and `.md` include added/removed source modules, module package-owner moves, added/removed resolved in-root dependencies, and added/removed/changed package boundaries or entrypoints. Dependency links include their kind and source path:line evidence. Console output summarizes the delta.
+
+External or unresolved dependencies are excluded from the internal graph diff. A link is identified by its resolved source and target modules, so changing the import spelling while retaining the same resolved relationship is not counted as a topology change. The addition is backward-compatible at the file level: existing report names and default six / optional eight bundle outputs remain unchanged.
+
+Verified with the pinned Babel parser on synthetic nested-package snapshots: module, package and dependency replacement; evidence lines; repeatable bytes; and unchanged input snapshots. Full P46 Gate R: 23/23 source pins, 64 Python tests (58 pass, 6 platform/environment skips), Node parser pass; separate QA 11/11 pass. Current evidence is recorded in repository `STATUS.md` P46.
+
 ## P45 — verified bundle scope and artifact paths
 
 When `bundle` succeeds, its console summary now shows the analysis scope (indexed files, JS/TS files, dependency edges, and changed files) and an indexed list of every generated report path. This makes it clear which reports were written and what the run analyzed without changing the existing report schemas or filenames.
