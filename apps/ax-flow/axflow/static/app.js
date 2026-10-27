@@ -93,6 +93,9 @@ function describeDbvoraProvenance(result) {
     !Array.isArray(result.provenance) ? result.provenance : {};
 
   if (dbId) parts.push("선택 DB ID " + dbId);
+  if (provenance.cpu_usage === "unavailable") {
+    parts.push("CPU 사용량: 제공되지 않음");
+  }
   if (provenance.size_bytes === "measured_local_filesystem") {
     parts.push("크기: 로컬 파일시스템 측정");
   }
