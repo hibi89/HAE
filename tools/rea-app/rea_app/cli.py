@@ -176,7 +176,7 @@ def _bundle(args: argparse.Namespace) -> int:
         baseline = walk_source(baseline_root, limits)
         current = walk_source(current_root, limits)
         source_map = build_report(current, args.parser_timeout)
-        impact = build_change_impact(baseline, current, args.parser_timeout)
+        impact = build_change_impact(baseline, current, args.parser_timeout, current_report=source_map)
         contracts = build_functional_contracts(source_map)
         artifacts = (
             ("source-map.json", json.dumps(source_map, ensure_ascii=False, sort_keys=True, indent=2) + "\n"),

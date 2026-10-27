@@ -1,3 +1,9 @@
+## REA_APP P41 next — actual MVP parser-backed acceptance (2026-10-27 KST)
+
+- P41 removes a redundant current-snapshot `build_report` call from `bundle`: source-map passed to impact as optional keyword argument. Expected 3→2 parser invocations per bundle; actual speed difference **not benchmarked**. Code-change test in isolated stubbed runner 14/14 PASS; exact GitHub full scanner/graph/impact and pinned Node parser **unexecuted**.
+- NEXT FUNCTIONAL GATE: clean authorized `REA_APP` checkout; `npm ci` where approved and reachable; `python -m unittest discover -s tests -v` and `npm run test:parser`; create two read-only synthetic JS/TS folders with an imported exported function, then `python -m rea_app bundle baseline current --output-dir reports`. Verify 6 files, resolved edges/path:line evidence, nonempty independent callable contracts, deterministic repeated outputs, no source-tree writes. Record actual parser calls or timing. No false Gate R PASS.
+- After passing MVP user path, compare product features against `docs/TARGET_BLUEPRINT_V1.md` and implement remaining functionality, then security/reliability/Windows compatibility. Avoid additional speculative hardening-only steps. The isolated host currently lacks pinned Babel 7.29.9; no paid CI or external credentials authorized.
+
 ## REA_APP P40 — next functional acceptance (2026-10-27 KST)
 
 - New `bundle` entry point reduces three manual steps to one: baseline+current JS/TS trees → 6 files (source map, impact, independent functional contracts, both JSON/Markdown). Source and tests Git blob IDs are recorded in P40 STATUS. Mock-driven CLI tests 4/4 PASS, entire locally available isolated suite 13/13 PASS.

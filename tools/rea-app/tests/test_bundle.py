@@ -71,6 +71,17 @@ class BundleCommandTests(unittest.TestCase):
         self.assertEqual(contents, {name: (self.output / name).read_bytes() for name in files})
         self.assertEqual(prior, ((self.baseline / "app.ts").read_bytes(), (self.current / "app.ts").read_bytes()))
 
+    def test_reuses_current_report_instead_of_reparsing_current_tree(self):
+        from contextlib import ExitStack
+        with ExitStack() as stack:
+            mocks = [stack.enter_context(fake) for fake in self.fake_analysis()]
+            self.assertEqual(cli._bundle(self.args), 0)
+            mocks[1].assert_called_once_with("current_scan", self.args.parser_timeout)
+            mocks[2].assert_called_once_with(
+                "baseline_scan", "current_scan", self.args.parser_timeout,
+                current_report=self.source_report,
+            )
+
     def test_rejects_overlapping_snapshots(self):
         self.args.current = self.baseline
         self.assertEqual(self.run_faked(), 2)

@@ -134,9 +134,12 @@ def build_change_impact(
     baseline: ScanResult,
     current: ScanResult,
     parser_timeout: int,
+    *,
+    current_report: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     baseline_report = build_report(baseline, parser_timeout)
-    current_report = build_report(current, parser_timeout)
+    if current_report is None:
+        current_report = build_report(current, parser_timeout)
     named_reports = [("baseline", baseline_report), ("current", current_report)]
     before = _file_index(baseline)
     after = _file_index(current)
