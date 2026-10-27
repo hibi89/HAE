@@ -375,6 +375,21 @@ class ReaAppCliTests(unittest.TestCase):
         self.assertTrue(any(item["path"] == "outside-link.ts" and item["reason"] == "symlink" for item in result.skipped_files))
         self.assertEqual(snapshot(self.source), before)
 
+    def test_windows_reparse_attribute_is_treated_as_link(self) -> None:
+        class ReparsePath:
+            def __init__(self, attributes: int) -> None:
+                self.attributes = attributes
+
+            def is_symlink(self) -> bool:
+                return False
+
+            def lstat(self):
+                return type("StatResult", (), {"st_file_attributes": self.attributes})()
+
+        with patch.object(scanner.os, "name", "nt"):
+            self.assertTrue(scanner._is_link_or_reparse_point(ReparsePath(0x400)))
+            self.assertFalse(scanner._is_link_or_reparse_point(ReparsePath(0)))
+
 
 if __name__ == "__main__":
     unittest.main()
