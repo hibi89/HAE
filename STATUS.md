@@ -1,5 +1,12 @@
 # STATUS — 2026-10-27 KST
 
+## Latest P5 source-backed DBVORA API cross-check — 2026-10-27 KST
+- Ran the actual local DBVORA FastAPI app from pinned `hibi89/DBVORA feature/p0-db-map@31b8257468d28743fb2d3767d1caa56938df756c` against a synthetic SQLite fixture, then called it with the committed AX FLOW client from `feature/dbvora-integration` (client blob `682f7078a0b2b72b314f5c8ac220c602d8c12113`).
+- Live `GET /health` and `GET /api/inventory` returned the `p0-01.v1` schema, columns, PK/FK relationship, and measured size. The row sentinel and source path were absent; synthetic DB SHA-256 and mtime stayed unchanged, and no WAL/SHM appeared. Six DBVORA source-file blob hashes matched the pinned branch revision.
+- One end-to-end API/client check passed on Python 3.11.9. The first harness launch happened before fixture creation; DBVORA correctly failed closed with `FILE_UNAVAILABLE`. Reordering fixture creation before server launch produced a clean exit-code-0 pass. This was a harness-order issue, not a product defect.
+- This recheck strengthens the synthetic API evidence; it does not certify customer data, installer, security, or release readiness. Overall status remains PARTIAL.
+
+
 ## Verified by GitHub at start of bootstrap
 - Repository `hibi89/AX_FLOW`: **Private** (renamed from user-created REA_APP), default branch `main`, read/write admin available.
 - Initial state was **empty repository**, zero branches, zero product code. Bootstrap README initialized main commit `8d528821097fcf6b983e52d9de804613cd8d8c3d`.
@@ -9,10 +16,10 @@
 | Component | State | Evidence |
 | --- | --- | --- |
 | REA_APP static source analyzer | MVP_VERIFIED (BOUNDED SYNTHETIC JS/TS) | `REA_APP@80e8d7aad99c1c40d503848ed620421837b79477`; 10 Python + Node parser tests |
-| AX FLOW local runtime | P5_SYNTHETIC_DBVORA_E2E_VERIFIED (NOT CUSTOMER READY) | `feature/dbvora-integration@54b4c9336dc9a0dee0cd0418364b89fc1f34dc59`; Windows Python 3.11 full suite 42/42 PASS; actual synthetic UI→DBVORA API smoke passes |
+| AX FLOW local runtime | P5_SYNTHETIC_DBVORA_E2E_VERIFIED (NOT CUSTOMER READY) | `feature/dbvora-integration@54b4c9336dc9a0dee0cd0418364b89fc1f34dc59`; Windows Python 3.11 full suite 42/42 PASS; actual synthetic UI→DBVORA API smoke passes; pinned-source HTTP/client recheck also passes with row/path redaction and unchanged DB hash/mtime |
 | Natural-language planner and file input | PARTIAL | bounded deterministic Korean/English parser, CSV→SQLite template, localhost UI; one workflow family only |
 | OAuth, Gmail/Sheets connectors | NOT_STARTED | no account credentials, no auth test |
-| DBVORA integration | P5_SYNTHETIC_READ_ONLY_VERIFIED | selected-file `p0-01.v1` API over loopback; tables/columns/PK/FK/size displayed; customer DB and packaged service deployment unverified |
+| DBVORA integration | P5_SYNTHETIC_READ_ONLY_VERIFIED | selected-file `p0-01.v1` API over loopback; tables/columns/PK/FK/size displayed; pinned upstream API source cross-checked; customer DB and packaged service deployment unverified |
 | Recovery, resilience and performance | PARTIAL | handled failure status, resume/idempotent SQLite replay and threaded claims tested; hard-kill recovery and multi-process stress unverified |
 | Windows install, customer tests, security assessment | NOT_STARTED | no releases |
 | Vercel/Production | NOT_APPLICABLE | local-first product, no hosted service |
