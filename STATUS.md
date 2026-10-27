@@ -1,3 +1,10 @@
+## P37 — FIFO race fix with byte-pinned focused suite (2026-10-27 KST)
+
+- **IMPLEMENTED:** `rea_app/scanner.py` uses `O_NONBLOCK` where available to avoid blocking on FIFO swapped after `stat()`, retains existing no-follow, `fstat`, inode and snapshot guards. Tests added to `test_scan_open_races.py`; source commits scanner `6f44fba8dab2e14b8f50b4bc9309d3112d23e2ff`, test `1e5fc9bec55a53788cc9d3a68cf696666026313e`.
+- **TESTED:** Before fix, exact GitHub-byte-matched scanner under synthetic FIFO replacement yielded **3 pass / 1 timeout error** (3s child). After fix, exact local copies of scanner `ac3b5960378924c29e24c87cc58b67c315818c8a` and race test `59aa669caadcbb31fc5a96629002196728c31a80`: race suite 4/4 PASS, extended scanner regression (auth exclusion, snapshot stability, race) **11/11 PASS**, 0 fail/skip, Linux/Python 3.13.5. Other 2 test files' Git blobs also verified byte-equal. Detailed reproduction `tools/rea-app/P37_FIFO_SWAP_GUARD.md`.
+- **REMOTE VERIFIED:** `verify_gate_r.py` blob `8482322aef918c22787062aac5d4ca8549a20ea9` pins new scanner and test; `run_gate_r_evidence.py` blob `51b4c8b6de26d4720911a766aeb5962649ecafe2` pins verifier. Remote Git tree 16/16 exact manifest, no unreviewed executable files. **Gate R PARTIAL:** complete Python graph/CLI/impact and genuine installed Babel parser (not installed on isolated runner) **NOT RUN**; Windows not tested, Vercel N/A. No secrets/customer/n8n/paid CI used.
+- Next authorized complete clean source checkout + `python run_gate_r_evidence.py`, track full test exits/versions/OS; GitHub issue #1 tracks residual platform acceptance. No change to Lightning Azent/HAE source.
+
 ## P36 — Remote Gate R source audit and FIFO stall finding (2026-10-27 17:50 KST)
 
 - Current remote `REA_APP@e3263980e874b7d3b8a5378851d50738dc526d6a`: **16/16 reviewed source Git blob SHA matched**, zero unreviewed executable modules in analyzer/test directories. Since P35 code commit `71e75e5`, changed files were only `HANDOFF.md`, `STATUS.md`, `docs/NEXT_TASK.md`. Latest HEAD author and committer both mapped to `hibi89`; no GitHub combined status entries or PR workflow runs.
