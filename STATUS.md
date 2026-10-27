@@ -1,3 +1,8 @@
+## FINAL PRODUCT BRAND — HAE (Humanized Automation Ecosystem), 2026-10-27 KST
+- Owner-confirmed **HAE** supersedes **AX FLOW** as customer-facing final product name. REA_APP → Lightning Azent → HAE remains the development sequence. DBVORA is separately integrated.
+- Updated main + active feature README, REQUIREMENTS, ARCHITECTURE, TARGET_BLUEPRINT, app README and decision/agent instructions; active feature local HTML/JS now displays HAE. Internal legacy `hibi89/AX_FLOW`, `apps/ax-flow/`, Python `axflow`, IR `axflow.ir.v0`, branch names unchanged for compatibility.
+- This is **brand-only**: no workflow/IR/API/CLI migration, no product release, no test PASS asserted. Existing historical feature/test evidence and pending full suite gates are unchanged. No paid services, customer data or external tokens accessed.
+
 ## Architecture reset — Lightning Azent name and sequential implementation (2026-10-27 KST)
 - Owner selected **Lightning Azent**: Azent conveys "A to Z"; it is the new separately versioned **independently written engine**, not AX FLOW's GUI or REA_APP's analyzer. No brand/trademark availability review completed.
 - Adopted strict sequence **REA_APP reproducible evidence → lawful n8n functional contract review → Lightning Azent independent engine with migrated/proven current runner code → AX FLOW UI/AI/DBVORA consumer integration**, detailed in `docs/LIGHTNING_AZENT_MASTER_PLAN.md`; architectural decisions ADR-010..012.
