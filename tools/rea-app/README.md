@@ -88,3 +88,10 @@ The Windows host used for the current verification denied junction creation
 (`Access denied`). The reparse-attribute branch is unit-tested with synthetic
 file attributes, but an actual filesystem junction fixture remains unverified.
 
+## File-identity guard (P23)
+
+A race between resolving/stat-ing an input and actually opening it could otherwise read a replaced file. The scanner now uses `O_NOFOLLOW` for the final input path component when the OS supports it, and compares the opened descriptor's device/inode with the earlier stat before accepting bytes. A path that changes identity is skipped with `file_identity_changed`; an open-time link refusal is reported as unreadable. Two synthetic regression cases are committed under `tests/test_scan_open_races.py` (replacement of a regular file; POSIX final-component symlink swap). The earlier normal-path scan behavior is unchanged.
+
+**Limit:** This is a bounded final-component/identity guard, not a guarantee against all ancestor-directory replacement races or hostile concurrent filesystem changes. Windows junction tests still require a permitted Windows host. Use only explicitly authorized, suitably trusted source snapshots.
+
+**Verification state:** Prior exact remote source (`ff7997f2...`) passed Python 15/15 and Node parser tests on Windows; the later `96d1ced...` revision only changed handoff/status/next-task docs. This P23 code + its two new tests were committed through the GitHub connector but **the current REA_APP branch full suite has not been run**. A standalone local POSIX file-open behavior reproduction checked identity mismatch and `O_NOFOLLOW` outcomes (2/2 PASS), which is not equivalent to running `tests/test_scan_open_races.py` or the complete package.
