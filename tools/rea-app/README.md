@@ -59,6 +59,13 @@ and return type annotations. It includes names, optional/rest/default-presence
 flags, and definition/export line evidence. It never records default values or
 function bodies, and it does not infer types or describe function behavior.
 
+For JS/TS, the report also recognizes direct path arguments to a bounded set of
+Node `fs` read/write/list/delete APIs. It records safe relative string literals
+with source-line evidence. Dynamic paths are marked without values, while
+absolute, parent-relative, sensitive and unusual literals are redacted;
+shadowed or reassigned bindings are omitted. Relative paths are not resolved
+against the process working directory, and no file operation is executed.
+
 ## Verification
 
 From `tools/rea-app` run:
@@ -74,7 +81,8 @@ alias/external resolution, cyclic imports, entry points, syntax errors, binary a
 secret exclusions, symlink handling where the host allows symlink creation,
 Windows reparse-attribute detection, empty repositories, scan caps, missing-parser
 behavior, local value-flow evidence, ambiguous/reassigned binding exclusions,
-exported callable signatures and source-tree integrity.
+static Node fs path evidence/redaction, exported callable signatures and
+source-tree integrity.
 
 The Windows host used for the current verification denied junction creation
 (`Access denied`). The reparse-attribute branch is unit-tested with synthetic

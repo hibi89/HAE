@@ -37,6 +37,62 @@ function namesFromPattern(pattern, importedName) {
   return [];
 }
 
+function bindingNames(pattern, names = []) {
+  if (!pattern) return names;
+  if (pattern.type === 'Identifier') names.push(pattern.name);
+  else if (pattern.type === 'RestElement') bindingNames(pattern.argument, names);
+  else if (pattern.type === 'AssignmentPattern') bindingNames(pattern.left, names);
+  else if (pattern.type === 'TSParameterProperty') bindingNames(pattern.parameter, names);
+  else if (pattern.type === 'ObjectPattern') {
+    for (const property of pattern.properties) {
+      if (property.type === 'RestElement') bindingNames(property.argument, names);
+      else bindingNames(property.value, names);
+    }
+  } else if (pattern.type === 'ArrayPattern') {
+    for (const element of pattern.elements) bindingNames(element, names);
+  }
+  return names;
+}
+
+function collectFileAccessConflicts(root) {
+  const conflicts = new Set();
+  function walk(node) {
+    if (!node || typeof node.type !== 'string') return;
+    if (node.type === 'VariableDeclarator') {
+      const isRequire = node.init && node.init.type === 'CallExpression' &&
+        node.init.callee && node.init.callee.type === 'Identifier' && node.init.callee.name === 'require';
+      if (!isRequire) for (const name of bindingNames(node.id)) conflicts.add(name);
+    } else if (FUNCTION_TYPES.has(node.type)) {
+      for (const parameter of node.params || []) {
+        for (const name of bindingNames(parameter)) conflicts.add(name);
+      }
+      if (node.id && node.id.name) conflicts.add(node.id.name);
+    } else if ((node.type === 'ClassDeclaration' || node.type === 'ClassExpression') && node.id) {
+      conflicts.add(node.id.name);
+    } else if (node.type === 'CatchClause' && node.param) {
+      for (const name of bindingNames(node.param)) conflicts.add(name);
+    }
+
+    if (node.type === 'AssignmentExpression' && node.left && node.left.type === 'Identifier') {
+      conflicts.add(node.left.name);
+    } else if (node.type === 'UpdateExpression' && node.argument && node.argument.type === 'Identifier') {
+      conflicts.add(node.argument.name);
+    }
+
+    for (const key of Object.keys(node)) {
+      if (["loc", "start", "end", "extra", "comments", "tokens", "errors", "leadingComments", "trailingComments", "innerComments"].includes(key)) continue;
+      const value = node[key];
+      if (Array.isArray(value)) {
+        for (const child of value) if (child && typeof child.type === 'string') walk(child);
+      } else if (value && typeof value.type === 'string') {
+        walk(value);
+      }
+    }
+  }
+  walk(root);
+  return conflicts;
+}
+
 function configValue(node) {
   if (!node) return undefined;
   if (node.type === 'StringLiteral' || node.type === 'BooleanLiteral' || node.type === 'NumericLiteral') return node.value;
@@ -56,6 +112,107 @@ function configValue(node) {
 
 function sourceString(node) {
   return node && node.type === 'StringLiteral' ? node.value : null;
+}
+
+const FILE_ACCESS_OPERATIONS = new Map([
+  ['readFile', 'read'], ['readFileSync', 'read'],
+  ['createReadStream', 'read_stream'],
+  ['writeFile', 'write'], ['writeFileSync', 'write'],
+  ['createWriteStream', 'write_stream'],
+  ['appendFile', 'append'], ['appendFileSync', 'append'],
+  ['unlink', 'delete'], ['unlinkSync', 'delete'],
+  ['rm', 'delete'], ['rmSync', 'delete'],
+  ['mkdir', 'create_directory'], ['mkdirSync', 'create_directory'],
+  ['readdir', 'list_directory'], ['readdirSync', 'list_directory'],
+]);
+
+function fileSystemBinding(localName, bindings, edges, conflicts) {
+  if (conflicts.has(localName)) return null;
+  const matches = bindings.filter((binding) => binding.local === localName);
+  if (matches.length !== 1) return null;
+  const binding = matches[0];
+  if (binding.kind === 'type_import') return null;
+  const edge = edges[binding.edge_index];
+  const specifier = edge && edge.specifier;
+  if (!['fs', 'node:fs', 'fs/promises', 'node:fs/promises'].includes(specifier)) return null;
+  return {
+    module: specifier.endsWith('fs/promises') ? 'fs/promises' : 'fs',
+    imported: binding.imported,
+    namespace: ['*', 'default'].includes(binding.imported),
+  };
+}
+
+function fileSystemModuleObject(node, bindings, edges, conflicts) {
+  if (!node) return null;
+  if (node.type === 'Identifier') return fileSystemBinding(node.name, bindings, edges, conflicts);
+  if (
+    node.type === 'CallExpression' && node.callee && node.callee.type === 'Identifier' &&
+    node.callee.name === 'require' && node.arguments.length && node.arguments[0].type === 'StringLiteral'
+  ) {
+    const specifier = sourceString(node.arguments[0]);
+    if (!['fs', 'node:fs', 'fs/promises', 'node:fs/promises'].includes(specifier)) return null;
+    return {
+      module: specifier.endsWith('fs/promises') ? 'fs/promises' : 'fs',
+      imported: '*',
+      namespace: true,
+    };
+  }
+  return null;
+}
+
+function fileAccessOperation(callee, bindings, edges, conflicts) {
+  if (!callee) return null;
+  if (callee.type === 'Identifier') {
+    const binding = fileSystemBinding(callee.name, bindings, edges, conflicts);
+    if (!binding || binding.namespace) return null;
+    return FILE_ACCESS_OPERATIONS.get(binding.imported) || null;
+  }
+  if (callee.type !== 'MemberExpression') return null;
+  const method = nodeName(callee.property);
+  const operation = FILE_ACCESS_OPERATIONS.get(method);
+  if (!operation) return null;
+
+  let moduleObject = fileSystemModuleObject(callee.object, bindings, edges, conflicts);
+  if (callee.object && callee.object.type === 'MemberExpression' && nodeName(callee.object.property) === 'promises') {
+    moduleObject = fileSystemModuleObject(callee.object.object, bindings, edges, conflicts);
+    if (!moduleObject || moduleObject.module !== 'fs' || !moduleObject.namespace) return null;
+    return operation;
+  }
+  if (!moduleObject) return null;
+  if (moduleObject.module === 'fs/promises' && moduleObject.namespace) return operation;
+  if (moduleObject.module === 'fs' && (moduleObject.namespace || moduleObject.imported === 'promises')) return operation;
+  return null;
+}
+
+function filePathArgument(argument) {
+  if (!argument || argument.type !== 'StringLiteral') return { path: null, path_kind: 'dynamic' };
+  const raw = sourceString(argument);
+  if (!raw || /[\u0000-\u001f\u007f]/.test(raw)) return { path: null, path_kind: 'unsafe_literal' };
+  const normalized = raw.replace(/\\/g, '/');
+  if (normalized.startsWith('/') || /^[A-Za-z]:($|\/)/.test(normalized) || /^[A-Za-z][A-Za-z0-9+.-]*:\/\//.test(normalized)) {
+    return { path: null, path_kind: 'absolute_or_nonlocal_redacted' };
+  }
+  const segments = normalized.split('/').filter((segment) => segment && segment !== '.');
+  const reduced = [];
+  for (const segment of segments) {
+    if (segment === '..') {
+      if (!reduced.length) return { path: null, path_kind: 'parent_relative_redacted' };
+      reduced.pop();
+      continue;
+    }
+    const lowered = segment.toLowerCase();
+    if (
+      lowered === '.env' || lowered.startsWith('.env.') ||
+      ['.pem', '.key', '.p12', '.pfx', '.keystore'].some((extension) => lowered.endsWith(extension)) ||
+      ['secret', 'credential', 'private_key', 'token', 'password', 'api_key'].some((name) => lowered.includes(name))
+    ) {
+      return { path: null, path_kind: 'sensitive_path_redacted' };
+    }
+    reduced.push(segment);
+  }
+  const path = reduced.join('/') || '.';
+  if (!/^[\p{L}\p{N} _./-]+$/u.test(path)) return { path: null, path_kind: 'unsafe_literal' };
+  return { path, path_kind: 'relative_literal' };
 }
 
 function collectDeclarationExports(declaration, out) {
@@ -175,6 +332,7 @@ function parseSource(file) {
   const bindings = [];
   const exports = [];
   const calls = [];
+  const fileAccesses = [];
   const valueFlows = [];
   const functionNodes = [];
   let ast;
@@ -194,10 +352,13 @@ function parseSource(file) {
       bindings,
       exports,
       calls,
+      file_accesses: fileAccesses,
       value_flows: valueFlows,
       function_contracts: [],
     };
   }
+
+  const fileAccessConflicts = collectFileAccessConflicts(ast.program);
 
   function addEdge(kind, specifier, node, importBindings = []) {
     if (typeof specifier !== 'string') return;
@@ -272,6 +433,17 @@ function parseSource(file) {
         caller,
         line: lineOf(node),
       });
+      const operation = fileAccessOperation(callee, bindings, edges, fileAccessConflicts);
+      if (operation) {
+        const pathInfo = filePathArgument(node.arguments[0]);
+        fileAccesses.push({
+          operation,
+          path: pathInfo.path,
+          path_kind: pathInfo.path_kind,
+          argument_index: 0,
+          line: lineOf(node),
+        });
+      }
     } else if (node.type === 'ImportExpression' && node.source && node.source.type === 'StringLiteral') {
       addEdge('dynamic_import', sourceString(node.source), node);
     } else if (node.type === 'TSImportType' && node.argument && node.argument.type === 'TSLiteralType') {
@@ -478,7 +650,17 @@ function parseSource(file) {
     line: error.loc && error.loc.line ? error.loc.line : 1,
     message: error.message,
   }));
-  return { path: file.path, parse_errors: parseErrors, edges, bindings, exports, calls, value_flows: valueFlows, function_contracts: functionContracts };
+  return {
+    path: file.path,
+    parse_errors: parseErrors,
+    edges,
+    bindings,
+    exports,
+    calls,
+    file_accesses: fileAccesses,
+    value_flows: valueFlows,
+    function_contracts: functionContracts,
+  };
 }
 
 function parseTsConfig(file) {
@@ -516,3 +698,4 @@ try {
   process.stderr.write(`REA_APP parser failed: ${error && error.message ? error.message : String(error)}\n`);
   process.exitCode = 2;
 }
+

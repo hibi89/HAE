@@ -394,6 +394,66 @@ class ReaAppCliTests(unittest.TestCase):
         self.assertEqual(markdown_path.read_bytes(), first_markdown)
         self.assertEqual(snapshot(self.source), before)
 
+    def test_static_file_access_paths_include_evidence_and_redact_sensitive_values(self) -> None:
+        self.write(
+            "src/storage.ts",
+            'import * as fs from "node:fs";\n'
+            'import { readFileSync as read } from "fs";\n'
+            'import { promises as p } from "node:fs";\n'
+            'const fsCompat = require("node:fs");\n'
+            'const { readFileSync: readCompat } = require("fs");\n'
+            'const input = fs.readFileSync("./fixtures/input.csv");\n'
+            'const config = read("./data/report.json");\n'
+            'const archived = p.readFile("./archive.csv");\n'
+            'fsCompat.readFileSync("./compat-namespace.csv");\n'
+            'readCompat("./compat-named.csv");\n'
+            'fs.writeFileSync("../outside/result.csv", input);\n'
+            'fs.writeFileSync("C:/Users/haein/private.txt", input);\n'
+            'fs.writeFileSync("./secrets/api_token.txt", input);\n'
+            'fs.readFileSync(process.env.INPUT);\n',
+        )
+        self.write(
+            "src/shadow.ts",
+            'import * as fs from "node:fs";\n'
+            'function shadow(fs: unknown) { fs.readFileSync("./shadowed.csv"); }\n',
+        )
+        self.write(
+            "src/reassigned.ts",
+            'import * as fs from "node:fs";\n'
+            'function reassign() { let fs = require("node:fs"); fs = require("node:path"); fs.readFileSync("./reassigned.csv"); }\n',
+        )
+        before = snapshot(self.source)
+        result = self.run_scan()
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        report_bytes = (self.output / "source-map.json").read_bytes()
+        report_text = report_bytes.decode("utf-8")
+        report = json.loads(report_bytes)
+        accesses = report["file_accesses"]
+        self.assertEqual(report["summary"]["file_accesses"], 9, accesses)
+        relative = [item for item in accesses if item["path_kind"] == "relative_literal"]
+        self.assertEqual(
+            [(item["operation"], item["path"]) for item in relative],
+            [
+                ("read", "fixtures/input.csv"),
+                ("read", "data/report.json"),
+                ("read", "archive.csv"),
+                ("read", "compat-namespace.csv"),
+                ("read", "compat-named.csv"),
+            ],
+        )
+        self.assertEqual(
+            {item["path_kind"] for item in accesses if item["path"] is None},
+            {"parent_relative_redacted", "absolute_or_nonlocal_redacted", "sensitive_path_redacted", "dynamic"},
+        )
+        first = next(item for item in accesses if item["path"] == "fixtures/input.csv")
+        self.assertEqual(first["evidence"], {"path": "src/storage.ts", "line": 6, "argument_index": 0})
+        self.assertNotIn("C:/Users/haein/private.txt", report_text)
+        self.assertNotIn("api_token.txt", report_text)
+        self.assertNotIn("shadowed.csv", report_text)
+        self.assertNotIn("reassigned.csv", report_text)
+        self.assertIn("Static file-access observations", (self.output / "source-map.md").read_text(encoding="utf-8"))
+        self.assertEqual(snapshot(self.source), before)
+
     def test_exported_function_contracts_include_only_explicit_syntax_and_evidence(self) -> None:
         self.write(
             "src/contracts.ts",

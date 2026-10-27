@@ -286,6 +286,7 @@ def build_report(scan: ScanResult, parser_timeout: int) -> dict[str, Any]:
     exports: list[dict[str, Any]] = []
     function_contracts: list[dict[str, Any]] = []
     calls: list[dict[str, Any]] = []
+    file_accesses: list[dict[str, Any]] = []
     resolved_call_edges: list[dict[str, Any]] = []
     value_flow_edges: list[dict[str, Any]] = []
     resolved_edges_by_file: dict[str, dict[int, dict[str, Any]]] = {}
@@ -293,7 +294,7 @@ def build_report(scan: ScanResult, parser_timeout: int) -> dict[str, Any]:
     parser_files = {item["path"]: item for item in parsed.get("files", [])}
 
     for path in sorted(source_paths):
-        parse_result = parser_files.get(path, {"parse_errors": [], "edges": [], "exports": [], "calls": [], "value_flows": [], "function_contracts": []})
+        parse_result = parser_files.get(path, {"parse_errors": [], "edges": [], "exports": [], "calls": [], "file_accesses": [], "value_flows": [], "function_contracts": []})
         for error in parse_result.get("parse_errors", []):
             parse_error_count += 1
             diagnostics.append({"path": path, "line": error.get("line", 1), "kind": "syntax_error", "message": error.get("message", "syntax could not be parsed")})
@@ -333,6 +334,17 @@ def build_report(scan: ScanResult, parser_timeout: int) -> dict[str, Any]:
                 "caller": item.get("caller", "<module>"),
                 "evidence": {"path": path, "line": item["line"]},
                 "resolution": "syntactic_reference",
+            })
+        for item in parse_result.get("file_accesses", []):
+            file_accesses.append({
+                "operation": item["operation"],
+                "path": item.get("path"),
+                "path_kind": item["path_kind"],
+                "evidence": {
+                    "path": path,
+                    "line": item["line"],
+                    "argument_index": item["argument_index"],
+                },
             })
         value_flow_edges.extend(parse_result.get("value_flows", []))
 
@@ -392,6 +404,10 @@ def build_report(scan: ScanResult, parser_timeout: int) -> dict[str, Any]:
         item["evidence"]["definition"]["path"], item["evidence"]["definition"]["line"], item["exported_as"],
     ))
     calls.sort(key=lambda item: (item["path"], item["evidence"]["line"], item["callee"]))
+    file_accesses.sort(key=lambda item: (
+        item["evidence"]["path"], item["evidence"]["line"], item["operation"],
+        item["path_kind"], item["path"] or "",
+    ))
     resolved_call_edges.sort(key=lambda item: (item["from_path"], item["evidence"]["call_site"]["line"], item["to_path"], item["target_symbol"]))
     value_flow_edges.sort(key=lambda item: (
         item["evidence"].get("source_use", item["evidence"].get("producer", item["evidence"].get("target_binding", {}))).get("line", 0),
@@ -427,6 +443,7 @@ def build_report(scan: ScanResult, parser_timeout: int) -> dict[str, Any]:
             "internal_edges": sum(edge["resolution"] in {"internal", "internal_alias"} for edge in dependency_edges),
             "external_edges": sum(edge["resolution"] == "external" for edge in dependency_edges),
             "exports": len(exports), "call_sites": len(calls), "syntax_errors": parse_error_count,
+            "file_accesses": len(file_accesses),
             "function_contracts": len(function_contracts),
             "resolved_call_edges": len(resolved_call_edges),
             "value_flow_edges": len(value_flow_edges),
@@ -438,6 +455,7 @@ def build_report(scan: ScanResult, parser_timeout: int) -> dict[str, Any]:
         "exports": exports,
         "function_contracts": function_contracts,
         "calls": calls,
+        "file_accesses": file_accesses,
         "resolved_call_edges": resolved_call_edges,
         "value_flow_edges": value_flow_edges,
         "skipped_files": scan.skipped_files,
@@ -449,6 +467,7 @@ def build_report(scan: ScanResult, parser_timeout: int) -> dict[str, Any]:
             "call_resolution": "direct imported calls with a unique in-root module edge and matching export are linked; other calls remain syntactic references",
             "data_flow": "same-scope simple identifier aliases, call results, direct call arguments and returns; duplicate or reassigned bindings are omitted; control flow and cross-module value flow are not analyzed",
             "function_contracts": "exported callable signatures from explicit parameter and return type syntax; inferred types, defaults, function behavior and class methods are not included",
+            "file_paths": "direct string-literal arguments to recognized Node fs APIs; shadowed/reassigned bindings and dynamic, absolute, escaping, sensitive or unsupported path expressions are omitted or redacted; runtime working directory is not inferred",
         },
     }
 
@@ -466,6 +485,7 @@ def render_markdown(report: dict[str, Any]) -> str:
         f"- Exports: {summary['exports']}; syntactic call sites: {summary['call_sites']}",
         f"- Exported function signatures: {summary['function_contracts']}",
         f"- Statically linked imported calls: {summary['resolved_call_edges']}",
+        f"- Static file-access observations: {summary['file_accesses']}",
         f"- Local value-flow observations: {summary['value_flow_edges']}",
         f"- Parse errors: {summary['syntax_errors']}; skipped paths: {summary['skipped_paths']}", "",
         "## Coverage and limits", "",
@@ -474,6 +494,7 @@ def render_markdown(report: dict[str, Any]) -> str:
         f"- Calls: {report['coverage']['call_resolution']}.",
         f"- Value/data flow: {report['coverage']['data_flow']}.",
         f"- Exported function signatures: {report['coverage']['function_contracts']}.",
+        f"- File paths: {report['coverage']['file_paths']}.",
         f"- File cap: {report['limits']['max_files']}; per-file cap: {report['limits']['max_file_bytes']} bytes; total cap: {report['limits']['max_total_bytes']} bytes.", "",
         "## Packages", "",
     ]
@@ -538,6 +559,16 @@ def render_markdown(report: dict[str, Any]) -> str:
     if not report["value_flow_edges"]:
         lines.append("No direct local identifier flows met the supported binding checks.")
     lines.append("These are syntactic observations; control-flow conditions, reassignment, cross-module value flow, and runtime values are not inferred.")
+    lines.extend(["", "## Static file-access observations", ""])
+    for item in report["file_accesses"]:
+        path = f"{item['path_kind']} `{item['path']}`" if item["path"] is not None else item["path_kind"]
+        lines.append(
+            f"- `{item['evidence']['path']}:{item['evidence']['line']}` — "
+            f"{item['operation']} path argument ({path}; argument {item['evidence']['argument_index'] + 1})."
+        )
+    if not report["file_accesses"]:
+        lines.append("No supported static Node fs path arguments were observed.")
+    lines.append("Relative literals are not resolved against a runtime working directory; dynamic and sensitive paths are not exposed.")
     lines.extend(["", "## Exported function contracts", ""])
     if report["function_contracts"]:
         for item in report["function_contracts"]:
@@ -582,3 +613,4 @@ def render_markdown(report: dict[str, Any]) -> str:
     if not report["diagnostics"] and not report["skipped_files"]:
         lines.append("No diagnostics or exclusions.")
     return "\n".join(lines) + "\n"
+
