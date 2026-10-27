@@ -1,3 +1,10 @@
+## Lightning Azent P7 — next full-code validation gate (2026-10-28 KST)
+
+- **Current code:** P6 scheduler implementation source blob `358624dad5d12311333d40154fe4351c236f63f0`; P7 test `898ccfb0abe99aa40be09186ff6e0be49986e0de` is exact-hash matched to isolated local execution. Source-pinned scheduler lock tests **2/2 PASS** Linux/Python 3.13 with stub Engine, including a second OS process and abrupt exit.
+- **Test count:** 30 Python definitions (7 MVP, 6 CLI, 9 native, 6 resume, 2 lock); **entire LA suite not run** from authenticated checkout. Original HAE and native Windows remain **UNVERIFIED**.
+- **Next authoritative run:** On a clean checkout of latest `feature/lightning-azent`, run `python -m compileall -q packages/lightning-azent`, then `PYTHONPATH=packages/lightning-azent python -m unittest discover -s packages/lightning-azent/tests -v`; on Windows PowerShell set `$env:PYTHONPATH='packages/lightning-azent'`. Record exact SHA/OS/interpreter/PASS/FAIL/SKIP, independent process lock and abort/resume receipts.
+- **Remaining gates:** Three real local synthetic workflows, DB file noncreation on denied paths, old `apps/ax-flow/tests` parity, fresh wheel installation and CLI smoke; then minimal HAE consumer adapter/version handshake. Do not introduce paid CI or real external data/credentials without approval.
+
 ## Lightning Azent P6 verification gate (2026-10-28 KST)
 
 1. **New source:** per-schedule OS lock in `scheduler.py`; `test_scheduler_lock.py` added. 29 LA test definitions now. Exact scheduler original/patch SHA and focused source-pinned Linux mock-engine check documented in STATUS/HANDOFF.
