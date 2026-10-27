@@ -24,7 +24,13 @@ class SensitiveScanExclusionTests(unittest.TestCase):
             source.write_text("export const safe = true;\n", encoding="utf-8")
             source_hash = hashlib.sha256(source.read_bytes()).digest()
             secret_paths = []
-            for name in sorted(PRIVATE_FILES | {".env", ".env.production", "my_private_key.txt"}):
+            required = {
+                ".npmrc", ".pypirc", ".netrc", ".git-credentials", ".envrc",
+                ".bash_history", ".zsh_history", "terraform.tfstate",
+                "terraform.tfstate.backup", ".env", ".env.production", "my_private_key.txt",
+            }
+            self.assertTrue(required - {".env", ".env.production", "my_private_key.txt"} <= PRIVATE_FILES)
+            for name in sorted(required):
                 secret = root / name
                 secret.write_text("secret-material-never-open\n", encoding="utf-8")
                 secret_paths.append(secret)
