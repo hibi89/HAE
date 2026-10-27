@@ -40,6 +40,15 @@ Python dependencies, dynamic resolution or external package internals. Skipped
 paths and scan coverage are called out so excluded or capped files are not
 treated as compared.
 
+The walker also excludes authentication dotfiles (`.npmrc`, `.pypirc`, `.netrc`,
+`.git-credentials`, `.envrc`), shell history, Terraform state files, and
+credential directories (`.ssh`, `.aws`, `.azure`, `.docker`, `.kube`, `.gnupg`,
+`secrets`, `credentials`) before opening them. These are intentionally not
+indexed. This is a denylist defense for supported stable source snapshots,
+not a guarantee that arbitrary unknown secrets or live attacker-writable
+folder swaps cannot be read. The added P24 tests are committed but require
+full repo regression in an authorized checkout.
+
 The walker skips common generated/dependency directories, secret-named files,
 symlinks, binaries, non-UTF-8 source and oversized individual files. Package
 boundaries, declared dependencies, package entry points, JS/TS imports/re-exports,
