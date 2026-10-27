@@ -1,3 +1,7 @@
+## P28 focused regression, 2026-10-27
+
+Python 3.13.5 on Linux executed 11 tests against five GitHub-byte-matched source and test files: 11 passed, 0 failed, 0 skipped. Covers scanner race safety, sensitive-file exclusions, and verifier self-tests. See `tools/rea-app/P28_FOCUSED_REGRESSION.md` for exact blob SHAs and commands. Full REA_APP graph/CLI and genuine Babel parser tests remain unrun; Gate R stays PARTIAL.
+
 ## REA_APP P27 — Babel installed-version verification (2026-10-27 KST)
 - Implemented exact installed `@babel/parser@7.29.9` verification before Node test in offline `verify_gate_r.py`, rejecting uninstalled/mismatched dependency. Prior lockfile alone did not prove installed version.
 - GitHub code `c60df0fc11f54f65e7b7da2e08590de7b5081737` blob `309510bd01aa01dc8ee6b2defb5498aebc67b0e1`; two tests added in `test_verify_gate_r.py` `3a1a023533a7c070c35be5abbf06bc185a87471b` blob `c8db5c2957cc365d6e3c4c6cfcc70d5f1351d7fc`. Local tested copies byte-identical to GitHub blobs, 14-file manifest updated.
