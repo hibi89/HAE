@@ -1,3 +1,11 @@
+## Lightning Azent P3 — manual resume and preflight plan pin (2026-10-28 KST)
+
+- **ACTUAL CHANGE:** LA CLI now accepts `resume` for an existing, synthetic manual run, using `LAExecutor.resume` instead of initializing the SQLite engine first. Existing `run`, `schedule`, `status`, `validate` interfaces remain unchanged.
+- **SIDE-EFFECT GATE:** Resume verifies persisted run presence and SHA-256 of the **normalized plan** using a read-only ledger before the engine opens SQLite; the underlying Engine also rechecks the hash transactionally. Unknown run, invalid run id, unsupported trigger, missing write authorization, and plan mismatch must fail closed; no promise of external exactly-once delivery.
+- **TEST DEFINITIONS:** Added `tests/test_resume.py` with 5 acceptance definitions: unknown run no DB, native CLI completed replay, changed-plan rejection, injected crash recovery without duplicate business writes, and mismatch without recreating removed synthetic business DB. LA suite now **26 authored tests (7 + 5 + 9 + 5), zero executed on this commit**. Full source checkout, offline parity fixtures, Windows packaging and original HAE regression remain **UNVERIFIED**.
+- **SOURCE:** Private `hibi89/HAE` branch `feature/lightning-azent`. New code/test commits `7357c7c`, `bc5c5bd`, `a60cb22`, `797039c`, `9480a9a`; check final HEAD after this document update. Existing HAE/REA_APP customer sources, real data, credentials and deployment untouched.
+- **NEXT EXECUTABLE GATE:** Run `PYTHONPATH=packages/lightning-azent python -m unittest discover -s packages/lightning-azent/tests -v` on an authorized checkout, then original `apps/ax-flow/tests`, native/legacy CLI fixture parity, fresh wheel smoke. Address measured failures before HAE adapter; no paid CI or externally exposed service.
+
 ## Lightning Azent P2 — native interface, CLI and wheel metadata staged (2026-10-28 KST)
 
 - **FUNCTIONAL:** Added `packages/lightning-azent/lightning_azent/contract.py` with strict `azent.ir.v0` plus allowed legacy `axflow.ir.v0` negotiation; original input is copied, unknown versions/unsupported nodes rejected through the strict existing validator. Same v0 deterministic core semantics; no claim of n8n parity or general independent implementation architecture.
