@@ -11,7 +11,7 @@ from pathlib import Path
 
 SOURCE = Path(__file__).resolve().parents[1] / "run_gate_r_evidence.py"
 PASS_TEXT = (
-    "SOURCE VERIFIED: 15/15 Git blobs match reviewed baseline\n"
+    "SOURCE VERIFIED: 16/16 Git blobs match reviewed baseline\n"
     "PYTHON_ALL: PASS (exit 0)\n"
     "DEPENDENCY VERIFIED: @babel/parser@7.29.9\n"
     "NODE_PARSER: PASS (exit 0)\n"
@@ -49,9 +49,9 @@ class TestEvidenceRunner(unittest.TestCase):
         data = verifier_script.encode("utf-8")
         (self.repo / "verify_gate_r.py").write_bytes(data)
         original = SOURCE.read_text(encoding="utf-8")
-        self.assertIn('EXPECTED_VERIFIER_BLOB = "396654c47b25cfbc0279b4dcdc2f8872c7e20891"', original)
+        self.assertIn('EXPECTED_VERIFIER_BLOB = "65f9534fd0669e545aa3acf0b78781ccb324f2d8"', original)
         custom = original.replace(
-            'EXPECTED_VERIFIER_BLOB = "396654c47b25cfbc0279b4dcdc2f8872c7e20891"',
+            'EXPECTED_VERIFIER_BLOB = "65f9534fd0669e545aa3acf0b78781ccb324f2d8"',
             'EXPECTED_VERIFIER_BLOB = "' + blob_id(data) + '"',
         )
         (self.repo / "run_gate_r_evidence.py").write_text(custom, encoding="utf-8")
@@ -87,7 +87,7 @@ class TestEvidenceRunner(unittest.TestCase):
         self.assertEqual(x["python_unittest_skipped_counts"], [1])
 
     def test_missing_marker_fail_closed(self):
-        r = self.execute('print("SOURCE VERIFIED: 15/15 Git blobs match baseline")\n')
+        r = self.execute('print("SOURCE VERIFIED: 16/16 Git blobs match baseline")\n')
         self.assertEqual(r.returncode, 1)
         self.assertEqual(self.latest()["status"], "PARTIAL_OR_FAIL")
 
@@ -97,7 +97,7 @@ class TestEvidenceRunner(unittest.TestCase):
         self.assertFalse(self.latest()["required_markers"]["python"])
 
     def test_source_counter_prefix_cannot_forge_success(self):
-        r = self.execute(self.success_script().replace("15/15 Git blobs", "15/150 Git blobs"))
+        r = self.execute(self.success_script().replace("16/16 Git blobs", "16/160 Git blobs"))
         self.assertEqual(r.returncode, 1)
         self.assertFalse(self.latest()["required_markers"]["source"])
 
