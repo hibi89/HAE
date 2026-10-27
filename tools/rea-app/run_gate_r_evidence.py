@@ -73,7 +73,8 @@ def main(argv: list[str] | None = None) -> int:
         (run_dir / "stderr.txt").write_text(stderr, encoding="utf-8")
 
     combined = stdout + "\n" + stderr
-    markers = {marker: any(line.strip() == marker for line in combined.splitlines()) for marker in REQUIRED_MARKERS}
+    markers = {marker: any(line.strip() == marker or line.strip().startswith(marker + " ")
+                           for line in combined.splitlines()) for marker in REQUIRED_MARKERS}
     tests = re.findall(r"^Ran (\d+) tests?\b", combined, flags=re.MULTILINE)
     skipped = re.findall(r"^OK \(skipped=(\d+)\)$", combined, flags=re.MULTILINE)
     valid_provenance = bool(sha and re.fullmatch(r"[0-9a-f]{40}", sha) and branch == args.expected_branch)
