@@ -1,3 +1,9 @@
+## P44 — injected runtime-backup failure cleanup (2026-10-27 12:24 KST)
+- **Coverage:** injected a native publish error before publication and an integrity error after publication. Both returned safe failure; neither left a target or staged .part file. Source SHA-256, size and mtime remained unchanged, and the output directory was empty.
+- **Tests:** targeted failure-path test 1/1 PASS in 0.476 s. Full Windows Python 3.11.9 suite **76/76 PASS** in 40.428 s with synthetic local-loopback access. Node syntax, UI provenance regression and changed-file whitespace/conflict audit PASS.
+- **Failure record:** no P44 test failures. The full suite used the same authorized local-only loopback access required by the UI/DBVORA synthetic fixtures; no external network, credentials or customer data were used.
+- **Acceptance/progress:** F2 failure cleanup is verified; F2 remains PASS. This does not cover a sudden power loss, DBVORA source restore or customer deployment. Overall remains **91% PARTIAL** (A100/B100/C95/D95/E65), heuristic; OAuth, DBVORA D2, independent security, signed/customer distribution and commercial gates remain open.
+
 ## P43 — concurrent no-overwrite runtime backup publication (2026-10-27 12:23 KST)
 - **Verification:** two synthetic CLI processes were held at native publication after both passed the fresh-target check and staged backups. Exactly one published; the other exited 2 safely. The ledger passed integrity/status reads; source SHA-256, size and mtime were unchanged; no staging file remained and only the winning artifact remained.
 - **Tests:** race 1/1 PASS in 0.712 s. Full Windows Python 3.11.9 suite **75/75 PASS** in 39.978 s with synthetic local-loopback access. Node syntax, UI provenance and changed-file whitespace/conflict checks PASS.

@@ -1,5 +1,6 @@
 import json
 import hashlib
+import os
 import sqlite3
 import subprocess
 import sys
@@ -10,6 +11,7 @@ import unittest
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from pathlib import Path
+from unittest.mock import patch
 
 from axflow.engine import (ApprovalRequired, Engine, InjectedStop, PlanError, StepRetryExhausted,
                            StepTimeout, validate)
@@ -183,6 +185,49 @@ raise SystemExit(main())
         for marker in output_root.glob(".shared-backup.sqlite.ready-*"):
             marker.unlink()
         self.assertEqual([path.name for path in output_root.iterdir()], [target.name])
+
+    def test_backup_failures_before_and_after_publish_leave_no_artifacts(self):
+        self.engine.execute(self.plan, "BackupFailureRun", approve_writes=True)
+        source = self.root / "state.db"
+        workspace_temp = Path(__file__).resolve().parents[3] / ".verification-temp"
+        workspace_temp.mkdir(exist_ok=True)
+        destinations = tempfile.TemporaryDirectory(prefix="p44-backup-failure-", dir=workspace_temp)
+        self.addCleanup(destinations.cleanup)
+        output_root = Path(destinations.name)
+        source_before = (hashlib.sha256(source.read_bytes()).hexdigest(), source.stat().st_size,
+                         source.stat().st_mtime_ns)
+        publish_name = "rename" if os.name == "nt" else "link"
+
+        before_publish = output_root / "before-publish.sqlite"
+        with patch(f"axflow.state_backup.os.{publish_name}", side_effect=OSError("injected publish failure")):
+            with self.assertRaises(StateBackupError):
+                backup_runtime_state(source, before_publish)
+        self.assertFalse(before_publish.exists())
+        self.assertEqual(list(output_root.glob(".axflow-state-*.part")), [])
+
+        after_publish = output_root / "after-publish.sqlite"
+        from axflow import state_backup
+        real_integrity = state_backup._integrity
+        integrity_calls = 0
+
+        def fail_destination_verification(path):
+            nonlocal integrity_calls
+            integrity_calls += 1
+            if integrity_calls == 2:
+                raise StateBackupError("injected post-publication verification failure")
+            return real_integrity(path)
+
+        with patch("axflow.state_backup._integrity", side_effect=fail_destination_verification):
+            with self.assertRaisesRegex(StateBackupError, "post-publication"):
+                backup_runtime_state(source, after_publish)
+        self.assertEqual(integrity_calls, 2)
+        self.assertFalse(after_publish.exists())
+        self.assertEqual(list(output_root.glob(".axflow-state-*.part")), [])
+        self.assertEqual(list(output_root.iterdir()), [])
+        self.assertEqual(
+            (hashlib.sha256(source.read_bytes()).hexdigest(), source.stat().st_size,
+             source.stat().st_mtime_ns), source_before,
+        )
 
     def test_cli_runtime_backup_restore_requires_synthetic_and_preserves_state(self):
         self.engine.execute(self.plan, "CliBackupRun", approve_writes=True)

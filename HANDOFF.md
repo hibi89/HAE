@@ -1,12 +1,10 @@
-## Latest checkpoint — P43 concurrent backup publication
-1. **Branch:** hibi89/AX_FLOW feature/axflow-mvp; P42 implementation 01eb4e5869d64342a69fdae29fe3c93c33425e5a.
-2. **Proof:** two synthetic CLI processes reached native no-overwrite publish after both passed the absent-target check. One exited 0, one safely exited 2; final SQLite integrity/status pass, source SHA/size/mtime unchanged, stage files gone, one artifact remains.
-3. **Tests:** race 1/1 PASS (0.712 s); full suite **75/75 PASS** (39.978 s); Node syntax/UI provenance and whitespace/conflict audit PASS.
-4. **Failure/recovery:** restricted sandbox first had 9 failures/12 errors from WinError 10013 local TCP denial. Authorized local-only synthetic rerun passed; no code failure remains.
-5. **Scope:** F2 concurrent publication verified; no DBVORA data restore, power-loss or customer deployment claim. No website/auth/server or external service.
-6. **Estimate:** **91% PARTIAL** (A100/B100/C95/D95/E65). OAuth, DBVORA D2, independent security, signed/customer distribution and commercial gates remain open.
-7. **Next:** inject failures before and after publication; verify no residue and unchanged source.
-8. **P43 implementation commit:** `e2d70db08a171ccd821b5b65de5e273c664cc91a`.
+## Latest checkpoint — P44 backup failure cleanup
+1. **Branch:** hibi89/AX_FLOW feature/axflow-mvp; P43 commit e2d70db08a171ccd821b5b65de5e273c664cc91a.
+2. **Proof:** injected pre-publish error and post-publish integrity error both fail safely; no destination or .part remains, output folder is empty, and source SHA/size/mtime is unchanged.
+3. **Tests:** targeted 1/1 PASS (0.476 s); full Windows suite **76/76 PASS** (40.428 s); Node syntax/UI provenance and whitespace checks PASS.
+4. **Scope:** F2 cleanup verified; no DBVORA restore, power-loss or customer-release claim. Synthetic local fixtures only; no site/auth or external service.
+5. **Estimate:** **91% PARTIAL**; DBVORA D2, OAuth, independent security, signed/customer distribution and commercial gates remain open.
+6. **Next:** detect a source database changing during backup and ensure the attempted snapshot is discarded.
 
 
 
