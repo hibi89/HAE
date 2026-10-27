@@ -139,6 +139,14 @@ def main() -> int:
         plan = str(FIX / "csv-filter-import.json")
         arguments = ["--state", state, "--data", data, "--input-root", str(folder),
                      "--run-id", "CsvSmoke", "--synthetic", "--approve-writes"]
+        without_approval = [x for x in arguments if x != "--approve-writes"]
+        refusal = subprocess.run(
+            [python, "-B", "-m", "lightning_azent", "run", plan, *without_approval],
+            cwd=ROOT, env=env, capture_output=True, text=True, timeout=opts.timeout)
+        require(refusal.returncode == 2 and "ApprovalRequired" in refusal.stderr,
+                "Expected approval gate to reject the CSV run")
+        require(not Path(state).exists() and not Path(data).exists(),
+                "Rejected CSV run must not initialize databases")
         first = command_json("csv_run", ["run", plan, *arguments])
         again = command_json("csv_resume", ["resume", plan, *arguments])
         with sqlite3.connect(data) as db:
