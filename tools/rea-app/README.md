@@ -1,3 +1,7 @@
+## P34 — verified local evidence capture (2026-10-27 KST)
+
+In an authorized **clean** `REA_APP` checkout with reviewed `verify_gate_r.py` and installed `@babel/parser@7.29.9`, run `python run_gate_r_evidence.py` from this directory. This runner now pins the reviewed verifier's Git blob, requires clean scoped Git status, exact branch and commit metadata, and exact 15/15/Python/Node success lines including zero exit code. The local output directory contains `evidence.json`, `stdout.txt`, `stderr.txt`; no upload or installation occurs. Synthetic provenance regressions **11/11 PASS** on Linux/Python 3.13.5, but full analyzer/real Babel/Windows integration is still **UNVERIFIED**. See `P34_PROVENANCE_GATE.md`.
+
 ## P32 report-write safety
 
 Reports now write a temporary UTF-8 file under the selected output folder, flush/fsync it and atomically replace each final file. Existing report symlink targets are not followed; on replacement failure the old report remains and the temporary file is removed. Four synthetic focused writer tests PASS on Linux. JSON and Markdown are not committed as one atomic pair, and live output parent-directory races and Windows-native behavior remain unverified. Gate R verifier now pins 15 source/test files. See P32_OUTPUT_WRITE_SAFETY.md.
