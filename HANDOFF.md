@@ -1,5 +1,12 @@
 # HANDOFF — AX FLOW + REA_APP (bootstrap, 2026-10-27 KST)
 
+## Latest checkpoint — P22 exact remote-source verification (2026-10-27 13:15 KST)
+1. **Branch/source:** `hibi89/AX_FLOW` REA_APP at `ff7997f2fd7a5c195bc06a63f2535ec469c24eae` was the exact tree tested. No product code was modified.
+2. **Provenance:** the mounted workspace is an unborn Git snapshot with untracked files; 8/13 analyzer file blob IDs differed from the remote tree. The first local pass was not treated as branch evidence. A separate temporary source copy was reconstructed from GitHub and all 13/13 `tools/rea-app` blob IDs matched the remote tree using `git hash-object --no-filters --stdin-paths`.
+3. **Tests:** Windows Python suite **15/15 PASS**; `npm run test:parser` **PASS** with installed `@babel/parser@7.29.9`; whitespace scan clean. Temporary source copy removed after tests.
+4. **Failure/recovery:** no test failures on the exact remote branch source. The only issue was source provenance in the mounted workspace; exact source was fetched, hash-verified, then tested.
+5. **Scope/status:** estimate remains **91% PARTIAL** from the separate acceptance matrix. No site is required. Keep the standalone engine on hold for overall chief review; external credentials, DBVORA restore, independent security review, commercial review, and signed/customer distribution remain gated.
+
 ## Latest checkpoint — P21 filesystem API false-positive guard (2026-10-27 13:07 KST)
 1. Goal: keep maximizing verified REA_APP R-A1 progress while preserving the explicit hold on the standalone AX FLOW engine.
 2. Change: commit 21be05d3b4294d8feabe757b6f0f226ca39c606c restricts fs/promises observations to supported asynchronous APIs and rejects file-like method names imported from unrelated modules. Added regression assertions for both false-positive cases.

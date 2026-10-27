@@ -1,5 +1,13 @@
 # STATUS — 2026-10-27 KST
 
+## Latest verification checkpoint — P22 exact remote-source rerun (2026-10-27 13:15 KST)
+- Source branch HEAD tested: REA_APP@ff7997f2fd7a5c195bc06a63f2535ec469c24eae. This verification changed no product code.
+- The mounted workspace has no Git commits and reports its files as untracked. Its initial 15/15 plus parser pass was not counted as branch evidence because 8 of 13 analyzer tree blobs differed from the remote tree.
+- Reconstructed all 13 `tools/rea-app` files from the exact remote tree in a temporary directory; `git hash-object --no-filters --stdin-paths` matched all 13/13 blob IDs. The temporary copy was removed after verification.
+- Exact remote-source verification: `python -m unittest discover -s tests -v` — 15/15 PASS; `npm run test:parser` — PASS using the installed `@babel/parser@7.29.9`; trailing-whitespace scan clean.
+- Failure record: no test failed on the exact remote source. The provenance issue was limited to the mounted no-commit workspace snapshot; the exact branch tree was fetched, hash-verified, and rerun successfully.
+- Overall matrix remains 91% PARTIAL (heuristic). No website or browser session is needed; the overall review gate still precedes any standalone engine work.
+
 ## Latest checkpoint — P21 filesystem API false-positive guard (2026-10-27 13:07 KST)
 - Branch: REA_APP; code/test commit 21be05d3b4294d8feabe757b6f0f226ca39c606c, parent c4fb5588882fac40af4d499900635caa8a9601ac.
 - Tightened static path classification: fs/promises calls now exclude unsupported synchronous/stream APIs, and similarly named calls imported from non-fs modules are not reported.

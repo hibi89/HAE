@@ -1,5 +1,17 @@
 # Next work unit — 2026-10-27 KST (verified checkpoint)
 
+## P22 complete — exact remote REA_APP verification (2026-10-27 13:15 KST)
+The mounted directory was not a Git checkout, so its initial passing test run could not be attributed to REA_APP. I reconstructed the 13 files under `tools/rea-app` from remote `REA_APP@ff7997f2fd7a5c195bc06a63f2535ec469c24eae` in an isolated temporary folder and verified all 13 Git blob IDs before testing.
+
+**Verification:** Windows Python suite 15/15 PASS; `npm run test:parser` PASS with `@babel/parser@7.29.9`; trailing-whitespace scan clean. The temporary tree was removed. No tests failed on the exact remote source, and no product code changed.
+
+The initial mounted snapshot differed at the blob level in 8/13 analyzer files; this was a workspace provenance issue, not a failed test. Its exact cause was not investigated further because branch-source verification succeeded.
+
+## Next authorized step — overall chief review
+- REA_APP synthetic acceptance and the permitted official-documentation n8n analysis are complete for this pass.
+- Review the evidence and the separate 91% shared acceptance matrix before choosing additional feature work.
+- Keep the standalone AX FLOW engine on hold until that review. No site or browser session is needed.
+
 ## P21 — filesystem API false-positive guard — COMPLETE (2026-10-27 13:07 KST)
 - Code commit: 21be05d3b4294d8feabe757b6f0f226ca39c606c on REA_APP, parent c4fb5588882fac40af4d499900635caa8a9601ac.
 - Static path reports now ignore unsupported synchronous/stream APIs from fs/promises and file-like method names from unrelated modules. Synthetic regressions cover both exclusions.
