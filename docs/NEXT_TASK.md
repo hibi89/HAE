@@ -1,3 +1,11 @@
+## P21 complete — configured DBVORA offline state is clear and bounded (2026-10-27 KST)
+A separate synthetic UI pointed at a confirmed-closed loopback DBVORA port. It reported the service unavailable and how to retry; no table metadata, database/CSV content, path, run receipt or local database file appeared. The connected P5 preview was left untouched. Test server and synthetic fixtures were removed. Progress advances to **86% / PARTIAL** (A100/B95/C95/D90/E50).
+
+A first port probe had a one-line syntax typo; the corrected probe confirmed the port was closed. This was a harness typo, not a product failure.
+
+## Next atomic task — re-verify the REA_APP bounded MVP on its branch
+Fetch the exact `REA_APP` branch head, confirm the local analyzer source matches, run its Python and Node tests, and exercise deterministic JSON/Markdown output on the synthetic fixture. Record only source-backed behavior and verify the source root remains unchanged. No additional website is needed; keep the P5 DBVORA review at `http://127.0.0.1:8767/` open. Then perform a concise A–E evidence audit. Do not elevate the blocked symlink test or perform restore, customer-data, OAuth, public-release or independent-engine work without its existing approval.
+
 ## P20 complete — Windows symlink fixture blocked by OS privilege (2026-10-27 KST)
 Unprivileged Python `Path.symlink_to` failed with `OSError [WinError 1314]`, so no link was created and AX FLOW did not run. The synthetic fixture was removed. Do not elevate for this check. Normal path traversal and absolute-path preview rejection passed in P19; real symlink traversal remains SKIPPED.
 

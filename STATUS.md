@@ -1,5 +1,14 @@
 # STATUS — 2026-10-27 KST
 
+## P21 — configured-but-offline DBVORA state verified in the UI (2026-10-27 KST)
+- Launched a separate synthetic AX FLOW UI with `--dbvora-url http://127.0.0.1:18767`; the port was confirmed closed before startup. The visible panel reported **“DBVORA local service is unavailable.”** and instructed the user to check the API and refresh.
+- The page showed no table/column data, database path, CSV row content or run receipt; runtime and business DB files remained absent. The P5 connected preview at `:8767` was not changed.
+- **Test:** browser UI status and redaction assertions PASS; offline panel remained bounded and user-actionable.
+- **Failure/cause:** the first local port-probe command had a Python conditional-expression typo and did not execute; corrected probe confirmed CLOSED. No product/test failure remained.
+- Temporary UI server was stopped and its synthetic fixture folder removed. No source changes.
+- **Blueprint progress:** A100/B95/C95/**D90**/E50, equal-weight heuristic **86%** (supersedes P20's 84%); product remains **PARTIAL**. DBVORA restore, customer database validation, independent security review, signed Windows distribution and release evidence remain open.
+
+
 ## P20 — Windows symlink acceptance attempted; host denied fixture creation (2026-10-27 KST)
 - Attempted to create a synthetic symlink from `.verification-temp/p20-symlink/input/link.csv` to a sibling synthetic CSV using unprivileged Python 3.11 `Path.symlink_to`.
 - **Result: SKIPPED** before AX FLOW execution. Windows returned `OSError: [WinError 1314]` (“A required privilege is not held by the client”). The link was not created, no workflow ran, and the temporary fixture folder was removed.
@@ -88,7 +97,7 @@
 | AX FLOW local runtime | P18_SYNTHETIC_CSV_UI_AND_P5_DBVORA_E2E_VERIFIED (NOT CUSTOMER READY) | `feature/axflow-mvp@86ac854bd633e3a312aa54a5300e2f78f634dbfd`; Windows Python 3.11.9 suite 60/60 PASS; synthetic CSV→SQLite→pinned DBVORA API→visible AX FLOW schema/refresh E2E PASS; row/path withheld, business DB unchanged |
 | Natural-language planner and file input | FOUR_BOUNDED_INTENTS_SYNTHETIC_BROWSER_E2E_VERIFIED (PARTIAL) | full import and DBVORA-backed schema in P17; filtered save, read-only lookup, conditional save and no-match conditional in P18; unsupported-intent and path-escape visible rejection still pending |
 | OAuth, Gmail/Sheets connectors | NOT_STARTED | no account credentials, no auth test |
-| DBVORA integration | P5_SOURCE_BACKED_UI_E2E_VERIFIED_SYNTHETIC | selected-file `p0-01.v1` API over loopback; tables/columns/PK/FK/size displayed; one selected local SQLite file only; customer DB, packaged service, restore and security review unverified |
+| DBVORA integration | P21_CONNECTED_AND_UNAVAILABLE_UI_E2E_VERIFIED_SYNTHETIC | pinned-source `p0-01.v1` API; connected UI renders schema/PK/FK/size and configured-offline UI reports unavailable; selected local SQLite only; customer DB, packaged service, restore and security review unverified |
 | Recovery, resilience and performance | PARTIAL | real process crash resume, cross-process same-run replay, persisted interval due ticks, crash replay and concurrent tick deduplication are tested; DBVORA restore and broader load bounds remain open |
 | Windows package, customer tests, security assessment | PARTIAL (STDlib ZIPAPP SMOKE) | package CLI, synthetic SQLite workflow and packaged localhost preview/run tested; no signed installer or customer/release evidence |
 | Vercel/Production | NOT_APPLICABLE | local-first product, no hosted service |

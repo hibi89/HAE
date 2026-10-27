@@ -1,5 +1,16 @@
 # HANDOFF — AX FLOW + REA_APP (bootstrap, 2026-10-27 KST)
 
+## Latest checkpoint — P21 DBVORA offline-state UI acceptance (2026-10-27 KST)
+1. **Task:** check the configured-but-unavailable DBVORA path without touching the active connected P5 review.
+2. **Test setup:** AX FLOW UI on a separate synthetic fixture server, configured to `http://127.0.0.1:18767`; a loopback probe confirmed the port was closed before startup.
+3. **Observed UI:** DBVORA status showed “DBVORA local service is unavailable.” and its helper text advised checking the API and refreshing.
+4. **Redaction/no-write:** no tables, paths, CSV rows or run receipt appeared; runtime/business DB files remained absent.
+5. **Cleanup:** temporary server stopped and its synthetic fixture folder removed. P5 `:8767` stayed untouched.
+6. **Failure record:** first port-probe one-liner had a syntax error; corrected command reported CLOSED. No app failure.
+7. **Progress:** **86% PARTIAL**, A100/B95/C95/D90/E50, equal weights.
+8. **Next:** verify REA_APP's bounded analyzer from its exact branch/source, run its Python+Node test suite and deterministic-output smoke, then audit remaining Blueprint gates. Keep separate DBVORA restore/customer/release/security approvals gated.
+9. **Sites:** leave `http://127.0.0.1:8767/` open for connected P5 schema review; no additional site needs to be opened.
+
 ## Latest checkpoint — P20 Windows symlink check skipped by host privilege boundary (2026-10-27 KST)
 1. **Task:** attempt a real Windows symlink fixture to validate the engine's no-symlink CSV rule.
 2. **Fixture:** temporary synthetic input path under `.verification-temp/p20-symlink`; no customer data or external paths.
