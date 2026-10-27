@@ -31,7 +31,7 @@ SOURCE_BLOBS = {
     "tests/test_cli.py": "6035ccc58fcfc8f2d8eceeba95b8d969ec257dc4",
     "tests/test_scan_open_races.py": "0601539e0a57807441fa31373339c689b2aa7439",
     "tests/test_scan_sensitive_exclusions.py": "3f40479907fe923137f9c018a57b2d3df08ba023",
-    "tests/test_verify_gate_r.py": "d6b7bc8d56ff0ddd8f4d74958d62ac666ca6058a",
+    "tests/test_verify_gate_r.py": "f1e9745e3139050e6ef10bf331c91f6431790136",
 }
 
 
@@ -59,7 +59,14 @@ def check_source() -> bool:
     wrong = []
     for relative, expected in sorted(SOURCE_BLOBS.items()):
         source = ROOT / relative
-        if not source.is_file() or source.is_symlink():
+        try:
+            file_stat = source.lstat()
+        except OSError:
+            file_stat = None
+        if file_stat is None or not stat.S_ISREG(file_stat.st_mode) or (
+            getattr(file_stat, "st_file_attributes", 0)
+            & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+        ):
             wrong.append((relative, "MISSING_OR_LINK"))
             continue
         actual = git_blob_id(source.read_bytes())

@@ -1,3 +1,9 @@
+## P31 REA_APP next work (2026-10-27 KST)
+
+- File-level reparse metadata guard added to offline Gate R verifier; reviewed code/test Git blobs `e88665699d00b3f8c21c5ddddba880fc01f79d5f` / `f1e9745e3139050e6ef10bf331c91f6431790136`. Exact local Python 3.13.5 verifier self-test **9/9 PASS** after reproduced 2-subcase failure before fix. Details: `tools/rea-app/P31_FILE_REPARSE_GUARD.md`.
+- Do **not** report complete Gate R; analyzer/CLI/impact/graph Python tests, actual Babel parser, Windows native junction and full integration are UNVERIFIED. Next necessary task: authorized byte-identical full REA_APP checkout with installed pinned Babel 7.29.9, `cd tools/rea-app && python verify_gate_r.py`, record source count and every PASS/FAIL/SKIP/exit.
+- Maintain REA_APP → permitted standalone behavior contracts → Lightning Azent → HAE sequence. No unapproved n8n source access or private paid CI.
+
 ## REA_APP P30 next task — complete full Gate R after verified directory-link regression (2026-10-27 KST)
 
 - New reviewed verifier/test Git blobs: `91e81f6bf31820f7d690e0837ac7170403c212d4` and `d6b7bc8d56ff0ddd8f4d74958d62ac666ca6058a`, byte-identical with Linux/Python 3.13.5 focused **8/8 actual PASS** after prepatch two-subcase failure. `tools/rea-app/P30_PARENT_DIR_GUARD.md` explains exact scope. `rea_app/` and `tests/` linked parents are now rejected before scanning manifest files.

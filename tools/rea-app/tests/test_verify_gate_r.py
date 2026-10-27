@@ -5,9 +5,11 @@ import contextlib
 import importlib.util
 import io
 import os
+import stat
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -91,6 +93,21 @@ class TestGateRSourceAttribution(unittest.TestCase):
                 finally:
                     original.unlink()
                     relocated.rename(original)
+
+    def test_manifest_file_reparse_and_nonregular_are_rejected(self) -> None:
+        # Simulate Windows reparse metadata on a regular file and a non-file
+        # without needing Windows junction creation privileges.
+        source = self.root / "rea_app/scanner.py"
+        real_lstat = Path.lstat
+        for mode, attributes in ((stat.S_IFREG | 0o644, 0x400),
+                                 (stat.S_IFDIR | 0o755, 0)):
+            with self.subTest(mode=mode, attributes=attributes):
+                def fake_lstat(path, *args, **kwargs):
+                    if path == source:
+                        return SimpleNamespace(st_mode=mode, st_file_attributes=attributes)
+                    return real_lstat(path, *args, **kwargs)
+                with patch.object(Path, "lstat", fake_lstat):
+                    self.assertFalse(self.checked())
 
     def test_symlink_in_manifest_is_rejected(self) -> None:
         source = self.root / "tests/test_smoke.py"

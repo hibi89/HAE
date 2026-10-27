@@ -1,3 +1,7 @@
+## P31 — file-level reparse attributes now rejected (2026-10-27 KST)
+
+The offline `verify_gate_r.py` validates every reviewed manifest path as a regular file via `lstat`, rejecting Windows reparse attributes before reading bytes. One new unittest simulates a flagged regular-file reparse point and a nonregular file: both unexpected acceptances occurred before repair; post-repair exact local verifier/self-test execution **9/9 PASS**. This is a synthetic attribute test on Linux, not actual Windows-junction verification. See `tools/rea-app/P31_FILE_REPARSE_GUARD.md`. The full Python analyzer and genuine Babel parser Gate R suites remain unrun.
+
 ## P30 — verifier now rejects linked source directories (2026-10-27 KST)
 
 The offline `verify_gate_r.py` now checks that `rea_app/` and `tests/` are real directories (not symlinks or Windows reparse-point directories) **before** reading any reviewed manifest file. `tests/test_verify_gate_r.py` adds two directory-link subcases. A local byte-exact reconstruction executed focused Python **8/8 PASS**, with the new subcases reproducing failures on the old verifier. See `tools/rea-app/P30_PARENT_DIR_GUARD.md`. Full 14-file Python analysis, real Babel tests and actual Windows junction tests remain pending. This is not a release sign-off.

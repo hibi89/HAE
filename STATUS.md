@@ -1,3 +1,9 @@
+## P31 — file reparse-point source attribution hardening (2026-10-27 KST)
+
+- On `REA_APP@ab8ff4f29cad65fdb581dd8dd9e6ab99da56a31b`, recreated and hash-confirmed previously reviewed verifier/test sources. A new test simulating (a) Windows regular-file reparse metadata and (b) nonregular file metadata generated **2 failed subcases** on original `is_file/is_symlink` verification. Replaced with `Path.lstat` regular-file requirement and reparse attribute exclusion. Focused Linux/Python 3.13.5 verifier regression is now **9/9 actual PASS**. GitHub code/test blobs match executed local bytes `e88665699d00b3f8c21c5ddddba880fc01f79d5f`, `f1e9745e3139050e6ef10bf331c91f6431790136`. Evidence: `tools/rea-app/P31_FILE_REPARSE_GUARD.md`.
+- Full 14-file analyzer Python suite and real installed `@babel/parser@7.29.9` Node suite remain **NOT RUN**; Windows file-reparse test was simulated, not an actual Windows filesystem operation. Gate R remains **PARTIAL**. No other product code, target data, secrets, GitHub CI or production modified.
+- Design alternatives: unchanged `is_file/is_symlink` (unsafe under simulated reparse); stdlib `lstat` + flag (selected); isolated immutable worktree (greater cost, deferred). Next authorized executable checkout + `python verify_gate_r.py`.
+
 ## P30 — Gate R parent-directory symlink bypass closed (2026-10-27 KST)
 
 - Directly reproduced a Gate R provenance flaw: protected `rea_app/` or `tests/` directory can be replaced with symlink while all child file SHA checks pass. Local synthetic 8-test run with new regression against old code: **2 failed subcases**. After adding `lstat` directory/Windows reparse guards: verifier-focused Python **8/8 PASS, 0 skipped** on Linux/Python 3.13.5.
