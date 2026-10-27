@@ -12,7 +12,7 @@ class VerifyReceiptsFacadeTests(unittest.TestCase):
             root = Path(directory)
             executor = LAExecutor(root / 'state.sqlite', root / 'business.sqlite')
             with self.assertRaises(PlanError):
-                executor.verify_receipts({'version': 'axflow.ir.v0', 'steps': []}, '../unsafe')
+                executor.verify_receipts({'version': 'axflow.ir.v0', 'steps': [{'id': 'seed', 'op': 'literal', 'value': 1}]}, '../unsafe')
             self.assertFalse((root / 'state.sqlite').exists())
             self.assertFalse((root / 'business.sqlite').exists())
 
