@@ -1,3 +1,9 @@
+## P24 — REA_APP avoid credential file collection (2026-10-27 KST)
+- Branch `REA_APP`, base `6b7f78ee93eccbf7f7afb457dbfd37cc025713ca`. Added private auth file exclusion and private-directory pruning to bounded `tools/rea-app/rea_app/scanner.py` (`019e022d1404cbdfc600a0d40cd0ef521c7d9191`), synthetic regression assertions (`67155aa73445ca4ed33dd97d02a0adbc1fa4aa86`), updated Gate R review and README.
+- Locally reproduced corresponding scanner filename/directory selection checks **2/2 PASS** on synthetic temp fixtures, **not** running actual modified repository import. Complete Python and Babel tests for updated SHA **NOT RUN**, so Gate R remains PARTIAL. Previous P23 incomplete verification remains and no 100% safety/release claim applies.
+- HAE is the new customer-facing name; REA_APP → Lightning Azent → HAE remains active development order. This work affects REA_APP only, not the separate engine or HAE customer app.
+- Next: real repo tests with source hash/OS/versions and Node parser, then Gate R evidence review and independent behavior contracts (not n8n code transplant).
+
 ## P23 — REA_APP chief review and file-open race guard (2026-10-27 KST)
 - Owner-approved order now REA_APP verified → lawful n8n behavior/contracts → independent **Lightning Azent** → AX FLOW. This branch handles REA_APP only. Chief code+gap report: `tools/rea-app/CHIEF_GATE_R_REVIEW.md` (`20672b0c34b2a2480f87e1e7f8f20d6af06c7a83`).
 - Baseline `REA_APP@96d1ced45c37064642dda79d0559be9f076269ce`: compared to last **exact-remote-tested** `ff7997f2fd7a5c195bc06a63f2535ec469c24eae`, only HANDOFF/STATUS/NEXT_TASK changed (one docs commit). Previous exact-source 15/15 Python PASS and npm parser PASS refer to **old source**, not P23.
