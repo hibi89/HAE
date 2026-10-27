@@ -140,12 +140,28 @@ are inventory-only in this MVP.
 
 ## Run
 
-Install Node.js 20+ and the pinned parser package from this directory:
+Install Python 3.11+ and Node.js 20+, then install the locked parser package:
 
 ```powershell
-npm ci
+npm ci --prefix rea_app --ignore-scripts --no-audit --no-fund
 python -m rea_app scan C:\path\to\authorized\source --output-dir C:\path\to\reports
 ```
+
+To install the Python package into the active environment instead of running
+from a source checkout:
+
+```powershell
+python -m pip install .
+$reaAppPackage = python -c "import pathlib, rea_app; print(pathlib.Path(rea_app.__file__).parent)"
+npm ci --prefix $reaAppPackage --ignore-scripts --no-audit --no-fund
+rea-app --version
+rea-app scan C:\path\to\authorized\source --output-dir C:\path\to\reports
+```
+
+The Python wheel includes the parser adapter and the exact npm manifest and
+lockfile. Install Babel beside the installed adapter with the shown `npm ci`
+command; it installs `@babel/parser@7.29.9` without running dependency lifecycle
+scripts. A source checkout uses the same command with `rea_app` as the prefix.
 
 Both the source root and report directory must be selected explicitly. Reports
 are written as `source-map.json` and `source-map.md`; the report directory must
@@ -213,7 +229,7 @@ From `tools/rea-app` run:
 
 ```powershell
 python -m unittest discover -s tests -v
-npm run test:parser
+npm --prefix rea_app run test:parser
 ```
 
 The synthetic tests cover deterministic output, two-snapshot change and impact

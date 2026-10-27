@@ -596,8 +596,11 @@ class ReaAppCliTests(unittest.TestCase):
     def test_missing_parser_fails_with_coverage_limitation(self) -> None:
         self.write("main.ts", "export const value = 1;\n")
         isolated_tool = self.base / "isolated-tool"
-        shutil.copytree(TOOL_ROOT / "rea_app", isolated_tool / "rea_app")
-        shutil.copy2(TOOL_ROOT / "babel_parser_adapter.cjs", isolated_tool)
+        shutil.copytree(
+            TOOL_ROOT / "rea_app",
+            isolated_tool / "rea_app",
+            ignore=shutil.ignore_patterns("node_modules", "__pycache__"),
+        )
         process_env = os.environ.copy()
         process_env["PYTHONPATH"] = str(isolated_tool)
         process_env["NODE_PATH"] = ""

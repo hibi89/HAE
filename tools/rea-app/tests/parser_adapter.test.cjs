@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
-const adapter = path.join(__dirname, '..', 'babel_parser_adapter.cjs');
+const adapter = path.join(__dirname, '..', 'rea_app', 'babel_parser_adapter.cjs');
 const input = {
   files: [
     { path: 'src/main.ts', content: 'import { value as localValue } from "./value";\nexport const run = () => localValue();\n' },

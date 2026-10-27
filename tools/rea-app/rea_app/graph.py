@@ -31,7 +31,7 @@ def _parse_with_typescript(scan: ScanResult, timeout_seconds: int) -> dict[str, 
         for item in scan.files
         if item.category in {"javascript_typescript_source", "typescript_config"}
     ]
-    adapter = Path(__file__).resolve().parents[1] / "babel_parser_adapter.cjs"
+    adapter = Path(__file__).resolve().parent / "babel_parser_adapter.cjs"
     try:
         completed = subprocess.run(
             ["node", str(adapter)],

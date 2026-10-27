@@ -20,9 +20,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 # Pin the trusted Gate R entrypoint as well as its manifest-protected inputs.
 # Update this fingerprint deliberately whenever verify_gate_r.py is reviewed.
-EXPECTED_VERIFIER_BLOB = "9870c90069a9076257345eb3734411f1c2bb1309"
+EXPECTED_VERIFIER_BLOB = "a32e768d40eb7b268cafbf65ad6623a427907e28"
 REQUIRED_LINES = {
-    "source": re.compile(r"^SOURCE VERIFIED: 23/23 Git blobs match .+$"),
+    "source": re.compile(r"^SOURCE VERIFIED: 24/24 Git blobs match .+$"),
     "python": re.compile(r"^PYTHON_ALL: PASS \(exit 0\)$"),
     "babel": re.compile(r"^DEPENDENCY VERIFIED: @babel/parser@7\.29\.9$"),
     "node": re.compile(r"^NODE_PARSER: PASS \(exit 0\)$"),

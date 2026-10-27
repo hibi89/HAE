@@ -59,6 +59,12 @@ class TestGateRSourceAttribution(unittest.TestCase):
         (self.root / "tests/test_extra.py").write_text("pass\n", encoding="utf-8")
         self.assertFalse(self.checked())
 
+    def test_installed_node_dependency_scripts_are_not_source_tests(self) -> None:
+        dependency = self.root / "rea_app/node_modules/@babel/parser/index.js"
+        dependency.parent.mkdir(parents=True)
+        dependency.write_text("module.exports = {};\n", encoding="utf-8")
+        self.assertTrue(self.checked())
+
     def test_installed_parser_version_mismatch_blocks_node_suite(self) -> None:
         from subprocess import CompletedProcess
         observed = CompletedProcess(args=["node"], returncode=0, stdout="7.30.0\n", stderr="")

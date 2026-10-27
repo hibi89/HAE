@@ -4,7 +4,7 @@
   "private": true,
   "description": "Parser adapter for the read-only REA_APP source analyzer",
   "scripts": {
-    "test:parser": "node tests/parser_adapter.test.cjs"
+    "test:parser": "node ../tests/parser_adapter.test.cjs"
   },
   "devDependencies": {
     "@babel/parser": "7.29.9"

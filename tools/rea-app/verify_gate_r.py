@@ -21,16 +21,17 @@ SOURCE_BLOBS = {
     "rea_app/__init__.py": "e6d7269a82c761c70eda0d52ee1d858711d92b21",
     "rea_app/__main__.py": "bfdcd0c1158dff4fcc25157b317419f0a89dd33f",
     "rea_app/cli.py": "47530124e451925e6019f876b5138bbc4731a05f",
-    "rea_app/graph.py": "2fb29a09023185cddb7d8ef4b3b08500730c87bb",
+    "rea_app/graph.py": "0741167e0ebcbc8dadd9e80b1cc8a230a529657d",
     "rea_app/impact.py": "a6275f6803352fc4db465f38a369d08831e538a0",
     "rea_app/contracts.py": "99418bfcf649866182a841e72fccaa37433d6071",
     "rea_app/diagram.py": "14624c10c73d3ff9c6f96a823a5bafe7dd40cc5d",
     "rea_app/scanner.py": "ac3b5960378924c29e24c87cc58b67c315818c8a",
-    "babel_parser_adapter.cjs": "fc91cd920570bafc6fed11dff154fa2912eae5b6",
-    "package.json": "f5f89ef63c5636b5be93391b83b11363dcec7ed1",
-    "package-lock.json": "0bbde3cd132070df076a478a63056673687852d4",
-    "tests/parser_adapter.test.cjs": "b64bcbea40ca567eab7ab508af70f061c82b95e1",
-    "tests/test_cli.py": "8ee3c94a8ff367f1bf73ccf0dd3e93cfde5c50c2",
+    "rea_app/babel_parser_adapter.cjs": "fc91cd920570bafc6fed11dff154fa2912eae5b6",
+    "rea_app/package.json": "05c3c311e410d1dd0dde7db0be84a838275be991",
+    "rea_app/package-lock.json": "0bbde3cd132070df076a478a63056673687852d4",
+    "pyproject.toml": "e44bdca16128701fb1ac32fc3cce9e8755d6957d",
+    "tests/parser_adapter.test.cjs": "a9f6c5c3ccd83f261c3c0eea527772775f25ddd3",
+    "tests/test_cli.py": "929f3c41cee6494b658dfe3ccab653f477923d3f",
     "tests/test_bundle.py": "1cc3607521f21e81ca408823682351d8b4f88430",
     "tests/test_diagram.py": "6f58530a825eec4eb9741acc1e3820e3a7c96771",
     "tests/test_bundle_real_parser.py": "e1963a98040434aa645c8373683af65d539b1bac",
@@ -40,7 +41,7 @@ SOURCE_BLOBS = {
     "tests/test_scan_open_races.py": "7b0872d3b92f168b3e1d2d5dc9d3ef17d8ca6249",
     "tests/test_scan_snapshot_integrity.py": "a309e31b5b6c015d993fe39da90fcf93088261f0",
     "tests/test_scan_sensitive_exclusions.py": "3f40479907fe923137f9c018a57b2d3df08ba023",
-    "tests/test_verify_gate_r.py": "f1e9745e3139050e6ef10bf331c91f6431790136",
+    "tests/test_verify_gate_r.py": "2e9b94a59abb34c6c0e520991d72ae5eb8d56ad2",
 }
 
 
@@ -85,6 +86,9 @@ def check_source() -> bool:
     # Byte-exact matching alone is insufficient if extra Python tests exist.
     for directory in ("rea_app", "tests"):
         for entry in (ROOT / directory).rglob("*"):
+            relative_path = entry.relative_to(ROOT / directory)
+            if "node_modules" in relative_path.parts:
+                continue
             if entry.suffix.lower() not in {".py", ".js", ".cjs", ".mjs", ".ts", ".tsx"}:
                 continue
             relative = entry.relative_to(ROOT).as_posix()
@@ -124,7 +128,7 @@ def parser_dependency_pinned() -> bool:
         return False
     command = [node, "-p", "require('@babel/parser/package.json').version"]
     try:
-        result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True,
+        result = subprocess.run(command, cwd=ROOT / "rea_app", capture_output=True, text=True,
                                 encoding="utf-8", errors="replace", timeout=15, check=False)
     except (OSError, subprocess.TimeoutExpired) as exc:
         print(f"NODE_PARSER BLOCKED: dependency inspection {type(exc).__name__}", file=sys.stderr)
@@ -147,7 +151,9 @@ def main() -> int:
     if not npm:
         print("NODE_PARSER BLOCKED: npm unavailable, not counted as PASS.", file=sys.stderr)
         return 1
-    node_ok = parser_dependency_pinned() and execute("NODE_PARSER", [npm, "run", "test:parser"])
+    node_ok = parser_dependency_pinned() and execute(
+        "NODE_PARSER", [npm, "--prefix", str(ROOT / "rea_app"), "run", "test:parser"]
+    )
     print(f"SUMMARY: source=PASS, python={'PASS' if python_ok else 'FAIL'}, "
           f"node={'PASS' if node_ok else 'FAIL'}", flush=True)
     return 0 if python_ok and node_ok else 1
