@@ -1,3 +1,19 @@
+## P52 — native Windows directory junctions verified (2026-10-27 KST)
+
+- Added a PowerShell-backed junction fixture helper plus real scanner and Gate R tests. The scanner ignores an outside-root junction and does not index its target file; Gate R rejects `rea_app/` and `tests/` when either is a real Windows junction.
+- Normal restricted runs skip junction creation on access denial. The authorized elevated Gate R run created junctions and executed both regressions successfully.
+- Gate R on Windows 10 build 10.0.26200 / Python 3.11.9: **SOURCE 25/25; 71 tests, 65 pass, 6 skip; exact Babel 7.29.9 Node PASS; exit 0**. The 6 remaining skips cover symlink privileges and POSIX-only tests. QA **11/11 PASS**.
+- Evidence: `E:\HAE\REA_APP_GATE_EVIDENCE\gate-r-k901axhj\evidence.json`, clean P52 commit with matching verifier pin.
+- Code commit `bb25e2f701a16ee3cd3384df0fc28b4e6ce2ae41` follows P51 `618205dc4726e4da15db6628f1adc5bd119d8d66`; both fast-forward pushed to private `hibi89/HAE` `REA_APP`, P52 confirmed as remote head before this docs update.
+- No customer data, paid CI, package publication or deployment. Next: P53 direct re-export signatures in the standalone current-snapshot functional-contract inventory.
+
+## P51 — direct ESM re-export callable contract deltas (2026-10-27 KST)
+
+- `change-impact` now compares explicit direct re-exports using a unique source-row edge and a unique direct target callable. Evidence ties the façade export row to its target definition. Chains, wildcard/unresolved/external exports and same-line ambiguous declarations are skipped.
+- Real Babel baseline/current bundle regression reproduced the missing façade contract before the fix; after it passed signature, exact line evidence, no-body leakage, deterministic rerun and unchanged-source checks.
+- Design: comparison-only enrichment reuses parsed `exports` and dependency edges without extra parser invocations or schema changes. Expanding the standalone functional-contract inventory was deferred as P53's separate scope.
+- Gate R: **SOURCE 24/24; 69 tests, 63 passed, 6 skipped; exact Babel 7.29.9 Node PASS; QA 11/11 PASS**. Code commit `618205dc4726e4da15db6628f1adc5bd119d8d66`, fast-forward pushed; evidence `E:\HAE\REA_APP_GATE_EVIDENCE\gate-r-b8tribs2\evidence.json`.
+
 ## P50 — Python wheel packaging and installed CLI path (2026-10-27 KST)
 
 - **IMPLEMENTED:** Added `pyproject.toml` with exact build-tool versions (`setuptools==84.1.0`, `wheel==0.48.0`), Python `>=3.11`, and a `rea-app` console command. The wheel includes `babel_parser_adapter.cjs`, `package.json`, and `package-lock.json`; npm assets and adapter now live beside Python package code. README describes source and installed-package setup. Gate R protects the packaging metadata, now 24/24 blobs.

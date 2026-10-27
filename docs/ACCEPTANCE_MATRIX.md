@@ -1,11 +1,11 @@
 # AX FLOW Definition of Done — evidence matrix
 
-**Statuses at 2026-10-27 KST: all product tests NOT RUN.** Docs-only GitHub validation does not count as customer/functional test. Mark verified only on exact commit, command, environment and result.
+**Status update 2026-10-27 KST:** R1's supported synthetic JS/TS acceptance is verified on `REA_APP@bb25e2f701a16ee3cd3384df0fc28b4e6ce2ae41`. R2 has a docs-only research result but its legal/permission review is incomplete; other gates remain NOT_STARTED unless separately evidenced. This does not imply full product or release readiness. Mark each status only on an exact commit, command, environment and result.
 
 | ID | Component | Required proof | Current |
 |---|---|---|---|
-| R1 | REA_APP synthetic source analyzer | real parser/import/graph + bounds + no source mutation tests | NOT_STARTED |
-| R2 | Permitted n8n study | evidence-linked functional spec, reviewed license/contracts, no transplanted n8n code | NOT_STARTED |
+| R1 | REA_APP synthetic source analyzer | real parser/import/graph + bounds + no source mutation tests | PASS — 25/25 pinned blobs; 71 Python tests (65 pass, 6 skip); exact Babel Node PASS; native junction checks executed; evidence `E:\HAE\REA_APP_GATE_EVIDENCE\gate-r-k901axhj\evidence.json` |
+| R2 | Permitted n8n study | evidence-linked functional spec, reviewed license/contracts, no transplanted n8n code | PARTIAL — official documentation study and links recorded in `STATUS.md`; no source copied, but no legal counsel/permission determination |
 | F1 | Typed workflow IR | independently validated versioned schema, invalid/injection inputs fail closed | NOT_STARTED |
 | F2 | Runtime SQLite + executor | deterministic CLI, durable journal, restart recovery, migrations/backup tests | NOT_STARTED |
 | F3 | Business-data handling | user-selected SQLite read/write with integrity, no conflation with runtime DB | NOT_STARTED |
