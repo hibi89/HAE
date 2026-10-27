@@ -1,3 +1,9 @@
+## P36 — Remote Gate R source audit and FIFO stall finding (2026-10-27 17:50 KST)
+
+- Current remote `REA_APP@e3263980e874b7d3b8a5378851d50738dc526d6a`: **16/16 reviewed source Git blob SHA matched**, zero unreviewed executable modules in analyzer/test directories. Since P35 code commit `71e75e5`, changed files were only `HANDOFF.md`, `STATUS.md`, `docs/NEXT_TASK.md`. Latest HEAD author and committer both mapped to `hibi89`; no GitHub combined status entries or PR workflow runs.
+- New security/availability review issue [#1](https://github.com/hibi89/AX_FLOW/issues/1): `scanner.py` uses blocking `os.open` after pre-stat; malicious/concurrent replacement with FIFO may stall. Isolated Linux/Python 3.13.5 **POSIX API demonstration**: ordinary FIFO read-only open exceeded 1s timeout, nonblocking open returned promptly and `fstat` detected nonregular. **Not an executed full scanner integration test.** Windows unresolved.
+- Options documented (targeted `O_NONBLOCK` mitigation vs larger descriptor-relative traversal); code/security behavior remains unchanged pending design approval. Full source-pinned Python + real Babel 7.29.9 suite **NOT RUN**, Gate R **PARTIAL**; no paid CI or deployment. P36 docs-only checkpoint.
+
 ## P35 — scanner snapshot consistency gate (2026-10-27 KST)
 
 - GitHub `REA_APP@71e75e5698e5b81755c85e889e658efadc0d0501`: source reader now rejects changed or partial snapshots (`file_changed_during_read`) using post-read fstat, sizes and timestamps. Previous scanner lacked post-read consistency checks.
