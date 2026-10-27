@@ -447,6 +447,47 @@ class WebUITests(unittest.TestCase):
         self.assertEqual(code, 200)
         self.assertEqual(json.loads(raw.decode("utf-8"))["status"], "failed")
 
+    def test_numeric_filter_threshold_precision_preview_and_write_gate(self):
+        source = self.inputs / "precise.csv"
+        source.write_bytes(b"amount,id\n0.0000002,first\n0.0000001,second\n")
+        unchanged_hash = hashlib.sha256(source.read_bytes()).hexdigest()
+        valid_task = "Import this CSV where amount > 1e-7 into SQLite"
+        code, _, preview = self.post_json("/api/preview", {
+            "task": valid_task, "csv_path": "precise.csv",
+        })
+        self.assertEqual(code, 200, preview)
+        self.assertEqual(preview["plan"]["steps"][1]["value"], 1e-7)
+        self.assertEqual(preview["plan"]["steps"][1]["transform"], "number")
+        code, _, response = self.post_json("/api/run", {
+            "task": valid_task, "csv_path": "precise.csv",
+            "preview_id": preview["preview_id"], "approve_writes": True,
+        })
+        self.assertEqual(code, 200, response)
+        self.assertEqual(response["result"]["imported_rows"], 1)
+        with closing(sqlite3.connect(self.business)) as business:
+            saved_before = business.execute("SELECT COUNT(*) FROM csv_records").fetchone()[0]
+        self.assertEqual(saved_before, 1)
+
+        for threshold in (
+            "0.10000000000000001",
+            "9007199254740993",
+            "1e-9999",
+            "1e9999",
+        ):
+            with self.subTest(threshold=threshold):
+                code, _, failure = self.post_json("/api/preview", {
+                    "task": f"Import this CSV where amount > {threshold} into SQLite",
+                    "csv_path": "precise.csv",
+                })
+                self.assertEqual(code, 422, failure)
+                self.assertEqual(failure["error_type"], "PlanError")
+                with closing(sqlite3.connect(self.business)) as business:
+                    self.assertEqual(
+                        business.execute("SELECT COUNT(*) FROM csv_records").fetchone()[0],
+                        saved_before,
+                    )
+        self.assertEqual(hashlib.sha256(source.read_bytes()).hexdigest(), unchanged_hash)
+
     def test_deeply_nested_json_is_rejected_without_internal_error(self):
         nested = b"[" * 1200 + b"null" + b"]" * 1200
         raw = b'{"filename":' + nested + b',"content_base64":"aWQKMQo="}'
