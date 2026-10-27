@@ -1,3 +1,10 @@
+## Lightning Azent P9 — validation after read-only business-ledger preflight (2026-10-28 KST)
+
+- **New code gate:** `runlog.inspect_business_ledger` blocks missing/replaced/incompatible/corrupt SQLite receipts with read-only schema + quick integrity check. Called by `LAExecutor.resume` after verifying plan hash and before instantiating `Engine`. Git blob `runlog.py@9bfaaf968c28c4461170ebcd7dcb6f1747d844fd`.
+- **Evidence:** Source-pinned isolated Linux/Python 3.13 test suite **5 PASS, 0 FAIL** on normal/missing/empty/dropped-table/malformed synthetic DB; real package not imported except copied `runlog.py`. New `test_resume.py` 2 definitions still unrun; full LA suite 33 authored (7+6+9+8+3), **0/33 executed as whole suite**.
+- **Immediate full verifier:** Authorized clean `feature/lightning-azent` checkout; record `git rev-parse HEAD`, Python/OS, source hashes; run `python -m compileall -q packages/lightning-azent` and `PYTHONPATH=packages/lightning-azent python -m unittest discover -s packages/lightning-azent/tests -v`, or Windows `$env:PYTHONPATH='packages/lightning-azent'` first. Fix real failures; test corrupted receipts with actual API.
+- **Then:** Three full synthetic Engine workflows, original HAE suite, wheel installed CLI and Windows OS locking. Do not claim commercial-ready product, run paid CI, or integrate new HAE consumer before real validation.
+
 ## Lightning Azent P8 — next executable verification (2026-10-28 KST)
 
 - **Feature/test source:** `scheduler.py@649fda8831210aaf8137d227d949dda56c2896ee` and `test_scheduler_lock.py@7ffd8c0792457694021dc6803f175d605887b7d4`. Source-pinned isolated Linux/Python 3.13 scheduler test: **3/3 PASS** (thread, second process exit, denial/no-file). Engine module in fixture is a stub.
