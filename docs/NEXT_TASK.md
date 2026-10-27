@@ -1,3 +1,10 @@
+## REA_APP P45 next — blueprint gap audit on verified real-parser baseline (2026-10-27 KST)
+
+- **Completed gate:** P45 ran against the exact clean Windows checkout with pinned `@babel/parser@7.29.9`. `python verify_gate_r.py` passed with 23/23 source pins, 63 tests (57 pass, 6 platform/environment skips, 0 failures), Node parser PASS; the genuine Babel-backed `bundle` E2E passed for default six-report and optional eight-report output, deterministic reruns, evidence path/line, and source preservation. Evidence is recorded in `STATUS.md`.
+- **Next functional priority:** Read `docs/TARGET_BLUEPRINT_V1.md` and trace each supported user capability to an implemented CLI path and executable evidence. Record each gap with an acceptance case, then implement the highest-value supported-scope gap and add a genuine end-to-end test where the user path spans the parser. Avoid changing report schemas or file counts without a blueprint requirement.
+- **Close remaining release checks:** Exercise physical symlink/junction cases on a Windows host with the needed privilege; otherwise keep the six documented platform/environment skips explicit. Evaluate a fresh-PC install/bootstrap path with pinned parser integrity. Do not add paid CI, upload customer source, or deploy externally without authorization.
+- Latest code commit `688a45a5e51524dd6d2ddb3b21298e2cfbf9ecf1` is confirmed on private `hibi89/HAE`, branch `REA_APP`; docs follow-up is tracked in P45 `HANDOFF.md` and `STATUS.md`.
+
 ## REA_APP P44 next MVP gate (2026-10-27 KST)
 
 - Opt-in one-command architecture view added: `python -m rea_app bundle BASELINE CURRENT --output-dir OUT --with-diagram` writes 8 outputs; omitting option remains exactly 6. No extra parser calls. Focused Python suite **22/22 PASS on isolated stubs**; real Babel parser not available.

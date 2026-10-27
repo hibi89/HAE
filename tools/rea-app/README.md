@@ -1,3 +1,9 @@
+## P45 — verified bundle scope and artifact paths
+
+When `bundle` succeeds, its console summary now shows the analysis scope (indexed files, JS/TS files, dependency edges, and changed files) and an indexed list of every generated report path. This makes it clear which reports were written and what the run analyzed without changing the existing report schemas or filenames.
+
+The default bundle still writes six reports. Adding `--with-diagram` writes eight, including `architecture.mmd` and `architecture.md`. Both paths passed genuine `@babel/parser@7.29.9` synthetic-project end-to-end acceptance with deterministic repeated output and unchanged input snapshots. The current Windows Gate R evidence and platform skips are recorded in the repository `STATUS.md` P45 entry.
+
 ## P44 — optional architecture diagram in one MVP bundle command (2026-10-27 KST)
 
 ```powershell
