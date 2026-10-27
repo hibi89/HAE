@@ -167,7 +167,7 @@ class ResumeAcceptanceTests(unittest.TestCase):
 
     def test_completed_csv_import_missing_row_is_not_silently_resumed(self):
         (self.root / "orders.csv").write_bytes(
-            b"id,amount,label\\n1,99,low\\n2,100,edge\\n3,150,high\\n"
+            bytes([10]).join([b'id,amount,label', b'1,99,low', b'2,100,edge', b'3,150,high']) + bytes([10])
         )
         plan = self.fixture("csv-filter-import.json")
         self.assertEqual(
