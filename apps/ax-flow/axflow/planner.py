@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import re
 
-from .engine import PlanError, validate
+from .engine import Engine, NUMBER_TEXT, PlanError, validate
 from .templates import build_template
 
 MAX_REQUEST_CHARS = 512
@@ -48,7 +48,7 @@ _KOREAN_NORMALIZE = re.compile(
     r"(?:숫자|수치)(?:형)?(?:으로|로)\s*(?:변환|변경)|문자열(?:로)?\s*(?:변환|변경))",
     re.IGNORECASE,
 )
-_VALUE = r'(?:\"[^\"\r\n]{1,80}\"|\'[^\'\r\n]{1,80}\'|-?\d+(?:\.\d+)?|[A-Za-z가-힣_][A-Za-z0-9가-힣_-]{0,63})'
+_VALUE = r'(?:\"[^\"\r\n]{1,80}\"|\'[^\'\r\n]{1,80}\'|[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?|[A-Za-z가-힣_][A-Za-z0-9가-힣_-]{0,63})'
 _ENGLISH_FILTER = re.compile(
     rf"(?<![A-Za-z0-9_])(?P<field>{_FIELD})\s*(?P<operator>>=|<=|==|=|>|<|equals?)\s*"
     rf"(?P<value>{_VALUE})(?![A-Za-z0-9_])",
@@ -65,9 +65,9 @@ _ORDERED = {">": "gt", ">=": "gte", "<": "lt", "<=": "lte"}
 def _parse_scalar(raw: str, operator: str) -> tuple[object, str]:
     if raw[:1] in {"'", '"'}:
         return raw[1:-1], "identity"
-    if operator in {"gt", "gte", "lt", "lte"} and re.fullmatch(r"-?\d+(?:\.\d+)?", raw):
-        number = float(raw)
-        return (int(number) if number.is_integer() else number), "number"
+    if operator in {"gt", "gte", "lt", "lte"} and NUMBER_TEXT.fullmatch(raw):
+        # Use the executor's bounded, lossless numeric conversion for intent thresholds.
+        return Engine._transform(raw, "number"), "number"
     return raw, "identity"
 
 
