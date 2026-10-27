@@ -1,3 +1,9 @@
+## REA_APP P43 — next verified implementation step (2026-10-27 KST)
+
+- Implemented/locally tested evidence-only diagram CLI: `python -m rea_app diagram source-map.json --output-dir out` → `architecture.mmd` and `architecture.md` with resolved in-root import graph and line evidence. New 6/6 PASS, total isolated 20/20 PASS (source exact blob hashes in STATUS P43). No new dependency; useful offline even without the Babel installation.
+- **Critical MVP acceptance not closed:** pinned `@babel/parser@7.29.9` cannot install from this isolated host (npm DNS `EAI_AGAIN`). Run existing `tests/test_bundle_real_parser.py` against the exact current GitHub source and genuine Babel before declaring REA_APP complete. Full Gate R and Windows are also unverified. Do not create new CI/paid services without approval.
+- After actual MVP acceptance, compare frozen `docs/TARGET_BLUEPRINT_V1.md`, complete outstanding user capabilities, then final security/reliability/compatibility. Avoid more speculative source-hardening rounds; favor features and real evidence.
+
 ## REA_APP P42 — next: run real JS/TS bundle acceptance (2026-10-27 KST)
 
 - Source-pinned `tests/test_bundle_real_parser.py` runs actual subprocess twice on small synthetic JS/TS baseline/current with no mocks; checks 6 output reports, resolved import/line evidence, changed dependent and entrypoint, exported callable contract, deterministic output, original tree unchanged. Python syntax compiled, **runtime not executed** due missing exact Babel parser 7.29.9.

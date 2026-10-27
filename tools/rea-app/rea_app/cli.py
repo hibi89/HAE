@@ -9,6 +9,7 @@ from pathlib import Path
 
 from . import __version__
 from .contracts import ContractError, build_functional_contracts, load_source_map, render_functional_contracts_markdown
+from .diagram import DiagramError, load_source_map_for_diagram, render_architecture_mermaid
 from .graph import ParserError, build_report, render_markdown
 from .impact import build_change_impact, render_change_impact_markdown
 from .scanner import ScanError, ScanLimits, walk_source
@@ -198,6 +199,24 @@ def _bundle(args: argparse.Namespace) -> int:
     return 1 if source_map["summary"]["syntax_errors"] or impact["summary"]["syntax_errors"] else 0
 
 
+def _diagram(args: argparse.Namespace) -> int:
+    """Render a dependency architecture diagram from a saved source-map report."""
+    try:
+        source_map_path = args.source_map.expanduser().resolve(strict=True)
+        output = args.output_dir.expanduser().resolve(strict=False)
+        if output.exists() and not output.is_dir():
+            raise OutputError("output path exists and is not a directory")
+        diagram = render_architecture_mermaid(load_source_map_for_diagram(source_map_path))
+        output.mkdir(parents=True, exist_ok=True)
+        _write_report(output / "architecture.mmd", diagram)
+        _write_report(output / "architecture.md", "# REA_APP architecture\n\n```mermaid\n" + diagram + "```\n")
+    except (DiagramError, OutputError, OSError) as exc:
+        print(f"REA_APP diagram export stopped: {exc}", file=sys.stderr)
+        return 2
+    print(f"REA_APP architecture diagram generated: {output / 'architecture.mmd'}")
+    return 0
+
+
 def build_argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="rea-app",
@@ -235,6 +254,10 @@ def build_argument_parser() -> argparse.ArgumentParser:
     bundle.add_argument("--max-total-bytes", type=int, default=20_000_000)
     bundle.add_argument("--parser-timeout", type=int, default=30)
     bundle.set_defaults(handler=_bundle)
+    diagram = commands.add_parser("diagram", help="render a Mermaid architecture graph from saved source-map.json")
+    diagram.add_argument("source_map", type=Path, help="existing REA_APP source-map.json")
+    diagram.add_argument("--output-dir", type=Path, required=True, help="diagram output directory")
+    diagram.set_defaults(handler=_diagram)
     return parser
 
 

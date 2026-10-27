@@ -1,3 +1,15 @@
+## P43 — visual architecture graph from an already saved source map
+
+Run the new zero-dependency offline export after any `scan` or `bundle` that has produced `source-map.json`:
+
+```powershell
+python -m rea_app diagram C:\reports\source-map.json --output-dir C:\reports\diagram
+```
+
+It writes **`architecture.mmd`** and **`architecture.md`** (the latter embeds a Mermaid graph for GitHub preview). Nodes are relative JS/TS module paths; directed links show **resolved in-root imports and their original line numbers**. External dependencies, unresolved edges, project source bodies and absolute paths are never copied. It reads the saved bounded 10 MB report and **does not require the Babel parser or rerun source analysis**.
+
+For test evidence, an isolated Python 3.13.5 synthetic report was fed into the real `diagram` CLI. New tests cover determinism, correct internal edges and evidence, empty graph, label escaping, invalid paths/lines, malformed or oversized input, and repeated real subprocess output. **6/6 new tests PASS** and **20/20 total locally executable tests PASS** against byte-exact candidate files in the standalone contracts/bundle fixture. This local environment's unrelated scanner/graph/impact imports were test stubs; **actual Babel parser 7.29.9 and full JS/TS `bundle` remain unavailable and unverified**. Rendered `.mmd` output is syntactically authored text, not a browser-rendered visual regression test.
+
 ## P42 — real Babel-backed bundle acceptance test
 
 A new synthetic-project integration test runs the **actual** `python -m rea_app bundle` subprocess twice and checks six output files, resolved import path/line, changed dependency impact, affected package entrypoint, callable contract path/line, deterministic output and unchanged originals. It does not mock scanning or parsing.
