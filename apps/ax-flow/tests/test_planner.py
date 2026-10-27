@@ -69,6 +69,35 @@ class PlannerTests(unittest.TestCase):
         self.assertEqual(numeric_filter["steps"][1]["transforms"], {"amount": "number"})
         self.assertEqual(numeric_filter["steps"][2]["from"], "normalized")
 
+    def test_numeric_filter_thresholds_preserve_precision_and_exponents(self):
+        for threshold, expected in (
+            ("0.1", 0.1),
+            ("3.75", 3.75),
+            ("1e-7", 1e-7),
+            ("9007199254740991", 9007199254740991),
+        ):
+            with self.subTest(threshold=threshold):
+                plan = plan_request(
+                    f"Import this CSV where amount > {threshold} into SQLite", "contacts.csv"
+                )
+                self.assertEqual(
+                    [step["op"] for step in plan["steps"]],
+                    ["csv_read", "csv_filter", "sqlite_import_csv"],
+                )
+                self.assertEqual(plan["steps"][1]["value"], expected)
+                self.assertEqual(plan["steps"][1]["transform"], "number")
+
+        for unsafe in (
+            "0.10000000000000001",
+            "9007199254740993",
+            "1e-9999",
+            "1e9999",
+        ):
+            with self.subTest(unsafe=unsafe), self.assertRaises(PlanError):
+                plan_request(
+                    f"Import this CSV where amount > {unsafe} into SQLite", "contacts.csv"
+                )
+
     def test_unsupported_compound_negated_or_oversized_requests_fail_closed(self):
         for request in (
             "send the imported CSV over email into SQLite",
