@@ -1,5 +1,7 @@
 # HAE — Humanized Automation Ecosystem
 
+> **2026-10-28 OWNER CANONICAL ARCHITECTURE:** [**HAE 공식 생태계 설계 정본**](https://github.com/hibi89/HAE/blob/main/docs/ECOSYSTEM_CANONICAL.md) — HAE(자연어·고객 단계별 안내) + LA(플로우 구성·실행) + SOVIA(위험·행동 감사) + DBVORA(실제 업무 DB화 연계·구조/상태·백업/복구)는 **전체 생태계의 필수 4요소**. n8n은 실행 엔진이 아닌 별도 참고/추후 어댑터. 타 도구는 확장 옵션. 전체 통합 E2E 검증 전 완성 주장 금지. 해당 private/main 문서가 역사적 선택형 연동 설명보다 우선함.
+
 **Final customer-facing product name: HAE (Humanized Automation Ecosystem).** Former name: AX FLOW. Internal `axflow` package, `apps/ax-flow/` path, `feature/axflow-mvp` branch, and `hibi89/AX_FLOW` repository remain compatibility identifiers, not product branding.
 
 **Status:** `main` contains planning/integration records; source prototypes are developed separately on `REA_APP` and `feature/axflow-mvp`. No customer-ready release or live OAuth claim.
@@ -17,10 +19,11 @@ A user chooses a suggested task or writes a natural-language instruction, adds o
 - `tools/rea-app/` — REA_APP: source architecture, dependency and behavior analysis for lawful independent engineering; development tool, not automation runtime.
 - `apps/ax-flow/` — HAE: standalone automation + data product; not a modified n8n distribution.
 - `hibi89/DBVORA` — distinct private database visibility, optimization, recovery and archiving tool. Only approved, versioned local interface integration; no code copying by default.
-- SMAX²/SOVIA are separate optional future interoperability targets.
+- **SOVIA Sovereign** is an independently versioned but **mandatory HAE ecosystem integration** for plan/approval/action audit; its current Audit Lite is post-execution synthetic-only and does not yet enforce runtime actions.
+- **SMAX², REA_APP and CODE CHECKER** are separate optional tools/add-ons; they do not replace HAE, LA, SOVIA or DBVORA.
 
 ## Development stages
-REA_APP core → permitted n8n functionality/architecture study → independent Lightning Azent execution engine + SQLite → AI/file workflows + OAuth → DBVORA data-management UI integration → browser/Windows/security, recovery, customer pilots.
+HAE natural-language guided intake → Lightning Azent declarative flow / approved execution → SOVIA plan and action audit integration → supported business-data persistence + DBVORA-visible schema / health / verified restore → integrated Windows/browser/customer E2E. REA_APP/n8n lawful study is an independent engineering aid, not a runtime dependency.
 
 Master engineering plan: [docs/MASTER_SCHEDULE.md](docs/MASTER_SCHEDULE.md). Database architecture: [docs/DATA_ARCHITECTURE.md](docs/DATA_ARCHITECTURE.md). Validation: [docs/ACCEPTANCE_MATRIX.md](docs/ACCEPTANCE_MATRIX.md).
 
