@@ -8,6 +8,13 @@
 5. **Other branch:** permitted n8n structure analysis and P10 AX FLOW interval crash test are checkpointed on `feature/axflow-mvp`; P10 full suite 60/60 PASS. AX FLOW engine expansion remains held.
 6. **Next:** choose only a concrete permission-free Blueprint gap; browser-visible E2E and gated restore/release actions remain unresolved.
 
+## P14 — REA_APP Windows reparse-point evidence
+1. **Change/branch:** Added a unit test for the scanner's Windows FILE_ATTRIBUTE_REPARSE_POINT decision, including set and clear values. `REA_APP` code commit `98c6d6b399804b9041862caeb3124a0faa1146a0`; README caveat commit `f2b09c0827d7fb86666fa3d8fd4684cbebd39b96`.
+2. **Verification:** Python suite **11/11 PASS**; Node parser adapter PASS with pinned `@babel/parser@7.29.9`. No analyzer behavior changed.
+3. **Failure causes:** first fixture command had a PowerShell unmatched-parenthesis parse error and executed nothing; corrected command then failed at junction creation with OS **Access denied**. No escalation used. README/STATUS explicitly say the real junction fixture is still unverified. The synthetic unit test does not claim filesystem-level proof.
+4. **State:** progress remains 77% / PARTIAL. The actual junction test, browser-visible UI E2E, separately approved DBVORA restore, independent review, signed installer and customer/release gates remain open.
+5. **Next:** continue only with another permission-free Blueprint acceptance item; do not bypass the browser URL-confidence block or elevate junction creation.
+
 
 1. **Goal/requirements/technology:** AX FLOW is a local-first natural-language automation product: file input + safe OAuth onboarding + plan/validate/run/recover with CLI and minimal web UI; optional DBVORA. REA_APP is a distinct app source analysis/reconstruction-assistance tool. Python 3.11+ proposed for initial static analysis and local executor; final technology remains subject to design/approval.
 2. **Completed/change/decision:** GitHub private `hibi89/AX_FLOW` discovered empty; initial README created. Repo intended as private monorepo with separate source directories and branches. No features developed.
