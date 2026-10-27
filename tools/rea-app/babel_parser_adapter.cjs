@@ -160,27 +160,34 @@ function fileSystemModuleObject(node, bindings, edges, conflicts) {
   return null;
 }
 
+function fileSystemOperation(method, moduleName) {
+  if (!FILE_ACCESS_OPERATIONS.has(method)) return null;
+  if (moduleName === 'fs/promises' && (method.endsWith('Sync') || method.startsWith('create'))) return null;
+  return FILE_ACCESS_OPERATIONS.get(method);
+}
+
 function fileAccessOperation(callee, bindings, edges, conflicts) {
   if (!callee) return null;
   if (callee.type === 'Identifier') {
     const binding = fileSystemBinding(callee.name, bindings, edges, conflicts);
     if (!binding || binding.namespace) return null;
-    return FILE_ACCESS_OPERATIONS.get(binding.imported) || null;
+    return fileSystemOperation(binding.imported, binding.module);
   }
   if (callee.type !== 'MemberExpression') return null;
   const method = nodeName(callee.property);
-  const operation = FILE_ACCESS_OPERATIONS.get(method);
-  if (!operation) return null;
+  if (!FILE_ACCESS_OPERATIONS.has(method)) return null;
 
   let moduleObject = fileSystemModuleObject(callee.object, bindings, edges, conflicts);
   if (callee.object && callee.object.type === 'MemberExpression' && nodeName(callee.object.property) === 'promises') {
     moduleObject = fileSystemModuleObject(callee.object.object, bindings, edges, conflicts);
     if (!moduleObject || moduleObject.module !== 'fs' || !moduleObject.namespace) return null;
-    return operation;
+    return fileSystemOperation(method, 'fs/promises');
   }
   if (!moduleObject) return null;
-  if (moduleObject.module === 'fs/promises' && moduleObject.namespace) return operation;
-  if (moduleObject.module === 'fs' && (moduleObject.namespace || moduleObject.imported === 'promises')) return operation;
+  if (moduleObject.module === 'fs/promises' && moduleObject.namespace) return fileSystemOperation(method, 'fs/promises');
+  if (moduleObject.module === 'fs' && (moduleObject.namespace || moduleObject.imported === 'promises')) {
+    return fileSystemOperation(method, moduleObject.imported === 'promises' ? 'fs/promises' : 'fs');
+  }
   return null;
 }
 

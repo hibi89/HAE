@@ -400,11 +400,15 @@ class ReaAppCliTests(unittest.TestCase):
             'import * as fs from "node:fs";\n'
             'import { readFileSync as read } from "fs";\n'
             'import { promises as p } from "node:fs";\n'
+            'import * as invalidFsPromises from "node:fs/promises";\n'
+            'import * as notFs from "./not-fs";\n'
             'const fsCompat = require("node:fs");\n'
             'const { readFileSync: readCompat } = require("fs");\n'
             'const input = fs.readFileSync("./fixtures/input.csv");\n'
             'const config = read("./data/report.json");\n'
             'const archived = p.readFile("./archive.csv");\n'
+            'invalidFsPromises.readFileSync("./invalid-promises-sync.csv");\n'
+            'notFs.readFileSync("./false-positive.csv");\n'
             'fsCompat.readFileSync("./compat-namespace.csv");\n'
             'readCompat("./compat-named.csv");\n'
             'fs.writeFileSync("../outside/result.csv", input);\n'
@@ -446,11 +450,13 @@ class ReaAppCliTests(unittest.TestCase):
             {"parent_relative_redacted", "absolute_or_nonlocal_redacted", "sensitive_path_redacted", "dynamic"},
         )
         first = next(item for item in accesses if item["path"] == "fixtures/input.csv")
-        self.assertEqual(first["evidence"], {"path": "src/storage.ts", "line": 6, "argument_index": 0})
+        self.assertEqual(first["evidence"], {"path": "src/storage.ts", "line": 8, "argument_index": 0})
         self.assertNotIn("C:/Users/haein/private.txt", report_text)
         self.assertNotIn("api_token.txt", report_text)
         self.assertNotIn("shadowed.csv", report_text)
         self.assertNotIn("reassigned.csv", report_text)
+        self.assertNotIn("invalid-promises-sync.csv", report_text)
+        self.assertNotIn("false-positive.csv", report_text)
         self.assertIn("Static file-access observations", (self.output / "source-map.md").read_text(encoding="utf-8"))
         self.assertEqual(snapshot(self.source), before)
 
