@@ -98,6 +98,27 @@ class NativeInterfaceTests(unittest.TestCase):
         self.assertNotEqual(seen[0]["run_id"], seen[1]["run_id"])
         with sqlite3.connect(self.business) as conn:
             self.assertEqual(conn.execute("SELECT COUNT(*) FROM records").fetchone()[0], 2)
+        # A fresh LAExecutor resumes the persisted schedule at the next tick.
+        reopened = LAExecutor(self.state, self.business, self.root)
+        third = list(reopened.schedule(
+            plan, "NativeSchedule", max_runs=1, approve_writes=True,
+            clock=clock, sleeper=lambda _: None))
+        self.assertEqual(third[0]["tick"], 2)
+        self.assertEqual(self.executor.status(third[0]["run_id"])["status"], "completed")
+        with sqlite3.connect(self.business) as conn:
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM records").fetchone()[0], 3)
+
+    def test_cli_native_workflow_executes_with_local_synthetic_opt_in(self):
+        native = FIXTURES / "native-conditional-route.json"
+        env = dict(os.environ, PYTHONPATH=str(PKG_ROOT))
+        run = subprocess.run([
+            sys.executable, "-m", "lightning_azent", "run", str(native),
+            "--state", str(self.state), "--data", str(self.business),
+            "--run-id", "NativeCli", "--synthetic",
+        ], cwd=self.root, env=env, capture_output=True, text=True, timeout=12)
+        self.assertEqual(run.returncode, 0, run.stderr)
+        self.assertEqual(json.loads(run.stdout), {"route": "accepted"})
+        self.assertEqual(self.executor.status("NativeCli")["status"], "completed")
 
     def test_status_uses_read_only_state_and_does_not_create_db(self):
         with self.assertRaises(Exception):
