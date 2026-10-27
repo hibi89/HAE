@@ -10,6 +10,7 @@ import re
 import sqlite3
 import time
 from contextlib import contextmanager
+from decimal import Decimal, InvalidOperation
 from pathlib import Path, PurePosixPath
 
 VERSION = "axflow.ir.v0"
@@ -20,6 +21,8 @@ MAX_CSV_BYTES = 262144
 MAX_CSV_ROWS = 1000
 MAX_CSV_COLUMNS = 64
 MAX_CSV_CELL_CHARS = 4096
+MAX_SAFE_INTEGER = 9007199254740991
+NUMBER_TEXT = re.compile(r"^[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?$")
 
 
 class PlanError(ValueError):
@@ -686,13 +689,41 @@ class Engine:
             return str(value)
         if isinstance(value, bool) or not isinstance(value, (int, float, str)):
             raise PlanError("number transform requires a numeric scalar")
+        if isinstance(value, int):
+            if abs(value) > MAX_SAFE_INTEGER:
+                raise PlanError("number transform exceeds the interoperable integer range")
+            return value
+        if isinstance(value, float):
+            if not math.isfinite(value):
+                raise PlanError("number transform received a non-finite number")
+            if value.is_integer():
+                integer = int(value)
+                if abs(integer) > MAX_SAFE_INTEGER:
+                    raise PlanError("number transform exceeds the interoperable integer range")
+                return integer
+            return value
+        text = value.strip()
+        if not NUMBER_TEXT.fullmatch(text):
+            raise PlanError("number transform received an invalid number")
         try:
-            number = float(value)
+            exact = Decimal(text)
+        except InvalidOperation as exc:
+            raise PlanError("number transform received an invalid number") from exc
+        if not exact.is_finite():
+            raise PlanError("number transform received a non-finite number")
+        if exact == exact.to_integral_value():
+            if abs(exact) > MAX_SAFE_INTEGER:
+                raise PlanError("number transform exceeds the interoperable integer range")
+            return int(exact)
+        try:
+            number = float(exact)
         except (ValueError, OverflowError) as exc:
             raise PlanError("number transform received an invalid number") from exc
         if not math.isfinite(number):
             raise PlanError("number transform received a non-finite number")
-        return int(number) if number.is_integer() else number
+        if number == 0 or Decimal(repr(number)) != exact:
+            raise PlanError("number transform would lose numeric precision")
+        return number
 
     @staticmethod
     def _compare(left: object, operator: str, right: object) -> bool:

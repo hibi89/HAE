@@ -1,3 +1,11 @@
+## P40 complete — precision-safe CSV numeric conversion
+The engine now accepts bounded, exact decimal notation and rejects malformed syntax, underflow, overflow, non-finite values, unsafe integers and values that round to a different decimal. Engine, API and packaged CLI tests cover the same synthetic success/failure matrix. Invalid input is rejected before business writes, source files remain unchanged, and packaged CLI failures return code 2.
+
+**Verification:** Windows Python 3.11.9 full suite **71/71 PASS** in 35.200 s with authorized loopback; engine suite 31/31; Node syntax/UI regression and changed-file whitespace/conflict audit PASS. Failures and recovery are recorded in STATUS. Progress remains **90% PARTIAL**.
+
+## Next atomic task — isolated SQLite backup/restore acceptance
+Inspect the existing runtime/business SQLite backup paths and the supported DBVORA snapshot contract. Work only on disposable synthetic databases and a new temporary destination. If an independently restored copy can be verified without touching the source, add the smallest test-first acceptance and record source hash/integrity. Do not retry a failed publication blindly, modify DBVORA, use real data, or implement a standalone engine; if the Windows flush gate blocks this, preserve the failure evidence and move to another safe, unblocked core gap.
+
 ## P39 complete — natural-language numeric/string normalization and zipapp exit status
 Added bounded English/Korean number/string column conversion planning. The API stores valid decimal input as a numeric JSON value; malformed numeric input fails before business writes with unchanged CSV. A packaged test exposed a real reporting bug: zipapp invoked the CLI but dropped its returned exit status, so a safe failure looked successful to scripts. The package now calls a wrapper that raises `SystemExit(main())`; invalid packaged conversion exits 2 and writes no business rows.
 

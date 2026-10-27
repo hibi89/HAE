@@ -1,3 +1,4 @@
+import hashlib
 import json
 import sqlite3
 import tempfile
@@ -280,48 +281,62 @@ class WebUITests(unittest.TestCase):
 
     def test_natural_language_numeric_conversion_fails_before_invalid_rows_are_saved(self):
         valid_path = self.inputs / "amounts.csv"
-        invalid_path = self.inputs / "invalid-amounts.csv"
-        valid_bytes = b"amount\n3.75\n"
-        invalid_bytes = b"amount\nNOT-A-NUMBER-MARKER\n"
+        valid_bytes = b"amount\n42\n3.75\n1.25e2\n 8.5 \n1e-7\n"
         valid_path.write_bytes(valid_bytes)
-        invalid_path.write_bytes(invalid_bytes)
         task = "Convert the amount column to a number, then import this CSV into local SQLite"
 
         code, _, preview = self.post_json("/api/preview", {"task": task, "csv_path": "amounts.csv"})
         self.assertEqual(code, 200, preview)
         self.assertEqual(preview["plan"]["steps"][1]["transforms"], {"amount": "number"})
+        valid_hash = hashlib.sha256(valid_bytes).hexdigest()
+        valid_metadata = (valid_path.stat().st_size, valid_path.stat().st_mtime_ns)
         code, _, result = self.post_json("/api/run", {
             "task": task, "csv_path": "amounts.csv", "preview_id": preview["preview_id"],
             "approve_writes": True,
         })
         self.assertEqual(code, 200, result)
-        self.assertEqual(result["result"]["imported_rows"], 1)
+        self.assertEqual(result["result"]["imported_rows"], 5)
         with closing(sqlite3.connect(self.business)) as business:
             stored = business.execute(
-                "SELECT payload_json FROM csv_records WHERE run_id=? AND row_number=1",
+                "SELECT payload_json FROM csv_records WHERE run_id=? ORDER BY row_number",
                 (result["run_id"],),
-            ).fetchone()[0]
-        self.assertEqual(json.loads(stored), {"amount": 3.75})
+            ).fetchall()
+        self.assertEqual([json.loads(item[0])["amount"] for item in stored], [42, 3.75, 125, 8.5, 1e-7])
+        self.assertEqual(hashlib.sha256(valid_path.read_bytes()).hexdigest(), valid_hash)
+        self.assertEqual((valid_path.stat().st_size, valid_path.stat().st_mtime_ns), valid_metadata)
 
-        code, _, invalid_preview = self.post_json("/api/preview", {
-            "task": task, "csv_path": "invalid-amounts.csv",
-        })
-        self.assertEqual(code, 200, invalid_preview)
-        code, _, failure = self.post_json("/api/run", {
-            "task": task, "csv_path": "invalid-amounts.csv",
-            "preview_id": invalid_preview["preview_id"], "approve_writes": True,
-        })
-        self.assertEqual(code, 422, failure)
-        self.assertEqual(failure["error_type"], "PlanError")
-        self.assertEqual(failure["status"]["status"], "failed")
-        self.assertEqual(valid_path.read_bytes(), valid_bytes)
-        self.assertEqual(invalid_path.read_bytes(), invalid_bytes)
-        with closing(sqlite3.connect(self.business)) as business:
-            self.assertEqual(business.execute(
-                "SELECT COUNT(*) FROM csv_records WHERE run_id=?", (failure["run_id"],)
-            ).fetchone()[0], 0)
-            self.assertEqual(business.execute("SELECT COUNT(*) FROM csv_records").fetchone()[0], 1)
-        self.assertNotIn("NOT-A-NUMBER-MARKER", json.dumps(failure["status"]))
+        invalid_values = (
+            "", "   ", "NaN", "Infinity", "-inf", "1e9999", "1e-9999", "$12.50",
+            "1_000", "9007199254740993", "0.10000000000000001",
+        )
+        for index, value in enumerate(invalid_values):
+            with self.subTest(value=value):
+                invalid_name = f"invalid-amount-{index}.csv"
+                invalid_path = self.inputs / invalid_name
+                invalid_bytes = f'amount\n"{value}"\n'.encode("utf-8")
+                invalid_path.write_bytes(invalid_bytes)
+                original_hash = hashlib.sha256(invalid_bytes).hexdigest()
+                original_metadata = (invalid_path.stat().st_size, invalid_path.stat().st_mtime_ns)
+                code, _, invalid_preview = self.post_json("/api/preview", {
+                    "task": task, "csv_path": invalid_name,
+                })
+                self.assertEqual(code, 200, invalid_preview)
+                code, _, failure = self.post_json("/api/run", {
+                    "task": task, "csv_path": invalid_name,
+                    "preview_id": invalid_preview["preview_id"], "approve_writes": True,
+                })
+                self.assertEqual(code, 422, failure)
+                self.assertEqual(failure["error_type"], "PlanError")
+                self.assertEqual(failure["status"]["status"], "failed")
+                self.assertEqual(hashlib.sha256(invalid_path.read_bytes()).hexdigest(), original_hash)
+                self.assertEqual((invalid_path.stat().st_size, invalid_path.stat().st_mtime_ns), original_metadata)
+                with closing(sqlite3.connect(self.business)) as business:
+                    self.assertEqual(business.execute(
+                        "SELECT COUNT(*) FROM csv_records WHERE run_id=?", (failure["run_id"],)
+                    ).fetchone()[0], 0)
+                    self.assertEqual(business.execute("SELECT COUNT(*) FROM csv_records").fetchone()[0], 5)
+                if value.strip():
+                    self.assertNotIn(value.strip(), json.dumps(failure["status"]))
 
     def test_run_rejects_missing_or_mismatched_preview_token(self):
         _, _, preview = self.post_json("/api/preview", {

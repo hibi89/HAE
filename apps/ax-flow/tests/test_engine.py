@@ -386,22 +386,43 @@ class TestEngine(unittest.TestCase):
         input_root = self.root / "invalid-normal-input"
         input_root.mkdir()
         csv_path = input_root / "amounts.csv"
-        original = b"amount\nnot-a-number\n"
-        csv_path.write_bytes(original)
         plan = {"version": "axflow.ir.v0", "steps": [
             {"id": "input", "op": "csv_read", "path": "amounts.csv"},
             {"id": "normalized", "op": "csv_normalize", "from": "input", "transforms": {"amount": "number"}},
             {"id": "imported", "op": "sqlite_import_csv", "from": "normalized"},
         ]}
+        invalid_values = (
+            "not-a-number", "", "   ", "NaN", "Infinity", "-inf", "1e9999", "1e-9999",
+            "$12.50", "1_000", "9007199254740993", "0.10000000000000001",
+        )
         engine = Engine(self.root / "invalid-normal-state.db", self.root / "invalid-normal-business.db", input_root)
-        with self.assertRaises(PlanError):
-            engine.execute(plan, "InvalidNormalize", approve_writes=True)
-        self.assertEqual(csv_path.read_bytes(), original)
+        for index, value in enumerate(invalid_values):
+            with self.subTest(value=value):
+                original = f'amount\n"{value}"\n'.encode("utf-8")
+                csv_path.write_bytes(original)
+                run_id = f"InvalidNormalize{index}"
+                with self.assertRaises(PlanError):
+                    engine.execute(plan, run_id, approve_writes=True)
+                self.assertEqual(csv_path.read_bytes(), original)
+                status = inspect_run(self.root / "invalid-normal-state.db", run_id)
+                self.assertEqual(status["status"], "failed")
+                self.assertEqual(status["step_outcomes"]["failed"], 1)
         with closing(sqlite3.connect(self.root / "invalid-normal-business.db")) as business:
             self.assertEqual(business.execute("SELECT COUNT(*) FROM csv_records").fetchone()[0], 0)
-        status = inspect_run(self.root / "invalid-normal-state.db", "InvalidNormalize")
-        self.assertEqual(status["status"], "failed")
-        self.assertEqual(status["step_outcomes"]["failed"], 1)
+
+    def test_number_transform_boundary_matrix(self):
+        for raw, expected in (
+            ("42", 42), ("-0", 0), ("3.75", 3.75), (" 8.5 ", 8.5),
+            ("1.25e2", 125), ("1e-7", 1e-7),
+        ):
+            with self.subTest(raw=raw):
+                self.assertEqual(Engine._transform(raw, "number"), expected)
+        for raw in (
+            "", "   ", "NaN", "Infinity", "-inf", "1e9999", "1e-9999", "$12.50",
+            "1_000", "9007199254740993", "0.10000000000000001",
+        ):
+            with self.subTest(raw=raw), self.assertRaises(PlanError):
+                Engine._transform(raw, "number")
 
     def test_csv_normalize_filter_import_retains_original_row_numbers(self):
         input_root = self.root / "filtered-normal-input"

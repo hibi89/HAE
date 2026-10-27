@@ -119,10 +119,8 @@ class ZipappSmokeTests(unittest.TestCase):
         inputs = self.outside / "numeric-input"
         inputs.mkdir()
         valid_path, invalid_path = inputs / "valid.csv", inputs / "invalid.csv"
-        valid_bytes = b"id,amount\n1,3.75\n"
-        invalid_bytes = b"id,amount\n2,BAD-NUMERIC-MARKER\n"
+        valid_bytes = b"id,amount\n1,42\n2,3.75\n3,1.25e2\n4, 8.5 \n5,1e-7\n"
         valid_path.write_bytes(valid_bytes)
-        invalid_path.write_bytes(invalid_bytes)
         plan = {"version": "axflow.ir.v0", "steps": [
             {"id": "input", "op": "csv_read", "path": "valid.csv"},
             {"id": "normalized", "op": "csv_normalize", "from": "input",
@@ -133,7 +131,7 @@ class ZipappSmokeTests(unittest.TestCase):
         plan_path.write_text(json.dumps(plan), encoding="utf-8")
         state, business = self.outside / "numeric-runtime.db", self.outside / "numeric-business.db"
         valid_hash = hashlib.sha256(valid_bytes).hexdigest()
-        valid_size, valid_mtime = valid_path.stat().st_size, valid_path.stat().st_mtime_ns
+        valid_metadata = (valid_path.stat().st_size, valid_path.stat().st_mtime_ns)
         successful = self._run_packaged(
             "run", plan_path, "--input-root", inputs, "--synthetic", "--state", state,
             "--data", business, "--run-id", "PackagedNumeric", "--approve-writes",
@@ -142,26 +140,46 @@ class ZipappSmokeTests(unittest.TestCase):
         receipt = json.loads(successful.stdout)["result"]
         self.assertEqual(receipt["source_sha256"], valid_hash)
         with closing(sqlite3.connect(business)) as con:
-            self.assertEqual(json.loads(con.execute(
-                "SELECT payload_json FROM csv_records WHERE run_id='PackagedNumeric' AND row_number=1"
-            ).fetchone()[0]), {"amount": 3.75, "id": "1"})
+            rows = con.execute(
+                "SELECT payload_json FROM csv_records WHERE run_id='PackagedNumeric' ORDER BY row_number"
+            ).fetchall()
+            self.assertEqual([json.loads(row[0])["amount"] for row in rows], [42, 3.75, 125, 8.5, 1e-7])
+        self.assertEqual(hashlib.sha256(valid_path.read_bytes()).hexdigest(), valid_hash)
+        self.assertEqual((valid_path.stat().st_size, valid_path.stat().st_mtime_ns), valid_metadata)
 
+        invalid_values = (
+            "", "   ", "NaN", "Infinity", "-inf", "1e9999", "1e-9999", "$12.50",
+            "1_000", "9007199254740993", "0.10000000000000001",
+        )
+        bad_plan_path = self.outside / "numeric-invalid-plan.json"
         bad_plan = json.loads(json.dumps(plan))
         bad_plan["steps"][0]["path"] = "invalid.csv"
-        bad_plan_path = self.outside / "numeric-invalid-plan.json"
         bad_plan_path.write_text(json.dumps(bad_plan), encoding="utf-8")
-        failed = self._run_packaged(
-            "run", bad_plan_path, "--input-root", inputs, "--synthetic", "--state", state,
-            "--data", business, "--run-id", "PackagedBadNumeric", "--approve-writes",
-        )
-        self.assertEqual(failed.returncode, 2, failed.stdout + failed.stderr)
-        self.assertNotIn("BAD-NUMERIC-MARKER", failed.stderr)
+        for index, value in enumerate(invalid_values):
+            with self.subTest(value=value):
+                invalid_bytes = f'id,amount\n{index + 10},"{value}"\n'.encode("utf-8")
+                invalid_path.write_bytes(invalid_bytes)
+                invalid_hash = hashlib.sha256(invalid_bytes).hexdigest()
+                invalid_metadata = (invalid_path.stat().st_size, invalid_path.stat().st_mtime_ns)
+                run_id = f"PackagedBadNumeric{index}"
+                failed = self._run_packaged(
+                    "run", bad_plan_path, "--input-root", inputs, "--synthetic", "--state", state,
+                    "--data", business, "--run-id", run_id, "--approve-writes",
+                )
+                self.assertEqual(failed.returncode, 2, failed.stdout + failed.stderr)
+                if value.strip():
+                    self.assertNotIn(value.strip(), failed.stderr)
+                self.assertEqual(hashlib.sha256(invalid_path.read_bytes()).hexdigest(), invalid_hash)
+                self.assertEqual((invalid_path.stat().st_size, invalid_path.stat().st_mtime_ns), invalid_metadata)
+                if value.strip():
+                    self.assertNotIn(value.strip(), state.read_bytes().decode("latin1"))
+                with closing(sqlite3.connect(business)) as con:
+                    self.assertEqual(con.execute(
+                        "SELECT COUNT(*) FROM csv_records WHERE run_id=?", (run_id,)
+                    ).fetchone()[0], 0)
+                    self.assertEqual(con.execute("SELECT COUNT(*) FROM csv_records").fetchone()[0], 5)
         self.assertEqual(hashlib.sha256(valid_path.read_bytes()).hexdigest(), valid_hash)
-        self.assertEqual((valid_path.stat().st_size, valid_path.stat().st_mtime_ns), (valid_size, valid_mtime))
-        self.assertEqual(invalid_path.read_bytes(), invalid_bytes)
-        self.assertNotIn("BAD-NUMERIC-MARKER", state.read_bytes().decode("latin1"))
-        with closing(sqlite3.connect(business)) as con:
-            self.assertEqual(con.execute("SELECT COUNT(*) FROM csv_records").fetchone()[0], 1)
+        self.assertEqual((valid_path.stat().st_size, valid_path.stat().st_mtime_ns), valid_metadata)
 
     def test_package_builder_refuses_to_overwrite_an_existing_artifact(self):
         before = hashlib.sha256(self.package.read_bytes()).hexdigest()

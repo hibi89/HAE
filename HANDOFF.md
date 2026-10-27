@@ -1,3 +1,15 @@
+## Latest checkpoint — P40 precision-safe numeric CSV normalization
+1. **Branch/base:** `hibi89/AX_FLOW` `feature/axflow-mvp`; P39 parent `c6d272cc3ab798df0736d9159a756309f80b81cd`. P40 source commit SHA is recorded in the current branch history after the atomic update.
+2. **Engine behavior:** CSV number normalization now uses an explicit decimal syntax, Decimal comparison and finite-float conversion; unsupported syntax and any demonstrated value loss fail before business writes.
+3. **Supported cases:** integers within the interoperable safe-integer range, exactly round-trippable finite decimals, exponent notation and surrounding whitespace. Unsafe integer magnitude, underflow, overflow, non-finite and precision-losing decimals reject.
+4. **Evidence:** engine, local API and Windows packaged zipapp all exercised successful and invalid boundary tables. Source bytes/hash/size/mtime remain stable; each invalid run adds zero business rows; runtime receipts omit source values and packaged failures exit 2.
+5. **Verification:** Windows Python 3.11.9 full suite **71/71 PASS** in 35.200 s with authorized synthetic loopback; engine suite **31/31 PASS**; Node syntax and UI provenance regression PASS; changed-file whitespace/conflict check PASS.
+6. **Failures/recovery:** wrong unittest module invocation was replaced with discovery. Red tests exposed underflow-to-zero, underscore notation, unsafe integer rounding and decimal precision loss; engine fix stopped them before writes. First post-fix full run had two false failures from `assertNotIn("")`; blank-input leakage assertions were guarded and the final suite passed.
+7. **Current estimate:** 90% PARTIAL (A100/B95/C95/D95/E65), heuristic; no complete release criterion closes.
+8. **Open gates:** P36 Windows synthetic DBVORA snapshot failed safely before publication; D2 restore remains NOT_STARTED. OAuth consent, independent security, signed/customer distribution and commercial evidence need their applicable owner/external approvals.
+9. **Site/environment:** no website or external login needed; only synthetic fixtures and loopback tests. P33 six locked historical logs remain under `.verification-temp`; no listener/process was visible and none was force-killed.
+10. **Next:** P41, inspect existing supported SQLite backup/restore paths and add an isolated synthetic round-trip acceptance only if it can use a new temporary clone and leave the source untouched. Do not retry DBVORA publication blindly, modify DBVORA, use real data, or implement a standalone engine; record platform failure and proceed to the next safe gap if restore cannot be verified.
+
 ## Latest checkpoint — P39 typed CSV normalization and package failure status fixed
 1. **Branch/base:** `hibi89/AX_FLOW` `feature/axflow-mvp`; P38 parent `18d94b29bfa93731de70d5e83c4e0b5137739eb3`.
 2. **Planner:** English/Korean explicit one-column conversion to number/string now creates validated `csv_normalize` IR. Unsupported/multi-column conversions still reject.
