@@ -1,3 +1,16 @@
+## REA_APP P32 handoff — 2026-10-27 KST
+
+1. Goal/technology: REA_APP authorized local read-only JS/TS analysis, Python 3.11+ and Node pinned Babel parser 7.29.9; Gate R before independent Lightning Azent and HAE.
+2. Change/decision: Direct report-file open could follow symlink; switched to same-directory UTF-8 temp file, flush/fsync, os.replace and cleanup. Preferred to symlink precheck (race risk) and two-report transactional layout change (larger scope).
+3. Executed verification: Original writer reproduced outside-file overwrite with synthetic local fixture; new writer focused four cases 4/4 PASS, zero failure/skip (symlink target preservation, existing update, replace-failure cleanup, UTF-8). New test exact Git blob f3dc3251e560f739325343b71039e628321e7446. Prior P31 verifier-focused 9/9 PASS, not current full suite.
+4. State: P32 targeted output writer fixed/tested; overall Gate R PARTIAL; no release or HAE/Lightning Azent advancement.
+5. Issue/recovery/alternatives: Stable trusted output parent is required; mutable parent races, Windows real junction behavior, atomicity of JSON and Markdown together remain unverified. Complete private checkout unavailable via local DNS and Babel package missing. Preferred authorized existing host; paid CI only on approval; ordinary Git revert as rollback.
+6. Repo/branch/SHA: hibi89/AX_FLOW private, REA_APP. Code commit 3892c321e6d5cda9de496d30155f8c92248a4401; modified tools/rea-app/rea_app/cli.py (Git blob a063550738a047dbe709538fc5ea5db94ad27f3f), new tests/test_report_write_safety.py (f3dc3251e560f739325343b71039e628321e7446), modified verify_gate_r.py (396654c47b25cfbc0279b4dcdc2f8872c7e20891) with 15 source files. See tools/rea-app/P32_OUTPUT_WRITE_SAFETY.md.
+7. Production/runtime: local CLI; Vercel N/A. Python 3.13.5 Linux targeted local tests; Node 22.16, genuine installed Babel unavailable; real browser/production tests N/A.
+8. Originals/security: Git prior SHA cbb1763dda16afc5e3e53a65432de48f0f53df3e retained; synthetic fixtures only; no n8n/customer content, secrets, OAuth, new deployment or billing.
+9. Next step/completion gate: exact authorized full checkout with installed Babel 7.29.9, cd tools/rea-app && python verify_gate_r.py; require SOURCE VERIFIED 15/15, full Python PASS/FAIL/SKIP and genuine Node parser PASS with exit 0, record Windows caveats; then Gate R review and permitted independent Lightning Azent/HAE work.
+10. Time/checkpoint: 2026-10-27 KST; GitHub code commit and narrow executed tests confirmed; full runtime integration and Windows operations not verified.
+
 ## Latest checkpoint — P31 REA_APP reviewed-file reparse point guard (2026-10-27 KST)
 
 1. **Goal/technology:** Complete trustworthy local/offline Gate R validation of authorized read-only REA_APP CLI, Python 3.11+, Node and pinned Babel 7.29.9, before independent Lightning Azent and HAE. P31 narrows provenance of each reviewed file itself.
