@@ -80,7 +80,7 @@ def main() -> int:
             elif args.command == "verify":
                 if args.state is None or args.data is None or args.run_id is None:
                     raise PlanError("verify requires --state, --data and --run-id")
-                result = LAExecutor(args.state, args.data).verify_receipts(plan, args.run_id)
+                result = LAExecutor(args.state, args.data).verify_receipts(prepared.runtime_plan, args.run_id)
             else:
                 if not args.synthetic or args.state is None or args.data is None:
                     raise PlanError("execution requires --synthetic, --state and --data")
