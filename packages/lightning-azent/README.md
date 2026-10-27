@@ -2,7 +2,7 @@
 
 The independent package now exposes `azent.ir.v0` as a strictly versioned, bounded **native interface** mapped into the owner-authored `axflow.ir.v0` v0 core. `axflow.ir.v0` stays accepted for legacy HAE parity. Unknown IR versions/operations fail closed; native/legacy input dictionaries are not mutated. An independent `LAExecutor` provides `prepare`, `execute`, `resume`, `schedule`, `status`, and `capabilities` with lazy database opening and explicit local write approval. No additional operation, connector, n8n code or OAuth support is implied.
 
-A `resume` request requires an existing manual run ID and the exact original normalized plan; missing runs, changed plans and missing write approval are rejected before the engine initializes SQLite. For source CLI recovery use `python -m lightning_azent resume plan.json --state state.sqlite --data business.sqlite --run-id ExistingID --synthetic` and `--approve-writes` when required. No externally executed workflow replay is supported.
+A `resume` request requires an existing manual run ID and the exact original normalized plan; missing runs, changed plans, missing write approval and a deleted business ledger are rejected before the engine initializes SQLite. For source CLI recovery use `python -m lightning_azent resume plan.json --state state.sqlite --data business.sqlite --run-id ExistingID --synthetic` and `--approve-writes` when required. No externally executed workflow replay is supported. For CLI CSV execution, a missing `--input-root` is also rejected before creating SQLite files.
 
 Packaged console command: `lightning-azent` (Python >=3.11, zero runtime Python dependencies). Source CLI: `python -m lightning_azent --version`, `capabilities`, `validate`, `run`, `resume`, `schedule`, `status`. Native sample `docs/lightning-azent/fixtures/native-conditional-route.json`; non-network synthetic input only. No release wheel built/published for LA.
 
@@ -17,13 +17,13 @@ python -m lightning_azent capabilities
 python -m lightning_azent validate docs/lightning-azent/fixtures/native-conditional-route.json
 ```
 
-**All 26 LA test definitions (7 initial + 5 CLI-denial + 9 native IR + 5 recovery) are UNEXECUTED in this GitHub-only build session.** They include 3 real local synthetic workflows, rejection with no SQLite creation, native CLI run, version compatibility, and interval restart. Earlier REA_APP Windows Gate R results are for REA_APP only, not LA. Do not merge/switch HAE imports until the new tests and original HAE suite pass.
+**All 28 LA test definitions (7 initial + 6 CLI-denial + 9 native IR + 6 recovery) are UNEXECUTED in this GitHub-only build session.** They include 3 real local synthetic workflows, rejection with no SQLite creation, native CLI run, version compatibility, and interval restart. Earlier REA_APP Windows Gate R results are for REA_APP only, not LA. Do not merge/switch HAE imports until the new tests and original HAE suite pass.
 
 # Lightning Azent — isolated execution package (development stage)
 
 Branch: `feature/lightning-azent`. Existing HAE app `apps/ax-flow/` and REA_APP branch are unchanged.
 
-This directory stages the **owner-authored** HAE synthetic SQLite runner into a standalone import boundary. It is not derived from n8n code. Legacy `axflow.ir.v0` remains the sole accepted plan schema in this phase; `azent.ir.v0`, external connectors, secrets, hosted jobs and GUI are **not implemented**. Only synthetic/local data is supported.
+This directory stages the **owner-authored** HAE synthetic SQLite runner into a standalone import boundary. It is not derived from n8n code. Both `azent.ir.v0` and legacy `axflow.ir.v0` are now accepted through the versioned bounded adapter; external connectors, secrets, hosted jobs and GUI are **not implemented**. Only synthetic/local data is supported.
 
 ## Developer test commands (NOT EXECUTED by this GitHub connector session)
 
