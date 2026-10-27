@@ -94,7 +94,7 @@ python -c "import uvicorn; from dbvora.api import create_app; uvicorn.run(create
 Then add `--dbvora-url http://127.0.0.1:8766` to the AX FLOW `serve` command and press **구조 맵 새로고침** in the UI. The inspected DBVORA branch exposes an app factory but no packaged service command; the command above invokes that existing factory without changing DBVORA. The DBVORA server must be started separately. If it is absent or rejects the request, AX FLOW shows an unavailable state. Contract and HTTP behavior are synthetic-fixture tested; an actual API smoke against a synthetic AX FLOW business DB passed. Customer database use remains unverified and unauthorized.
 
 ## Remaining Blueprint gaps
-Visible browser click/render E2E, independently verified source-preserving DBVORA restore, security assessment, Windows installer, customer/release gates and broader supported scope remain open. The local interval runner is foreground-only and has no GUI schedule editor or OS/cloud service integration. Keep customer data, OAuth, external writes and release claims blocked until authorized and independently verified.
+Broader customer/OAuth-connected browser workflows, independently verified source-preserving DBVORA restore, independent security assessment, signed Windows installer, customer/release gates and broader supported scope remain open. The local interval runner is foreground-only and has no GUI schedule editor or OS/cloud service integration. Keep customer data, OAuth, external writes and release claims blocked until authorized and independently verified.
 
 ## Local Windows zipapp package smoke
 
