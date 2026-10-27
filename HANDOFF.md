@@ -1,5 +1,18 @@
 # HANDOFF — AX FLOW + REA_APP (bootstrap, 2026-10-27 KST)
 
+## Latest checkpoint — P19 fail-closed browser acceptance (2026-10-27 KST)
+1. **Task:** test the visible planner's unsupported-request and CSV path boundary; no product source changes.
+2. **Test setup:** isolated local AX FLOW server, `--synthetic`, one harmless synthetic CSV in its input root.
+3. **Unsupported intent:** `email this CSV to someone` produced the bounded planner error, left execution disabled, and produced no receipt.
+4. **Path boundary:** `../escape.csv` and an absolute Windows CSV path were rejected during preview; no run button activation or receipt.
+5. **No-write evidence:** runtime and business SQLite files were absent both before and after failed preview requests.
+6. **Regression:** Windows Python 3.11.9 full suite `python -m unittest discover -s tests -v` — **60/60 PASS** with loopback permission.
+7. **Failure record:** restricted server execution printed its ready line but did not expose a browser-reachable socket; restarting the identical test server with local loopback permission resolved it. No application defect remained.
+8. **Cleanup:** server stopped; synthetic P19 fixture folder removed.
+9. **Progress:** unchanged at **84%** (A100/B95/C95/D80/E50, equal weights), PARTIAL.
+10. **Next:** make one unprivileged Windows symlink fixture under a temporary synthetic root and confirm symlink traversal is refused before DB writes. If the host denies symlink creation, record the OS error and leave that acceptance SKIPPED; do not request elevation. Also continue only permission-free Blueprint gaps.
+11. **Sites:** keep the P5 read-only DBVORA browser panel `http://127.0.0.1:8767/` open; no additional site needs to be opened.
+
 ## Latest checkpoint — P18 synthetic browser acceptance of all bounded CSV intents (2026-10-27 KST)
 1. **Task:** verify the remaining filtered, lookup and conditional planner paths through the user-facing UI, including explicit write approval; no source-code or standalone-engine expansion.
 2. **Branch/base:** `feature/axflow-mvp` head before this checkpoint: `e907c290a97d838261bbecaba32da3a7924cb557`. Tests exercised the local source corresponding to the branch.

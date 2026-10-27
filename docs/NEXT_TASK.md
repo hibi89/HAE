@@ -1,3 +1,11 @@
+## P19 complete — UI rejects unsupported requests and path escape (2026-10-27 KST)
+In an isolated synthetic browser run, an unsupported email request was rejected with no run receipt and a disabled run button. Traversal (`../escape.csv`) and an absolute Windows path were rejected during preview. No runtime/business database appeared and no run was invoked. Full Windows Python 3.11.9 suite: **60/60 PASS** with localhost permission.
+
+The first restricted server process printed its ready message but was unreachable from the browser; restarting it with local loopback permission resolved the issue. This was sandbox networking, not a product failure. The P19 server was stopped and its synthetic fixture folder removed. Progress remains **84% / PARTIAL**.
+
+## Next atomic task — real Windows symlink boundary check
+Attempt to create an unprivileged symlink fixture inside a temporary synthetic input root and verify that AX FLOW refuses to traverse it before any business write. If the OS denies link creation, record the exact privilege error and leave the check SKIPPED; do not elevate or alter OS policy. Then continue permission-free Blueprint gaps. No new website is needed; keep the P5 DBVORA review at `http://127.0.0.1:8767/` open.
+
 ## P18 complete — four bounded CSV intents verified through the local UI (2026-10-27 KST)
 Filtered import saved 2 synthetic rows; lookup returned one match at source row 1 without row values; conditional import saved 2; no-match conditional saved 0. The full import and DBVORA-linked schema/refresh flow are recorded in P17. Write flows remained disabled without explicit synthetic-data approval. Full Windows Python 3.11.9 suite: **60/60 PASS** with loopback permission.
 

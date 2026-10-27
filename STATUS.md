@@ -1,5 +1,15 @@
 # STATUS — 2026-10-27 KST
 
+## P19 — unsupported intent and path escape rejected in the visible synthetic UI (2026-10-27 KST)
+- Tested the live AX FLOW browser against an isolated synthetic input root. Unsupported task `email this CSV to someone` returned a bounded “unsupported or negated action” error, left the run button disabled, and created no receipt.
+- Both `../escape.csv` and a Windows absolute CSV path were refused during preview with `csv_read path must be a relative .csv path under --input-root`; the run button stayed disabled and no receipt appeared.
+- **No-write check:** before and after these failed previews, neither runtime nor business SQLite file existed. No workflow was run.
+- **Tests:** browser assertions above PASS. Windows Python 3.11.9 `python -m unittest discover -s tests -v` **60/60 PASS** with localhost loopback permission.
+- **Failure/cause:** the initial restricted server session printed “ready” but its TCP listener was inaccessible from the browser. Restarting the same synthetic-only server with loopback permission made it available; all UI checks then passed. This was the sandbox boundary, not an app defect.
+- Temporary P19 test server was stopped and its synthetic fixture folder removed. No source changes or engine expansion.
+- Blueprint progress remains **84% PARTIAL** (A100/B95/C95/D80/E50, equal-weight heuristic). P5 DBVORA panel remains open at `http://127.0.0.1:8767/`.
+
+
 ## P18 — all four bounded planner workflows verified in the synthetic browser UI (2026-10-27 KST)
 - In an isolated synthetic fixture folder, exercised the actual local AX FLOW UI and server: filtered import saved **2** matching rows; read-only lookup returned **1** match at source row **1** without row contents; conditional import saved **2** rows; a no-match conditional saved **0**. The full-import path and DBVORA-backed schema/refresh acceptance are recorded in P17.
 - Write approvals were required: the run button stayed disabled after unchecking the synthetic-write approval and enabled after checking it. Read-only lookup remained runnable without write approval.
