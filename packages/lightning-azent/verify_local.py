@@ -172,7 +172,7 @@ def main() -> int:
         )
         (work / "csv_missing_receipt_denial.log").write_text(
             tampered.stdout + "\n" + tampered.stderr, encoding="utf-8")
-        require(tampered.returncode != 0 and "PlanError" in tampered.stderr,
+        require(tampered.returncode == 2 and "RunLogError" in tampered.stderr,
                 "Resume accepted missing completed CSV business receipt")
         with sqlite3.connect(data) as db:
             require(db.execute("SELECT COUNT(*) FROM csv_records").fetchone()[0] == count - 1,
