@@ -1,4 +1,6 @@
-# AX FLOW — independently coded customer automation platform
+# HAE — Humanized Automation Ecosystem (independently coded customer automation platform)
+
+**Final product name:** HAE, formerly AX FLOW. Internal directory and package names stay as-is; Lightning Azent is the planned independently versioned engine.
 
 Status: planning; no runnable code or customer UI.
 
