@@ -1,4 +1,8 @@
 ## P10 complete — interval hard-crash replay (60/60 full-suite pass)
+
+## P15 — localhost UI ready for review
+Managed session `32804` serves the synthetic UI at `http://127.0.0.1:8765/`; listener and HTTP GET 200 were verified. Only two rows in a temporary synthetic CSV are configured; no run was initiated. Codex browser-open is queued, and visual click/render remains unverified. The earlier detached process did not persist; managed execution solved that. No source changed; progress remains 77% / PARTIAL.
+
 The actual CLI scheduler was killed at `os._exit(73)` after its synthetic business DB commit and before the runtime receipt. Restart replayed tick 0 with the same deterministic run ID, completed the run, advanced the schedule once, and kept one business row. Scheduler tests passed 6/6; full suite passed 60/60 under permitted loopback; Node syntax and compilation of 17 Python files passed. Commits: `a2a7c9ce5915c86f0de0dce754e7fdac450d68f5`, `c952fcfdfc9f8cabf25c9656ed4f18c0c6319ac3`.
 
 Resolved run failures: wrong unittest cwd (`ModuleNotFoundError`), sandboxed loopback denial (`WinError 10013`, 8 failures/10 errors), PowerShell wildcard not expanded for `py_compile`, and test assertion placement corrected before the passing rerun. Product estimate remains **77%** and PARTIAL; browser E2E, separately approved restore, independent review, signed installer, and customer/release evidence remain open.
