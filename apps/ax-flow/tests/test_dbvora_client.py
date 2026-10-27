@@ -125,6 +125,31 @@ class DbvoraClientTests(unittest.TestCase):
         self.assertNotIn("rows", json.dumps(result))
         self.assertNotIn("path", json.dumps(result))
 
+    def test_provenance_allowlist_drops_paths_and_untrusted_markup(self):
+        inventory = {
+            **INVENTORY,
+            "provenance": {
+                **INVENTORY["provenance"],
+                "secret_path": "C:\\private\\customer.db",
+                "injected_html": "<img src=x onerror=alert(1)>",
+                "tables": "C:\\private\\customer.db",
+            },
+        }
+        _, origin = self.start_server(inventory=inventory)
+
+        result = DbvoraClient(origin).fetch_inventory()
+
+        self.assertTrue(result["available"])
+        self.assertEqual(result["provenance"], {
+            "cpu_usage": "unavailable",
+            "relationships": "declared_sqlite_foreign_keys",
+            "size_bytes": "measured_local_filesystem",
+        })
+        serialized = json.dumps(result)
+        self.assertNotIn("C:\\\\private", serialized)
+        self.assertNotIn("injected_html", serialized)
+        self.assertNotIn("onerror", serialized)
+
     def test_unconfigured_and_unavailable_states_are_bounded(self):
         self.assertEqual(
             DbvoraClient().fetch_inventory(),

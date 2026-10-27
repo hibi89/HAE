@@ -18,6 +18,7 @@ const refreshButton = document.querySelector("#refresh-status");
 const approvalSection = document.querySelector("#approval-section");
 const dbvoraStatus = document.querySelector("#dbvora-status");
 const dbvoraMeta = document.querySelector("#dbvora-meta");
+const dbvoraProvenance = document.querySelector("#dbvora-provenance");
 const dbvoraTables = document.querySelector("#dbvora-tables");
 const dbvoraRelations = document.querySelector("#dbvora-relations");
 const dbvoraRefreshButton = document.querySelector("#refresh-dbvora");
@@ -83,6 +84,28 @@ function clearChildren(element) {
   while (element.firstChild) element.removeChild(element.firstChild);
 }
 
+function describeDbvoraProvenance(result) {
+  const parts = [];
+  const dbId = typeof result.db_id === "string" && /^[a-f0-9]{24}$/.test(result.db_id)
+    ? result.db_id
+    : "";
+  const provenance = result.provenance && typeof result.provenance === "object" &&
+    !Array.isArray(result.provenance) ? result.provenance : {};
+
+  if (dbId) parts.push("선택 DB ID " + dbId);
+  if (provenance.size_bytes === "measured_local_filesystem") {
+    parts.push("크기: 로컬 파일시스템 측정");
+  }
+  if (provenance.tables === "measured_sqlite_catalog") {
+    parts.push("테이블: SQLite catalog");
+  }
+  if (provenance.relationships === "declared_sqlite_foreign_keys") {
+    parts.push("관계: SQLite 선언 FK");
+  }
+
+  return parts.length ? "출처: " + parts.join(" · ") : "출처 메타데이터를 사용할 수 없습니다.";
+}
+
 function renderDbvora(result) {
   clearChildren(dbvoraTables);
   clearChildren(dbvoraRelations);
@@ -92,6 +115,7 @@ function renderDbvora(result) {
     dbvoraMeta.textContent = result.error_code === "NOT_CONFIGURED"
       ? "실행 시 --dbvora-url로 127.0.0.1 API 주소를 설정하세요."
       : "DBVORA API가 실행 중인지 확인한 뒤 새로고침하세요.";
+    dbvoraProvenance.textContent = "";
     return;
   }
 
@@ -99,6 +123,7 @@ function renderDbvora(result) {
   dbvoraStatus.className = "dbvora-status online";
   dbvoraMeta.textContent = "SQLite 파일 " + Number(result.size_bytes).toLocaleString() + " bytes · " +
     result.size_scope + " · 관측 " + result.observed_at;
+  dbvoraProvenance.textContent = describeDbvoraProvenance(result);
 
   for (const table of result.tables) {
     const article = document.createElement("article");

@@ -15,6 +15,12 @@ MAX_FOREIGN_KEYS_PER_TABLE = 1_000
 MAX_RELATIONSHIPS = 10_000
 MAX_TEXT_LENGTH = 512
 _DB_ID = re.compile(r"^[a-f0-9]{24}$")
+_PROVENANCE_VALUES = {
+    "cpu_usage": {"unavailable"},
+    "relationships": {"declared_sqlite_foreign_keys"},
+    "size_bytes": {"measured_local_filesystem"},
+    "tables": {"measured_sqlite_catalog"},
+}
 _ACTIONS = {"NO ACTION", "RESTRICT", "SET NULL", "SET DEFAULT", "CASCADE"}
 
 
@@ -175,10 +181,11 @@ def normalize_inventory(payload: object) -> dict[str, object]:
     raw_provenance = payload.get("provenance")
     if not isinstance(raw_provenance, dict) or len(raw_provenance) > 16:
         raise DbvoraClientError("INVALID_INVENTORY", "DBVORA returned invalid provenance metadata.")
-    provenance = {
-        _text(key, "provenance key", max_length=64): _text(value, "provenance value", max_length=80)
-        for key, value in raw_provenance.items()
-    }
+    provenance: dict[str, str] = {}
+    for key, allowed_values in _PROVENANCE_VALUES.items():
+        value = raw_provenance.get(key)
+        if isinstance(value, str) and value in allowed_values:
+            provenance[key] = value
     return {
         "contract_version": "p0-01.v1",
         "db_id": db_id,
