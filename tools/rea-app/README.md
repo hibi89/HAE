@@ -1,3 +1,17 @@
+## P40 — One-command MVP report bundle
+
+Run against two different, non-overlapping **authorized local source snapshots** after `npm ci` installs the pinned `@babel/parser@7.29.9` in `tools/rea-app`:
+
+```powershell
+python -m rea_app bundle C:\source-baseline C:\source-current --output-dir C:\rea-reports
+```
+
+The new `bundle` command writes six files in one output folder: `source-map.json/.md`, `change-impact.json/.md`, and `functional-contracts.json/.md`. It reuses the existing bounded read-only scan, parser-accurate graph, changed-file dependency impact, and evidence-only callable contracts. No original source is modified and no model/third-party service is invoked. Both selected source trees must not overlap; the output folder must be outside both. Parser or analysis failure before output generation creates **no bundle**. File writes are per-file atomic; the six-file group is **not** all-or-nothing if a disk error occurs during output.
+
+Two designs considered: a single CLI orchestrator reusing the current analyzer (**implemented now**) and a deeper parser/impact cache refactor (deferred to after functioning MVP due greater regression surface). For a small fixture, the first design minimizes implementation risk; it does reparse the current snapshot when calculating change impact, so performance can be improved later.
+
+**Evidence:** Exact source blob `8234acca278e6af9a15f73cf841ff7e4fedf6a80` and new `tests/test_bundle.py` blob `2db41dc5d0d2efb91e27ec8efe36a79e3383279b` match isolated Python 3.13.5 executed copies. Bundle orchestration tests **4/4 PASS** using mocked graph/scan/impact (real report file generation), plus earlier contracts unit and CLI tests **9/9 PASS**, total **13/13 PASS**. Full Babel-backed `bundle` across real JS/TS source and full Gate R remain **UNVERIFIED** because exact Babel runtime is not installed in this isolated environment.
+
 
 ## Functional contracts export (first blueprint-gap implementation)
 

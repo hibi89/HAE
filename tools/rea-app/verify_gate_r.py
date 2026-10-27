@@ -20,7 +20,7 @@ BASELINE_COMMIT = "3a1a023533a7c070c35be5abbf06bc185a87471b"
 SOURCE_BLOBS = {
     "rea_app/__init__.py": "e6d7269a82c761c70eda0d52ee1d858711d92b21",
     "rea_app/__main__.py": "bfdcd0c1158dff4fcc25157b317419f0a89dd33f",
-    "rea_app/cli.py": "0a9dd5fe64f57bd89c092208590d8f2e10561a6c",
+    "rea_app/cli.py": "8234acca278e6af9a15f73cf841ff7e4fedf6a80",
     "rea_app/graph.py": "21ce725e93916ba2582a18663d522eaff00c9228",
     "rea_app/impact.py": "64eb59d63780248cc417bcdbad8d73e1e813d75c",
     "rea_app/contracts.py": "99418bfcf649866182a841e72fccaa37433d6071",
@@ -30,6 +30,7 @@ SOURCE_BLOBS = {
     "package-lock.json": "0bbde3cd132070df076a478a63056673687852d4",
     "tests/parser_adapter.test.cjs": "f55d15130ba19700be858c7e2a2b468c302e5033",
     "tests/test_cli.py": "6035ccc58fcfc8f2d8eceeba95b8d969ec257dc4",
+    "tests/test_bundle.py": "2db41dc5d0d2efb91e27ec8efe36a79e3383279b",
     "tests/test_report_write_safety.py": "f3dc3251e560f739325343b71039e628321e7446",
     "tests/test_contracts.py": "64ea0c82b787ce76cdeaba526fbe21355647dd83",
     "tests/test_contracts_cli.py": "a39b0139b64157a6d138dde01c833e18bc3fd771",

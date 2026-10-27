@@ -166,6 +166,38 @@ def _contracts(args: argparse.Namespace) -> int:
     return 0
 
 
+def _bundle(args: argparse.Namespace) -> int:
+    """Export source map, change impact and independent interfaces together."""
+    try:
+        baseline_root, current_root, output = _prepare_compare_paths(
+            args.baseline, args.current, args.output_dir,
+        )
+        limits = ScanLimits(args.max_files, args.max_file_bytes, args.max_total_bytes)
+        baseline = walk_source(baseline_root, limits)
+        current = walk_source(current_root, limits)
+        source_map = build_report(current, args.parser_timeout)
+        impact = build_change_impact(baseline, current, args.parser_timeout)
+        contracts = build_functional_contracts(source_map)
+        artifacts = (
+            ("source-map.json", json.dumps(source_map, ensure_ascii=False, sort_keys=True, indent=2) + "\n"),
+            ("source-map.md", render_markdown(source_map)),
+            ("change-impact.json", json.dumps(impact, ensure_ascii=False, sort_keys=True, indent=2) + "\n"),
+            ("change-impact.md", render_change_impact_markdown(impact)),
+            ("functional-contracts.json", json.dumps(contracts, ensure_ascii=False, sort_keys=True, indent=2) + "\n"),
+            ("functional-contracts.md", render_functional_contracts_markdown(contracts)),
+        )
+        output.mkdir(parents=True, exist_ok=True)
+        for filename, body in artifacts:
+            _write_report(output / filename, body)
+    except (ScanError, OutputError, ParserError, ContractError, OSError) as exc:
+        print(f"REA_APP bundle stopped: {exc}", file=sys.stderr)
+        return 3 if isinstance(exc, ParserError) else 2
+    print(f"REA_APP bundle produced {len(artifacts)} reports; "
+          f"{len(contracts['contracts'])} callable interfaces.")
+    print(f"Reports: {output}")
+    return 1 if source_map["summary"]["syntax_errors"] or impact["summary"]["syntax_errors"] else 0
+
+
 def build_argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="rea-app",
@@ -194,15 +226,24 @@ def build_argument_parser() -> argparse.ArgumentParser:
     contracts.add_argument("source_map", type=Path, help="existing REA_APP source-map.json")
     contracts.add_argument("--output-dir", type=Path, required=True, help="local contract output directory")
     contracts.set_defaults(handler=_contracts)
+    bundle = commands.add_parser("bundle", help="emit scan, change-impact and functional-contract reports")
+    bundle.add_argument("baseline", type=Path, help="authorized baseline source snapshot")
+    bundle.add_argument("current", type=Path, help="authorized current source snapshot")
+    bundle.add_argument("--output-dir", type=Path, required=True, help="report directory outside both snapshots")
+    bundle.add_argument("--max-files", type=int, default=5000)
+    bundle.add_argument("--max-file-bytes", type=int, default=1_000_000)
+    bundle.add_argument("--max-total-bytes", type=int, default=20_000_000)
+    bundle.add_argument("--parser-timeout", type=int, default=30)
+    bundle.set_defaults(handler=_bundle)
     return parser
 
 
 def main() -> int:
     parser = build_argument_parser()
     args = parser.parse_args()
-    if args.command in {"scan", "compare"} and args.parser_timeout <= 0:
+    if args.command in {"scan", "compare", "bundle"} and args.parser_timeout <= 0:
         parser.error("--parser-timeout must be positive")
-    if args.command in {"scan", "compare"} and min(args.max_files, args.max_file_bytes, args.max_total_bytes) <= 0:
+    if args.command in {"scan", "compare", "bundle"} and min(args.max_files, args.max_file_bytes, args.max_total_bytes) <= 0:
         parser.error("scan limits must be positive")
     return args.handler(args)
 

@@ -1,3 +1,9 @@
+## REA_APP P40 — next functional acceptance (2026-10-27 KST)
+
+- New `bundle` entry point reduces three manual steps to one: baseline+current JS/TS trees → 6 files (source map, impact, independent functional contracts, both JSON/Markdown). Source and tests Git blob IDs are recorded in P40 STATUS. Mock-driven CLI tests 4/4 PASS, entire locally available isolated suite 13/13 PASS.
+- Next **MVP scope**: run `npm ci` only in an approved/authorized local `tools/rea-app` checkout (uses pinned parser@7.29.9), then `python -m rea_app bundle <synthetic-baseline> <synthetic-current> --output-dir <reports>`. Confirm actual JS/TS import links/line numbers, nonempty functional contracts, deterministic output and original tree unchanged. Full `python verify_gate_r.py` and Windows package acceptance only when working checkout exists.
+- Current environment isolated, no parser exact version available, so **do not mark full MVP or Gate R PASS**. No further hardening-only tasks until user workflow is verified and blueprint gaps addressed.
+
 ## REA_APP P39 — next priority is integrated MVP execution (2026-10-27 KST)
 
 1. Verified exact-source `contracts` CLI on synthetic source-map: **9/9 local Python checks PASS** including 4 CLI process scenarios, generated JSON/Markdown and deterministic rerun; new test `tools/rea-app/tests/test_contracts_cli.py`. Provenance `STATUS.md` P39.
