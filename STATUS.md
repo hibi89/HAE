@@ -1,3 +1,7 @@
+## P32 update — 2026-10-27 KST
+
+Atomic report output replacement code committed as `3892c321e6d5cda9de496d30155f8c92248a4401`. Original report symlink-following overwrite was reproduced with disposable local test files. Four focused synthetic output-writer tests PASS; earlier P31 verifier-focused 9/9 PASS. Offline source verifier now expects 15 blobs; complete current SHA Python integration and genuine pinned Babel parser tests NOT RUN, Gate R PARTIAL. Detailed evidence at `tools/rea-app/P32_OUTPUT_WRITE_SAFETY.md`. No deployment, customer data, paid CI or unrelated branch changes.
+
 ## P31 — file reparse-point source attribution hardening (2026-10-27 KST)
 
 - On `REA_APP@ab8ff4f29cad65fdb581dd8dd9e6ab99da56a31b`, recreated and hash-confirmed previously reviewed verifier/test sources. A new test simulating (a) Windows regular-file reparse metadata and (b) nonregular file metadata generated **2 failed subcases** on original `is_file/is_symlink` verification. Replaced with `Path.lstat` regular-file requirement and reparse attribute exclusion. Focused Linux/Python 3.13.5 verifier regression is now **9/9 actual PASS**. GitHub code/test blobs match executed local bytes `e88665699d00b3f8c21c5ddddba880fc01f79d5f`, `f1e9745e3139050e6ef10bf331c91f6431790136`. Evidence: `tools/rea-app/P31_FILE_REPARSE_GUARD.md`.
