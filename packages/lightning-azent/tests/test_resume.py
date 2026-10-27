@@ -97,5 +97,18 @@ class ResumeAcceptanceTests(unittest.TestCase):
         self.assertEqual(self.executor.status("CrashAfterBusiness")["status"], "completed")
 
 
+    def test_changed_plan_does_not_recreate_missing_business_database(self):
+        original = self.fixture("conditional-route.json")
+        self.assertEqual(self.executor.execute(original, "PinnedNoWrite"), {"route": "accepted"})
+        self.assertTrue(self.business.exists())
+        self.business.unlink()  # Disposable synthetic database in the test temp directory.
+        changed = self.fixture("conditional-route.json")
+        changed["steps"][0]["value"]["amount"] = 0
+        with self.assertRaises(PlanError):
+            self.executor.resume(changed, "PinnedNoWrite")
+        self.assertFalse(self.business.exists())
+        self.assertEqual(self.executor.status("PinnedNoWrite")["status"], "completed")
+
+
 if __name__ == "__main__":
     unittest.main()
