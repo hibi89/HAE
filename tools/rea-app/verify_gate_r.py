@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-BASELINE_COMMIT = "e6775a5b3bc17c2049238e0d505ec31e384d53ff"
+BASELINE_COMMIT = "3a1a023533a7c070c35be5abbf06bc185a87471b"
 
 # Git blob IDs observed directly on the private REA_APP branch at BASELINE_COMMIT.
 # This guards against stale/untracked workspace copies, not against malicious code.
@@ -30,7 +30,7 @@ SOURCE_BLOBS = {
     "tests/test_cli.py": "6035ccc58fcfc8f2d8eceeba95b8d969ec257dc4",
     "tests/test_scan_open_races.py": "0601539e0a57807441fa31373339c689b2aa7439",
     "tests/test_scan_sensitive_exclusions.py": "3f40479907fe923137f9c018a57b2d3df08ba023",
-    "tests/test_verify_gate_r.py": "745e1b5486c9d98dbcfcb1bf5d7ec5ca940f5ca3",
+    "tests/test_verify_gate_r.py": "c8db5c2957cc365d6e3c4c6cfcc70d5f1351d7fc",
 }
 
 
@@ -83,6 +83,29 @@ def execute(label: str, command: list[str]) -> bool:
     return result.returncode == 0
 
 
+
+def parser_dependency_pinned() -> bool:
+    """Verify the installed Babel parser version, not merely the lockfile text."""
+    node = shutil.which("node")
+    if not node:
+        print("NODE_PARSER BLOCKED: node is unavailable.", file=sys.stderr)
+        return False
+    command = [node, "-p", "require('@babel/parser/package.json').version"]
+    try:
+        result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True,
+                                encoding="utf-8", errors="replace", timeout=15, check=False)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        print(f"NODE_PARSER BLOCKED: dependency inspection {type(exc).__name__}", file=sys.stderr)
+        return False
+    installed = result.stdout.strip()
+    if result.returncode != 0 or installed != "7.29.9":
+        print("NODE_PARSER BLOCKED: require exact installed @babel/parser@7.29.9; "
+              f"observed {installed!r} (exit {result.returncode}).", file=sys.stderr)
+        return False
+    print("DEPENDENCY VERIFIED: @babel/parser@7.29.9", flush=True)
+    return True
+
+
 def main() -> int:
     print(f"REA_APP P24 verification: Python {sys.version.split()[0]}, platform {sys.platform}", flush=True)
     if not check_source():
@@ -92,7 +115,7 @@ def main() -> int:
     if not npm:
         print("NODE_PARSER BLOCKED: npm unavailable, not counted as PASS.", file=sys.stderr)
         return 1
-    node_ok = execute("NODE_PARSER", [npm, "run", "test:parser"])
+    node_ok = parser_dependency_pinned() and execute("NODE_PARSER", [npm, "run", "test:parser"])
     print(f"SUMMARY: source=PASS, python={'PASS' if python_ok else 'FAIL'}, "
           f"node={'PASS' if node_ok else 'FAIL'}", flush=True)
     return 0 if python_ok and node_ok else 1
