@@ -1,3 +1,11 @@
+## P41 complete — Windows DBVORA snapshot flush boundary diagnosed
+Read the exact DBVORA archive source and reproduced its staged-file read-only `fsync` failure on this Windows host (`OSError errno 9)); read/write `fsync` passed. A separate synthetic SQLite online backup and independent restore passed integrity/foreign-key/row checks with unchanged source SHA, size and mtime. This is platform diagnosis only; no product archive/restore passed and no DBVORA code changed.
+
+The first temporary harness left a SQLite file locked because connections were not explicitly closed; the cleanup failure was fixed with `contextlib.closing`, the capability harness reran cleanly, and only its verified temp directory was removed. D2 remains NOT_STARTED. Progress remains **90% PARTIAL**.
+
+## Next atomic task — AX FLOW runtime-ledger backup/restore
+Implement the smallest local backup and fresh-path restore for the existing runtime SQLite ledger, if supported by the current CLI architecture. Require `--synthetic`, refuse pre-existing destinations, preserve source databases, and verify the restored ledger with independent integrity and run-status reads. Keep artifacts under new temporary test paths. Do not modify DBVORA or implement a standalone engine.
+
 ## P40 complete — precision-safe CSV numeric conversion
 The engine now accepts bounded, exact decimal notation and rejects malformed syntax, underflow, overflow, non-finite values, unsafe integers and values that round to a different decimal. Engine, API and packaged CLI tests cover the same synthetic success/failure matrix. Invalid input is rejected before business writes, source files remain unchanged, and packaged CLI failures return code 2.
 

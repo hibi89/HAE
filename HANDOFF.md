@@ -1,3 +1,16 @@
+## Latest checkpoint — P41 Windows snapshot gate diagnosed
+1. **Branch/base:** `hibi89/AX_FLOW` `feature/axflow-mvp`; P40 code `d0e7a5a45f132b8a3cc7c9c4f5fd46e2a8e23bc8`, docs head `59f815b2cdabcd2d9f575bf19bb433fbf70fe4ab`.
+2. **DBVORA source:** exact `safe_zip.py` blob `a58d2c3bfd3b95a98ada74f59e208b58e35d2e13` opens staged files read-only before fsync.
+3. **Reproduction:** Windows read-only fsync failed `OSError errno 9`; read/write fsync passed.
+4. **SQLite check:** synthetic backup and independent fresh-path restore passed integrity/FK/row checks; source hash/size/mtime unchanged. Not product acceptance.
+5. **AX FLOW tests:** no source change; P40 full suite 71/71 PASS, Node syntax/UI regression PASS.
+6. **Harness failure:** initial teardown hit WinError 32 from unclosed SQLite handles; explicit `closing()` fixed it and cleanup passed.
+7. **Progress:** 90% PARTIAL (A100/B95/C95/D95/E65), heuristic.
+8. **Open gates:** D2 NOT_STARTED; DBVORA source fix needs separate approval. OAuth/security/customer/commercial release evidence remains open.
+9. **Site/environment:** no site/auth/server; synthetic temp data only, removed. Historical locked logs left untouched.
+10. **Next:** P42, add guarded runtime-ledger backup/restore only in AX FLOW, to a fresh path, with independent integrity/status tests; no overwrite, DBVORA edit or standalone engine.
+
+
 ## Latest checkpoint — P40 precision-safe numeric CSV normalization
 1. **Branch/base:** `hibi89/AX_FLOW` `feature/axflow-mvp`; P39 parent `c6d272cc3ab798df0736d9159a756309f80b81cd`. P40 implementation commit: `d0e7a5a45f132b8a3cc7c9c4f5fd46e2a8e23bc8`.
 2. **Engine behavior:** CSV number normalization now uses an explicit decimal syntax, Decimal comparison and finite-float conversion; unsupported syntax and any demonstrated value loss fail before business writes.
