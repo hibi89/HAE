@@ -26,3 +26,14 @@ Owner clarified hard planning intent: **REA_APP + n8n-inspired wholly independen
 ADR-009: freeze a scope-limited v1 blueprint; Codex GPT-6 Extra-High is implementation/test agent while chief GPT-6 owns architecture/acceptance; feature growth deferred if W1/W2 fails. Both programs remain distinct tools. The 2026 3-hackathon deadlines overlap W3, and available coding hours/provider gates can invalidate the stretch deadline. No Codex session/background work is started by publishing docs.
 
 Active master schedule: docs/MASTER_SCHEDULE.md (v2). Detailed day/week work: docs/FAST_TRACK_5_WEEK.md; frozen target: docs/TARGET_BLUEPRINT_V1.md; Codex: docs/CODEX_EXTRA_HIGH_ORDER.md. Original 21-week baseline retained in Git history.
+
+## 2026-10-27 — FINAL PRODUCT NAME: HAE (Humanized Automation Ecosystem)
+
+**OWNER-APPROVED, SUPERSEDES prior customer-facing AX FLOW brand:** The final name of the end-user automation platform is **HAE**, expanded exactly as **Humanized Automation Ecosystem**. Former product name **AX FLOW** is deprecated for customer-facing usage; historical references and preexisting code symbols may remain when identifying old work.
+
+**Three-product boundary (unchanged functionality):**
+1. **REA_APP** — authorized read-only source-analysis and reverse-engineering research tool.
+2. **Lightning Azent** — planned separately engineered workflow executor inspired by permitted n8n functional research; **Azent** evokes doing work A to Z.
+3. **HAE (Humanized Automation Ecosystem)** — final AI/natural-language customer automation ecosystem, using Lightning Azent as its execution engine and linking separately to DBVORA.
+
+**Migration policy:** Repository hibi89/AX_FLOW, apps/ax-flow/ path, axflow Python package and CLI, workflow schema axflow.ir.v0 and existing branch names remain **legacy technical identifiers**, without bulk/destructive renaming. Repository or API/schema renames require separate compatibility assessment and owner decision. Branding changes do not represent passing technical release gates. No new repository, package or trademark registration was made; brand availability is unverified.
