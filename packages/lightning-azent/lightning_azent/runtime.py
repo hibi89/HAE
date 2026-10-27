@@ -76,7 +76,7 @@ class LAExecutor:
         expected_hash = hashlib.sha256(canonical_json(normalized).encode("utf-8")).hexdigest()
         if existing["plan_sha256"] != expected_hash:
             raise PlanError("same run id cannot be reused with a different plan")
-        return self._new_engine().execute(normalized, run_id, approve_writes=approve_writes
+        return self._new_engine().execute(normalized, run_id, approve_writes=approve_writes)
 
     def schedule(self, plan: object, schedule_id: str, *, max_runs: int = 1,
                  approve_writes: bool = False, clock=None, sleeper=None) -> Iterator[dict[str, object]]:
