@@ -1,3 +1,12 @@
+## Next — REA_APP → LIGHTNING AZENT → AX FLOW (owner 2026-10-27)
+**Latest architectural order and source of truth:** `docs/LIGHTNING_AZENT_MASTER_PLAN.md`, naming/sequence adopted in `docs/DECISIONS.md` ADR-010 to ADR-012. This is the current plan; previous P49 small-feature task queue remains historical, not authorization to continue expanding AX FLOW first.
+
+1. On `REA_APP` branch confirm exact SHA and re-run actual Python+Node parser tests on a connected executable checkout; classify FAIL/PASS/SKIP honestly. Synthetic research evidence remains local/authorized.
+2. Lawfully research six bounded n8n behavior families (IR/data flow, triggers, execution state/retry, item mapping, connector permissions, credential boundaries); provide versioned, evidenced **independent functional contracts and fixtures**, no copied n8n source.
+3. Chief approves Lightning Azent v0.1 contract; only then design separate `packages/lightning-azent/` (proposed, not created) and compatibility-preserving extraction from current `axflow` engine. Engine operates independently of AX FLOW/REA_APP.
+4. Run real regression/Windows fail-safe & recovery, benchmark unsupported items fairly. Reconnect AX FLOW planner/UI only after engine tests pass. Preserve current hackathon-pinned synthetic code.
+5. Exact P48/P49 repository full suite is unverified. No new repo, paid CI, OAuth, production hosting, customer data or n8n code transplant without owner approval.
+
 ## Next after P49 — blueprint-first validation (2026-10-27 KST)
 1. **Do not repeat isolated proxy tests as a substitute for repository regression.** P49 source commit `9fe52ceea79d2251c953b0c17dcb33ce5cab0010`, test `3704eb86b2ca758432b4b104907637a61aabf150`; isolated Python stdlib opener reproduction 2/2 PASS only. P48 HTTP test also committed but unexecuted. Run actual `apps/ax-flow/` full suite + syntax + Windows loopback when an authorized source checkout/executor is available.
 2. Review `docs/BLUEPRINT_CODE_AUDIT_2026-10-27.md` against frozen `TARGET_BLUEPRINT_V1.md`: limited core is present, full product gates F4/F5/D2/F6/F7/F8/B1 still open. Existing acceptance 91% heuristic not updated.
