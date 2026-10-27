@@ -101,5 +101,43 @@ class IndependentEngineMvpTests(unittest.TestCase):
         self.assertFalse((self.root / "cli-business.sqlite").exists())
 
 
+    def test_cli_invalid_run_id_rejected_before_database_creation(self):
+        plan_path = self.root / "conditional.json"
+        plan_path.write_text(json.dumps(fixture("conditional-route.json")), encoding="utf-8")
+        env = dict(os.environ)
+        env["PYTHONPATH"] = str(PACKAGE_ROOT)
+        state = self.root / "invalid-run-state.sqlite"
+        data = self.root / "invalid-run-business.sqlite"
+        outcome = subprocess.run([
+            sys.executable, "-m", "lightning_azent", "run", str(plan_path),
+            "--state", str(state), "--data", str(data),
+            "--run-id", "invalid-hyphen", "--synthetic", "--approve-writes",
+        ], capture_output=True, text=True, timeout=12, env=env, cwd=self.root)
+        self.assertEqual(outcome.returncode, 2, outcome.stderr)
+        self.assertFalse(state.exists(), "invalid run must not initialize runtime SQLite")
+        self.assertFalse(data.exists(), "invalid run must not initialize business SQLite")
+
+    def test_cli_invalid_schedule_preflight_keeps_database_absent(self):
+        plan_path = self.root / "interval.json"
+        plan_path.write_text(json.dumps(fixture("interval-replay.json")), encoding="utf-8")
+        env = dict(os.environ)
+        env["PYTHONPATH"] = str(PACKAGE_ROOT)
+        for label, extra in (
+            ("schedule-id", ["--schedule-id", "invalid-hyphen", "--max-runs", "1"]),
+            ("max-runs", ["--schedule-id", "SafeSchedule", "--max-runs", "1001"]),
+        ):
+            with self.subTest(label=label):
+                state = self.root / f"{label}-state.sqlite"
+                data = self.root / f"{label}-business.sqlite"
+                outcome = subprocess.run([
+                    sys.executable, "-m", "lightning_azent", "schedule", str(plan_path),
+                    "--state", str(state), "--data", str(data), "--synthetic",
+                    "--approve-writes", *extra,
+                ], capture_output=True, text=True, timeout=12, env=env, cwd=self.root)
+                self.assertEqual(outcome.returncode, 2, outcome.stderr)
+                self.assertFalse(state.exists(), f"{label}: runtime DB unexpectedly created")
+                self.assertFalse(data.exists(), f"{label}: business DB unexpectedly created")
+
+
 if __name__ == "__main__":
     unittest.main()
