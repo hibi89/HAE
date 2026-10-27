@@ -1,3 +1,9 @@
+## P34 — Gate R evidence provenance fail-closed (2026-10-27 KST)
+
+- Closed an actual P33 evidence false-positive: synthetic `verify_gate_r.py` printing status markers from a dirty checkout previously yielded PASS. New runner pins reviewed verifier blob `396654c47b25cfbc0279b4dcdc2f8872c7e20891`, checks the `tools/rea-app` Git working tree is clean, and strictly matches full 15/15/Python/Node and exit-0 output lines.
+- Local Python 3.13.5 disposable Git-fixture regression **11/11 PASS** (no skips/errors). GitHub-published runner/test blobs match exact locally executed bytes `50475a1b827c4ad077cfc5b54765fa4624bd6157` / `767ffc7a835608651cc96ccf9cf1fe410435503c`; code commit `4e0ce299ebd01fa20c541358ffeaf4f593f56f11`. Detailed evidence: `tools/rea-app/P34_PROVENANCE_GATE.md`.
+- **Gate R PARTIAL:** complete 15-file Python suite, genuine Babel parser and Windows junction still NOT RUN. No customer data, third-party source, paid Actions or production changed. Next authorized complete checkout `python run_gate_r_evidence.py` with installed exact Babel 7.29.9; collect evidence before signing.
+
 ## P32 update — 2026-10-27 KST
 
 Atomic report output replacement code committed as `3892c321e6d5cda9de496d30155f8c92248a4401`. Original report symlink-following overwrite was reproduced with disposable local test files. Four focused synthetic output-writer tests PASS; earlier P31 verifier-focused 9/9 PASS. Offline source verifier now expects 15 blobs; complete current SHA Python integration and genuine pinned Babel parser tests NOT RUN, Gate R PARTIAL. Detailed evidence at `tools/rea-app/P32_OUTPUT_WRITE_SAFETY.md`. No deployment, customer data, paid CI or unrelated branch changes.
