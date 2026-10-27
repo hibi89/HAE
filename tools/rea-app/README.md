@@ -21,6 +21,24 @@ be outside the source root. Defaults cap the scan at 5,000 files, 1 MB per file,
 20 MB total and 30 seconds of parser time. Adjust these limits explicitly when
 needed; a total count/byte cap stops the scan without writing partial reports.
 
+Compare two authorized snapshots with:
+
+```powershell
+python -m rea_app compare C:\path\to\baseline C:\path\to\current --output-dir C:\path\to\reports
+```
+
+The roots must be different, non-overlapping directories and the report
+directory must be outside both. The comparison applies the same file and byte
+caps to each snapshot and writes `change-impact.json` and `change-impact.md`.
+It detects added, removed and modified indexed files by SHA-256, then follows
+resolved in-root JS/TS dependency edges from both snapshots to report direct
+and transitive dependents with import-line evidence and affected package
+entrypoints. File contents and absolute source paths are not included in the
+comparison report. It is static reachability: it does not infer runtime impact,
+Python dependencies, dynamic resolution or external package internals. Skipped
+paths and scan coverage are called out so excluded or capped files are not
+treated as compared.
+
 The walker skips common generated/dependency directories, secret-named files,
 symlinks, binaries, non-UTF-8 source and oversized individual files. Package
 boundaries, declared dependencies, package entry points, JS/TS imports/re-exports,
@@ -49,7 +67,8 @@ python -m unittest discover -s tests -v
 npm run test:parser
 ```
 
-The synthetic tests cover deterministic output, ESM and CommonJS references,
+The synthetic tests cover deterministic output, two-snapshot change and impact
+reports, overlap/output/cap rejection, ESM and CommonJS references,
 alias/external resolution, cyclic imports, entry points, syntax errors, binary and
 secret exclusions, symlink handling where the host allows symlink creation,
 Windows reparse-attribute detection, empty repositories, scan caps, missing-parser
@@ -59,3 +78,4 @@ exported callable signatures and source-tree integrity.
 The Windows host used for the current verification denied junction creation
 (`Access denied`). The reparse-attribute branch is unit-tested with synthetic
 file attributes, but an actual filesystem junction fixture remains unverified.
+

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import stat
+import hashlib
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -40,6 +41,7 @@ class ScannedFile:
     size_bytes: int
     category: str
     content: str | None = None
+    content_sha256: str = ""
 
 
 @dataclass
@@ -174,8 +176,10 @@ def walk_source(root_path: Path, limits: ScanLimits) -> ScanResult:
                     if not stat.S_ISREG(opened_stat.st_mode):
                         skipped.append({"path": relative, "reason": "not_regular_file"})
                         continue
-                    data = handle.read(limits.max_file_bytes + 1 if should_read else 4096)
-                if len(data) > limits.max_file_bytes and should_read:
+                    # Hash every accepted file so compare mode can detect changes
+                    # in inventory-only files without retaining their contents.
+                    data = handle.read(limits.max_file_bytes + 1)
+                if len(data) > limits.max_file_bytes or len(data) > file_stat.st_size:
                     skipped.append({"path": relative, "reason": "file_grew_past_limit"})
                     continue
                 if b"\x00" in data:
@@ -199,8 +203,15 @@ def walk_source(root_path: Path, limits: ScanLimits) -> ScanResult:
                 category = "typescript_config"
             else:
                 category = "inventory_only"
-            scanned.append(ScannedFile(relative, file_stat.st_size, category, content))
+            scanned.append(ScannedFile(
+                relative,
+                file_stat.st_size,
+                category,
+                content,
+                hashlib.sha256(data).hexdigest(),
+            ))
 
     scanned.sort(key=lambda item: item.path)
     skipped.sort(key=lambda item: (str(item["path"]), str(item["reason"])))
     return ScanResult(root, scanned, skipped, limits, total_bytes)
+

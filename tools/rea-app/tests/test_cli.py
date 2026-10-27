@@ -62,6 +62,27 @@ class ReaAppCliTests(unittest.TestCase):
             check=False,
         )
 
+    def run_compare(
+        self,
+        baseline: Path,
+        current: Path,
+        output: Path | None = None,
+        *options: str,
+    ) -> subprocess.CompletedProcess[str]:
+        process_env = os.environ.copy()
+        process_env["PYTHONPATH"] = str(TOOL_ROOT)
+        return subprocess.run(
+            [sys.executable, "-m", "rea_app", "compare", str(baseline), str(current),
+             "--output-dir", str(output or self.output), *options],
+            cwd=TOOL_ROOT,
+            env=process_env,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            capture_output=True,
+            check=False,
+        )
+
     def create_graph_fixture(self) -> Path | None:
         self.write(
             "package.json",
@@ -193,6 +214,117 @@ class ReaAppCliTests(unittest.TestCase):
         report = json.loads((self.output / "source-map.json").read_text(encoding="utf-8"))
         self.assertEqual(report["summary"]["files_indexed"], 0)
         self.assertEqual(report["dependency_edges"], [])
+
+    def test_compare_reports_added_removed_modified_and_transitive_entrypoint_impact(self) -> None:
+        baseline = self.base / "baseline"
+        baseline.mkdir()
+        (baseline / "package.json").write_text(
+            '{"name":"fixture","main":"./src/main.ts"}\n', encoding="utf-8", newline="\n",
+        )
+        (baseline / "src").mkdir()
+        (baseline / "src" / "main.ts").write_text(
+            'import { run } from "./service";\nexport { run };\n', encoding="utf-8", newline="\n",
+        )
+        (baseline / "src" / "service.ts").write_text(
+            'import { load } from "./db";\nexport const run = () => load();\n', encoding="utf-8", newline="\n",
+        )
+        (baseline / "src" / "db.ts").write_text(
+            "export const load = () => 1;\n", encoding="utf-8", newline="\n",
+        )
+        (baseline / "removed.txt").write_text("gone\n", encoding="utf-8", newline="\n")
+        (baseline / "unchanged.txt").write_text("same\n", encoding="utf-8", newline="\n")
+
+        (self.source / "package.json").write_text(
+            '{"name":"fixture","main":"./src/main.ts"}\n', encoding="utf-8", newline="\n",
+        )
+        (self.source / "src").mkdir()
+        (self.source / "src" / "main.ts").write_text(
+            'import { run } from "./service";\nexport { run };\n', encoding="utf-8", newline="\n",
+        )
+        (self.source / "src" / "service.ts").write_text(
+            'import { load } from "./db";\nexport const run = () => load();\n', encoding="utf-8", newline="\n",
+        )
+        # Same-size edits must still be detected from content hashes.
+        (self.source / "src" / "db.ts").write_text(
+            "export const load = () => 2;\n", encoding="utf-8", newline="\n",
+        )
+        (self.source / "added.txt").write_text("new\n", encoding="utf-8", newline="\n")
+        (self.source / "unchanged.txt").write_text("same\n", encoding="utf-8", newline="\n")
+        before_baseline = snapshot(baseline)
+        before_current = snapshot(self.source)
+
+        result = self.run_compare(baseline, self.source)
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        json_path = self.output / "change-impact.json"
+        markdown_path = self.output / "change-impact.md"
+        first_json = json_path.read_bytes()
+        first_markdown = markdown_path.read_bytes()
+        report = json.loads(first_json)
+        changes = {item["path"]: item["status"] for item in report["changed_files"]}
+        self.assertEqual(changes, {
+            "added.txt": "added",
+            "removed.txt": "removed",
+            "src/db.ts": "modified",
+        })
+        impact = next(item for item in report["impacts"] if item["changed_path"] == "src/db.ts")
+        direct = impact["direct_dependents"]
+        self.assertEqual([item["path"] for item in direct], ["src/service.ts"])
+        self.assertEqual(direct[0]["dependency_chain"][0]["evidence"][0]["evidence"], {
+            "path": "src/service.ts", "line": 1,
+        })
+        self.assertEqual([item["path"] for item in impact["transitive_dependents"]], ["src/main.ts"])
+        self.assertEqual(len(impact["impacted_entrypoints"]), 2)
+        self.assertEqual(report["summary"]["modified_files"], 1)
+        self.assertIn("src/main.ts", first_markdown.decode("utf-8"))
+        self.assertNotIn('"export const load = () =>', first_json.decode("utf-8"))
+        self.assertEqual(snapshot(baseline), before_baseline)
+        self.assertEqual(snapshot(self.source), before_current)
+
+        repeat = self.run_compare(baseline, self.source)
+        self.assertEqual(repeat.returncode, 0, repeat.stderr + repeat.stdout)
+        self.assertEqual(json_path.read_bytes(), first_json)
+        self.assertEqual(markdown_path.read_bytes(), first_markdown)
+
+    def test_compare_rejects_overlapping_roots_unsafe_output_and_fails_closed_on_caps(self) -> None:
+        baseline = self.base / "baseline"
+        baseline.mkdir()
+        current = self.base / "current"
+        current.mkdir()
+        (baseline / "old.ts").write_text("export const oldValue = 1;\n", encoding="utf-8", newline="\n")
+        (current / "new.ts").write_text("export const newValue = 1;\n", encoding="utf-8", newline="\n")
+
+        overlap = self.run_compare(baseline, baseline / "nested")
+        self.assertEqual(overlap.returncode, 2)
+        self.assertIn("must be existing directories", overlap.stderr)
+        self.assertFalse(self.output.exists())
+
+        unsafe = self.run_compare(baseline, current, current / "reports")
+        self.assertEqual(unsafe.returncode, 2)
+        self.assertIn("outside both selected source roots", unsafe.stderr)
+        self.assertFalse((current / "reports").exists())
+
+        capped = self.run_compare(baseline, current, None, "--max-files", "0")
+        self.assertEqual(capped.returncode, 2)
+        self.assertIn("scan limits must be positive", capped.stderr)
+        self.assertFalse(self.output.exists())
+
+        current_nested = self.base / "current" / "nested"
+        current_nested.mkdir()
+        nested_overlap = self.run_compare(current, current_nested)
+        self.assertEqual(nested_overlap.returncode, 2)
+        self.assertIn("must not overlap", nested_overlap.stderr)
+        self.assertFalse(self.output.exists())
+
+    def test_compare_scan_cap_failure_writes_no_partial_report(self) -> None:
+        baseline = self.base / "baseline"
+        baseline.mkdir()
+        (baseline / "one.ts").write_text("export const one = 1;\n", encoding="utf-8", newline="\n")
+        self.write("one.ts", "export const one = 1;\n")
+        self.write("two.ts", "export const two = 2;\n")
+        result = self.run_compare(baseline, self.source, None, "--max-files", "1")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("file-count limit exceeded", result.stderr)
+        self.assertFalse(self.output.exists())
 
     def test_value_flow_reports_simple_aliases_and_uses_without_guessing_mutations(self) -> None:
         self.write(
@@ -393,3 +525,4 @@ class ReaAppCliTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
