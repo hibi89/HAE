@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 from . import __version__
-from .contract import PreparedPlan, capabilities, prepare_plan
+from .contract import PreparedPlan, capabilities, preflight_summary, prepare_plan
 from .engine import ApprovalRequired, Engine, IDENTIFIER, PlanError, StepRetryExhausted, StepTimeout, MAX_SPEC_BYTES, validate
 from .runlog import RunLogError, inspect_run
 from .runtime import LAExecutor
@@ -45,7 +45,7 @@ def _read_plan(path: Path) -> PreparedPlan:
 def main() -> int:
     parser = argparse.ArgumentParser(prog="lightning-azent")
     parser.add_argument("--version", action="version", version=__version__)
-    parser.add_argument("command", choices=("capabilities", "validate", "run", "resume", "status", "schedule"))
+    parser.add_argument("command", choices=("capabilities", "validate", "preflight", "run", "resume", "status", "schedule"))
     parser.add_argument("plan", nargs="?", type=Path)
     parser.add_argument("--state", type=Path)
     parser.add_argument("--data", type=Path)
@@ -75,6 +75,8 @@ def main() -> int:
                 result = {"valid": True, "version": prepared.source_version,
                           "runtime_compat_version": plan["version"],
                           "steps": len(plan["steps"])}
+            elif args.command == "preflight":
+                result = preflight_summary(prepared)
             else:
                 if not args.synthetic or args.state is None or args.data is None:
                     raise PlanError("execution requires --synthetic, --state and --data")

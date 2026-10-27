@@ -46,6 +46,27 @@ def prepare_plan(plan: object, *, allow_legacy: bool = True) -> PreparedPlan:
     return PreparedPlan(source_version=version, runtime_plan=normalized)
 
 
+def preflight_summary(prepared: PreparedPlan) -> dict[str, object]:
+    """Redacted, plan-only metadata for HAE consent/configuration before execution.
+
+    Not an execution dry-run: does not open input files, databases or connectors.
+    """
+    runtime = prepared.runtime_plan
+    operations = [{"id": step["id"], "op": step["op"]} for step in runtime["steps"]]
+    return {
+        "source_version": prepared.source_version,
+        "runtime_version": runtime["version"],
+        "trigger_type": runtime.get("trigger", {"type": "manual"})["type"],
+        "steps": operations,
+        "step_count": len(operations),
+        "requires_write_approval": any(step["op"] in {"sqlite_put", "sqlite_import_csv"} for step in runtime["steps"]),
+        "requires_input_root": any(step["op"] == "csv_read" for step in runtime["steps"]),
+        "executes_workflow": False,
+        "external_connectors_supported": False,
+        "scope": "synthetic-local-only",
+    }
+
+
 def capabilities() -> dict[str, object]:
     """Describe only capabilities implemented by the local deterministic core."""
     return {

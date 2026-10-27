@@ -97,6 +97,19 @@ def main() -> int:
         return {"total": count, "passed": count - skip, "failed": 0,
                 "skipped": skip, "log": name + ".log"}
 
+    def preflight():
+        plan = str(FIX / "csv-filter-import.json")
+        info = command_json("preflight_csv", ["preflight", plan])
+        require(info.get("step_count") == 3 and
+                info.get("requires_input_root") is True and
+                info.get("requires_write_approval") is True and
+                info.get("executes_workflow") is False and
+                info.get("external_connectors_supported") is False and
+                all(set(step) == {"id", "op"} for step in info.get("steps", [])),
+                "Preflight metadata leak or incorrect permission classification")
+        return {"source_version": info["source_version"], "steps": 3,
+                "read_only": True}
+
     def native():
         folder = work / "native"; folder.mkdir()
         plan = str(FIX / "native-conditional-route.json")
@@ -176,6 +189,7 @@ def main() -> int:
     tasks = [
         ("git_provenance", provenance),
         ("syntax", syntax),
+        ("plan_preflight", preflight),
         ("la_full_regression", lambda: regression("la_unittest", PKG / "tests",
                                                  min_tests=EXPECTED_MIN_TESTS)),
         ("native_cli_resume", native),

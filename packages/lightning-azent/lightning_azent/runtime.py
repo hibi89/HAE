@@ -9,7 +9,7 @@ import hashlib
 from pathlib import Path
 from typing import Iterator
 
-from .contract import PreparedPlan, capabilities, prepare_plan
+from .contract import PreparedPlan, capabilities, preflight_summary, prepare_plan
 from .engine import ApprovalRequired, Engine, IDENTIFIER, PlanError, canonical_json
 from .runlog import RunLogError, inspect_business_ledger, inspect_completed_business_receipts, inspect_run
 from .scheduler import MAX_SCHEDULE_RUNS, interval_ticks
@@ -32,6 +32,11 @@ class LAExecutor:
     @staticmethod
     def prepare(plan: object, *, allow_legacy: bool = True) -> PreparedPlan:
         return prepare_plan(plan, allow_legacy=allow_legacy)
+
+    @staticmethod
+    def preflight(plan: object, *, allow_legacy: bool = True) -> dict[str, object]:
+        """Return validated plan metadata without opening files or executing steps."""
+        return preflight_summary(prepare_plan(plan, allow_legacy=allow_legacy))
 
     @staticmethod
     def capabilities() -> dict[str, object]:
