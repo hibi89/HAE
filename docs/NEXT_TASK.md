@@ -1,6 +1,18 @@
 ## P45 complete — reject a stale runtime backup
 The test committed one synthetic run-status change after the backup stage was created and before the source-after fingerprint. The backup rejected the changed source, published no artifact, removed the stage, and the only business-visible row change was the injected test mutation.
 
+## P46 complete — bounded local CSV attachment (2026-10-27 13:31 KST)
+Added a file picker for one UTF-8 `.csv` file, up to 512 KiB. The loopback-only upload route accepts at most 10 files per server session, rejects unsafe names/invalid base64/non-UTF-8 data, stages a generated-name copy under the selected input folder, and deletes that staging directory when the server closes. File contents and absolute paths are not returned or logged. The existing preview and explicit SQLite write approval remain required. The standalone engine was not modified.
+
+**Verification:** UI API suite 15/15 PASS; packaged API suite 6/6 PASS; full Windows Python suite 80/80 PASS; Node syntax PASS; changed-file whitespace scan clean.
+
+**Failure record:** default sandbox loopback was denied with WinError 10013; the local-only test request was authorized and then passed. The test-first run found the expected absent route. An initial implementation rerun exposed test fixtures with doubled Python escapes for newlines and invalid UTF-8; those fixtures were corrected before all reruns passed.
+
+F4 remains PARTIAL: general AI, other arbitrary attachment types, and AI repair are not implemented. The shared matrix remains 91% PARTIAL, and the engine hold and external approval gates remain in force.
+
+## Next atomic task — review remaining safe gaps
+Compare the remaining F4/F5/D2/F6/F7/F8/B1 evidence with the original blueprint. Work only on another locally verifiable item that does not require credentials, customer data, DBVORA source changes, independent security approval, signed distribution, or standalone-engine implementation. Do not edit the shared acceptance matrix from this branch.
+
 **Verification:** targeted test 1/1 PASS in 0.366 s; full Windows Python suite **77/77 PASS** in 40.902 s with synthetic local-loopback access; Node syntax/UI provenance and whitespace/conflict audit PASS. First attempt rolled back its own fixture change because the test omitted an explicit SQLite commit; the fixture was corrected and both reruns passed. Product code was unchanged. F2 stays PASS; estimate **91% PARTIAL**.
 
 ## Next atomic task — reconcile remaining acceptance gaps

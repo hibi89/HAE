@@ -8,6 +8,18 @@
 7. **Next:** review the full design matrix and complete remaining safe, locally verifiable requirements; no standalone engine.
 8. **P45 implementation commit:** `137f898a5fdef8b6b789791c2f47f38ea0db9c4f`.
 
+## Latest checkpoint — P46 bounded local CSV attachment (2026-10-27 13:31 KST)
+1. **TASK:** Add a bounded local CSV file picker/upload to the existing UI without changing the executor.
+2. **Branch and SHAs:** `feature/axflow-mvp`; before `62d712053470518376bdab59d4eec53191c46c88`; code commit `e6ba4e8b92c620d9fa3021d29eb019d0cae15c38`.
+3. **Changed paths:** `apps/ax-flow/axflow/web.py`, static `index.html`, `app.js`, `app.css`, `tests/test_web.py`, `tests/test_package.py`, and `README.md`.
+4. **Commands:** targeted web tests 15/15 PASS; packaged tests 6/6 PASS; `python -m unittest discover -s tests -v` 80/80 PASS; `node --check axflow/static/app.js` PASS; trailing-whitespace scan clean.
+5. **Failure/recovery:** default sandbox loopback restriction was WinError 10013; the authorized synthetic loopback run reached tests. Test-first absence was 404 as expected. Two subsequent fixture failures came from doubled Python escapes (`\n` and `\xff`); fixture literals were corrected and targeted/full reruns passed.
+6. **Behavior/safety:** one UTF-8 CSV up to 512 KiB, at most 10 staged files per server session, opaque generated names, strict base64 and filename checks, loopback/same-origin enforcement, no source-file overwrite, no file contents in response/logs, cleanup on server close. SQLite writes still require the existing preview and explicit approval.
+7. **Remaining gaps:** F4 remains PARTIAL: no general AI, other arbitrary attachment types, or bounded AI repair. Overall heuristic matrix remains 91% PARTIAL; external/auth/release gates are unchanged.
+8. **Risk/rollback:** staged data is a bounded local temporary copy under the chosen input root and is removed on server close. As with any temporary files, forced process termination can leave that directory behind; restart/normal exit cleanup was tested. Roll back with a revert of `e6ba4e8b92c620d9fa3021d29eb019d0cae15c38`; no shared matrix or engine code changed.
+9. **Next task:** review remaining matrix gaps and choose another locally verifiable item; hold standalone engine work for the overall chief review.
+10. **Owner action:** no site or browser session is required. No external credentials or approval are needed for this CSV-only feature.
+
 
 
 ## Latest checkpoint — P40 precision-safe numeric CSV normalization

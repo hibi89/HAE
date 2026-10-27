@@ -4,6 +4,14 @@
 - **Failure record:** first targeted run did not detect the mutation because the test fixture closed its SQLite connection without committing, so SQLite rolled it back. Added an explicit commit to the fixture; targeted and full reruns passed. Product code was unchanged.
 - **Acceptance/progress:** stale-source backup rejection is verified; F2 remains PASS. Overall stays **91% PARTIAL** (A100/B100/C95/D95/E65), heuristic. DBVORA D2, OAuth, independent security, signed/customer distribution and commercial gates remain open.
 
+## Latest checkpoint — P46 bounded local CSV attachment (2026-10-27 13:31 KST)
+- Branch: `feature/axflow-mvp`; code commit `e6ba4e8b92c620d9fa3021d29eb019d0cae15c38`, parent `62d712053470518376bdab59d4eec53191c46c88`.
+- Added a local CSV file picker and `POST /api/upload`. The route uses the existing loopback Host/Origin checks, accepts only plain `.csv` names and UTF-8 text, caps files at 512 KiB and each server session at 10 uploads, and caps the encoded request body. It stages random-named copies under the selected input root; response and logs contain no file contents or absolute paths. The server removes the temporary directory on close. Existing preview and explicit SQLite write approval still gate execution.
+- No engine code changed. Manual relative-path input remains supported. The UI supports one bounded CSV attachment type; general AI, other arbitrary attachment types, and AI repair remain open.
+- Verification: `python -m unittest discover -s tests -p test_web.py -v` — 15/15 PASS; `python -m unittest discover -s tests -p test_package.py -v` — 6/6 PASS; full suite — 80/80 PASS; `node --check axflow/static/app.js` PASS; changed-file whitespace scan clean.
+- Failure record: default sandbox denied synthetic localhost tests with WinError 10013; local-only escalation allowed execution. Test-first run correctly found the missing route (404). The first implementation run exposed double-escaped newline/invalid-byte test fixtures; correcting the fixture produced passing targeted and full reruns. No product test failure remains.
+- Overall matrix remains 91% PARTIAL. F4 is still partial; OAuth, DBVORA source restore, independent security review, signed/customer distribution, and commercial evidence remain gated. No website was left running.
+
 ## P44 — injected runtime-backup failure cleanup (2026-10-27 12:24 KST)
 - **Coverage:** injected a native publish error before publication and an integrity error after publication. Both returned safe failure; neither left a target or staged .part file. Source SHA-256, size and mtime remained unchanged, and the output directory was empty.
 - **Tests:** targeted failure-path test 1/1 PASS in 0.476 s. Full Windows Python 3.11.9 suite **76/76 PASS** in 40.428 s with synthetic local-loopback access. Node syntax, UI provenance regression and changed-file whitespace/conflict audit PASS.
