@@ -1,3 +1,9 @@
+## P25 complete — full synthetic AX FLOW suite passes
+Windows Python 3.11.9: python -m unittest discover -s tests -v from apps/ax-flow — **60/60 PASS** in 25.384 seconds with loopback permission enabled. The default-sandbox attempt had 9 failures / 10 errors: WinError 10013 blocked loopback mocks/UI; seven DBVORA assertions therefore saw UNAVAILABLE. Cross-process replay also hit its SQLite busy cap once, then passed on rerun. No source changed. See STATUS/HANDOFF for the full failure record. Progress remains **87% PARTIAL**.
+
+## Next atomic task — Windows reparse-point boundary probe
+Try a directory junction fixture in a temporary synthetic input root without elevation, then run the existing CSV path guard against a CSV reachable only through that junction. Verify it refuses before any business DB write. If the OS refuses fixture creation, record the exact error and mark SKIPPED; do not elevate or change OS policy. Keep P5 open and unchanged. Update the acceptance matrix only if the evidence changes a row.
+
 ## P24 complete — DBVORA FK relationship verified in isolated UI
 The current AX FLOW UI was connected to a separate synthetic SQLite database through the pinned DBVORA read-only API. The browser rendered employees.department_id → departments.id, and the FK persisted after schema-map refresh. API/UI redaction assertions passed; the database hash and mtime did not change and no WAL/SHM files were created. Both test servers and the synthetic DB were removed. P5 at http://127.0.0.1:8767/ remains open and unchanged. See STATUS/HANDOFF for exact source SHAs and evidence. Tracking estimate: **87% PARTIAL** (A100/B95/C95/D95/E50).
 

@@ -1,5 +1,19 @@
 # HANDOFF — AX FLOW + REA_APP (bootstrap, 2026-10-27 KST)
 
+## Latest checkpoint — P25 full regression suite rerun
+1. **Source:** local app code corresponding to feature/axflow-mvp@86ac854bd633e3a312aa54a5300e2f78f634dbfd; docs branch head before this checkpoint af2a54aa7fe4a684cb7d3ab4e1313cb17cb3163d. No product source changed.
+2. **Command:** from apps/ax-flow, Windows Python 3.11.9, python -m unittest discover -s tests -v.
+3. **Result:** **60/60 PASS** in 25.384 seconds after enabling local loopback permission.
+4. **Coverage:** DBVORA client, engine, zipapp packaging, planner, runlog, interval scheduler and web UI.
+5. **First attempt:** default sandbox reported 9 failures / 10 errors. Nineteen HTTP-dependent assertions failed because loopback socket access returned WinError 10013; seven DBVORA client tests received UNAVAILABLE instead of local mock responses.
+6. **Transient observation:** cross-process same-run replay hit its bounded SQLite busy cap on the restricted first run, then passed on the loopback-permitted full rerun. This did not recur; no product defect was established.
+7. **P24 evidence:** isolated visible UI displayed employees.department_id → departments.id; API/UI redaction, unchanged DB hash/mtime and no WAL/SHM all PASS.
+8. **Sites:** P5 http://127.0.0.1:8767/ remains open and unchanged; no other site is needed.
+9. **Progress/gates:** **87% PARTIAL**, A100/B95/C95/D95/E50. D2 restore, independent security assessment, signed installer, customer/release and commercial evidence remain incomplete or approval-gated.
+10. **Next:** continue one permission-free synthetic Blueprint check at a time; preserve the independent engine hold and record test failures before committing.
+
+# HANDOFF — AX FLOW + REA_APP (bootstrap, 2026-10-27 KST)
+
 ## Latest checkpoint — P24 DBVORA FK visible UI acceptance
 1. **Task/source:** tested AX FLOW UI source feature/axflow-mvp@86ac854bd633e3a312aa54a5300e2f78f634dbfd with pinned DBVORA feature/p0-db-map@31b8257468d28743fb2d3767d1caa56938df756c; docs branch head before this checkpoint was 9dd3405e23e479adafd48093f457b758149785f9.
 2. **Fixture:** isolated synthetic SQLite file with departments/employees tables, two rows, and an FK from employees.department_id to departments.id.

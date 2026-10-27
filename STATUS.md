@@ -1,3 +1,10 @@
+## P25 — full AX FLOW regression suite passes with loopback enabled (2026-10-27 KST)
+- Ran from the local app source corresponding to the unchanged product code commit feature/axflow-mvp@86ac854bd633e3a312aa54a5300e2f78f634dbfd; documentation branch head before this checkpoint was af2a54aa7fe4a684cb7d3ab4e1313cb17cb3163d.
+- **Passing command/environment:** Windows Python 3.11.9, from apps/ax-flow: python -m unittest discover -s tests -v — **60/60 PASS** in 25.384 seconds, with local loopback permission enabled. All DBVORA client, engine, package, planner, runlog, scheduler and web tests passed.
+- **Failure/cause:** the first default-sandbox run completed 60 tests with 9 failures and 10 errors. Nineteen loopback-dependent mock/UI/package checks could not connect because Windows returned WinError 10013; seven DBVORA client assertions consequently saw UNAVAILABLE instead of their fixture responses. The cross-process same-run replay test also hit its bounded SQLite busy cap once. In the loopback-permitted rerun, that test passed and the complete suite passed; the transient lock contention did not recur and was not isolated as a product defect.
+- No source changed in this unit. The P24 visible FK UI/API assertions remain PASS; P5 at http://127.0.0.1:8767/ is still open.
+- **Progress:** remains **87% PARTIAL** (A100/B95/C95/D95/E50). A test rerun adds confidence but closes no new Blueprint capability. Restore, independent security assessment, signed Windows distribution and customer/release evidence remain open.
+
 ## P24 — DBVORA foreign-key relation shown in the isolated UI (2026-10-27 KST)
 - Tested the current AX FLOW UI source from feature/axflow-mvp@86ac854bd633e3a312aa54a5300e2f78f634dbfd with pinned DBVORA source hibi89/DBVORA feature/p0-db-map@31b8257468d28743fb2d3767d1caa56938df756c; documentation branch head before this checkpoint was 9dd3405e23e479adafd48093f457b758149785f9.
 - Created a separate synthetic SQLite database with departments and employees, two synthetic rows, and declared FK employees.department_id → departments.id. An isolated DBVORA API on 127.0.0.1:18768 and AX FLOW UI on 127.0.0.1:8771 inspected only this file.

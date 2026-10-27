@@ -2,6 +2,8 @@
 
 **Evidence status at 2026-10-27 KST.** Status reflects tests actually run on the recorded bounded synthetic environment. “PASS” does not imply customer, production, or cross-platform readiness.
 
+**Latest complete AX FLOW regression:** Windows Python 3.11.9, from apps/ax-flow, python -m unittest discover -s tests -v — 60/60 PASS with loopback permission. Restricted-sandbox attempt had 9 failures / 10 errors from WinError 10013 plus one transient SQLite busy-cap failure that did not recur; see P25 in STATUS/HANDOFF.
+
 | ID | Component | Required proof | Current |
 |---|---|---|---|
 | R1 | REA_APP synthetic source analyzer | real parser/import/graph + bounds + no source mutation tests | PASS — bounded synthetic JS/TS; Python 11/11, Node parser PASS, deterministic fixture and self-scan |
