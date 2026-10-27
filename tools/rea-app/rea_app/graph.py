@@ -203,7 +203,16 @@ def _resolve_alias(
     return None, False
 
 
-def _resolve_module(specifier: str, importer: str, tsconfigs: list[dict[str, Any]], source_paths: set[str]) -> dict[str, Any]:
+def _resolve_module(
+    specifier: str | None,
+    importer: str,
+    tsconfigs: list[dict[str, Any]],
+    source_paths: set[str],
+    kind: str,
+) -> dict[str, Any]:
+    if specifier is None:
+        resolution = "unresolved_dynamic" if kind == "dynamic_import" else "unresolved"
+        return {"resolution": resolution, "to_path": None, "package_name": None, "declared_dependency": False}
     if specifier.startswith(("./", "../")):
         candidate = posixpath.normpath(posixpath.join(posixpath.dirname(importer), specifier))
         if not _within_relative_root(candidate):
@@ -300,7 +309,7 @@ def build_report(scan: ScanResult, parser_timeout: int) -> dict[str, Any]:
             diagnostics.append({"path": path, "line": error.get("line", 1), "kind": "syntax_error", "message": error.get("message", "syntax could not be parsed")})
         from_package = _package_for(path, packages)
         for edge_index, edge in enumerate(parse_result.get("edges", [])):
-            resolution = _resolve_module(edge["specifier"], path, tsconfigs, source_paths)
+            resolution = _resolve_module(edge["specifier"], path, tsconfigs, source_paths, edge["kind"])
             target_package = _package_for(resolution["to_path"], packages) if resolution["to_path"] else None
             if resolution["package_name"] and from_package:
                 resolution["declared_dependency"] = resolution["package_name"] in from_package["_dependency_names"]
@@ -462,6 +471,7 @@ def build_report(scan: ScanResult, parser_timeout: int) -> dict[str, Any]:
         "diagnostics": diagnostics,
         "coverage": {
             "javascript_typescript": "@babel/parser AST; import, export, require, dynamic import and syntactic call references",
+            "dynamic_imports": "String literals and no-substitution template literals are resolved; computed expressions are emitted as unresolved_dynamic without source text.",
             "python": "inventory only",
             "other_languages": "inventory only",
             "call_resolution": "direct imported calls with a unique in-root module edge and matching export are linked; other calls remain syntactic references",
@@ -517,7 +527,8 @@ def render_markdown(report: dict[str, Any]) -> str:
         for edge in report["dependency_edges"]:
             target = f"`{edge['to_path']}`" if edge["to_path"] else f"`{edge['to_package'] or 'unresolved'}`"
             declared = " (declared)" if edge["declared_dependency"] else ""
-            lines.append(f"- `{edge['evidence']['path']}:{edge['evidence']['line']}` — {edge['kind']} `{edge['specifier']}` → {target} [{edge['resolution']}{declared}]")
+            specifier = "<dynamic expression>" if edge["kind"] == "dynamic_import" and edge["specifier"] is None else edge["specifier"]
+            lines.append(f"- `{edge['evidence']['path']}:{edge['evidence']['line']}` — {edge['kind']} `{specifier}` → {target} [{edge['resolution']}{declared}]")
     else:
         lines.append("No import or re-export edges were observed.")
     lines.extend(["", "## Cross-module calls", ""])

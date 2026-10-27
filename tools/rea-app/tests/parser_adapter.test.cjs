@@ -10,6 +10,14 @@ const input = {
     { path: 'src/main.ts', content: 'import { value as localValue } from "./value";\nexport const run = () => localValue();\n' },
     { path: 'src/value.ts', content: 'export function value() { return 1; }\n' },
     {
+      path: 'src/dynamic.ts',
+      content: 'export async function load(name: string) {\n'
+        + '  const known = await import("./parts/known");\n'
+        + '  const templated = await import(`./parts/known`);\n'
+        + '  const computed = await import(name);\n'
+        + '  return [known, templated, computed];\n}\n',
+    },
+    {
       path: 'src/contracts.ts',
       content: 'export async function load(id: string, options?: { cache: boolean }): Promise<Result> { return await source("body-only"); }\n'
         + 'export const transform = (value: string, count = 9137): string => value;\n'
@@ -37,6 +45,11 @@ assert.equal(main.edges[0].line, 1);
 assert.equal(main.bindings[0].local, 'localValue');
 assert.equal(main.bindings[0].imported, 'value');
 assert.equal(main.calls[0].callee, 'localValue');
+const dynamicEdges = parsed.files.find((file) => file.path === 'src/dynamic.ts').edges
+  .filter((edge) => edge.kind === 'dynamic_import');
+assert.deepEqual(dynamicEdges.map((edge) => [edge.specifier, edge.line]), [
+  ['./parts/known', 2], ['./parts/known', 3], [null, 4],
+]);
 const value = parsed.files.find((file) => file.path === 'src/value.ts');
 assert.equal(value.exports[0].name, 'value');
 const contracts = parsed.files.find((file) => file.path === 'src/contracts.ts').function_contracts;

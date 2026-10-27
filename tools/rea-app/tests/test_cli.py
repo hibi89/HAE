@@ -209,6 +209,56 @@ class ReaAppCliTests(unittest.TestCase):
         self.assertEqual(markdown_path.read_bytes(), first_markdown)
         self.assertEqual(snapshot(self.source), before)
 
+    def test_unicode_modules_and_dynamic_import_resolution_limits(self) -> None:
+        unicode_path = "src/parts/고객-模块.ts"
+        self.write(
+            "src/loader.ts",
+            'export async function load(name: string) {\n'
+            '  const known = await import("./parts/고객-模块");\n'
+            '  const templated = await import(`./parts/고객-模块`);\n'
+            '  const computed = await import(name);\n'
+            '  const interpolated = await import(`./parts/${name}`);\n'
+            '  return known.default + computed + templated + interpolated;\n'
+            '}\n',
+        )
+        self.write(unicode_path, 'export default "fixture";\n')
+        before = snapshot(self.source)
+        first = self.run_scan()
+        self.assertEqual(first.returncode, 0, first.stderr + first.stdout)
+        report_path = self.output / "source-map.json"
+        markdown_path = self.output / "source-map.md"
+        first_json = report_path.read_bytes()
+        first_markdown = markdown_path.read_bytes()
+        report = json.loads(first_json)
+
+        self.assertIn(unicode_path, {item["path"] for item in report["files"]})
+        edges = [item for item in report["dependency_edges"] if item["kind"] == "dynamic_import"]
+        self.assertEqual(len(edges), 4)
+        known = next(item for item in edges if item["specifier"] == "./parts/고객-模块")
+        self.assertEqual(known["resolution"], "internal")
+        self.assertEqual(known["to_path"], unicode_path)
+        self.assertEqual(known["evidence"], {"path": "src/loader.ts", "line": 2})
+        template = next(item for item in edges if item["evidence"]["line"] == 3)
+        self.assertEqual(template["specifier"], "./parts/고객-模块")
+        self.assertEqual(template["resolution"], "internal")
+        self.assertEqual(template["to_path"], unicode_path)
+        unresolved = [item for item in edges if item["specifier"] is None]
+        self.assertEqual(len(unresolved), 2)
+        self.assertTrue(all(item["resolution"] == "unresolved_dynamic" for item in unresolved))
+        self.assertTrue(all(item["to_path"] is None for item in unresolved))
+        self.assertEqual([item["evidence"]["line"] for item in unresolved], [4, 5])
+        self.assertIn("unresolved_dynamic", report["coverage"]["dynamic_imports"])
+        markdown = first_markdown.decode("utf-8")
+        self.assertIn(unicode_path, markdown)
+        self.assertIn("<dynamic expression>", markdown)
+        self.assertEqual(snapshot(self.source), before)
+
+        again = self.run_scan()
+        self.assertEqual(again.returncode, 0, again.stderr + again.stdout)
+        self.assertEqual(report_path.read_bytes(), first_json)
+        self.assertEqual(markdown_path.read_bytes(), first_markdown)
+        self.assertEqual(snapshot(self.source), before)
+
     def test_zero_file_repository_is_a_valid_empty_inventory(self) -> None:
         result = self.run_scan()
         self.assertEqual(result.returncode, 0, result.stderr + result.stdout)

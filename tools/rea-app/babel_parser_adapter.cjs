@@ -114,6 +114,14 @@ function sourceString(node) {
   return node && node.type === 'StringLiteral' ? node.value : null;
 }
 
+function staticModuleSpecifier(node) {
+  if (node && node.type === 'StringLiteral') return node.value;
+  if (node && node.type === 'TemplateLiteral' && node.expressions.length === 0) {
+    return node.quasis[0] && node.quasis[0].value.cooked;
+  }
+  return null;
+}
+
 const FILE_ACCESS_OPERATIONS = new Map([
   ['readFile', 'read'], ['readFileSync', 'read'],
   ['createReadStream', 'read_stream'],
@@ -368,9 +376,9 @@ function parseSource(file) {
   const fileAccessConflicts = collectFileAccessConflicts(ast.program);
 
   function addEdge(kind, specifier, node, importBindings = []) {
-    if (typeof specifier !== 'string') return;
+    if (typeof specifier !== 'string' && kind !== 'dynamic_import') return;
     const edgeIndex = edges.length;
-    edges.push({ kind, specifier, line: lineOf(node) });
+    edges.push({ kind, specifier: typeof specifier === 'string' ? specifier : null, line: lineOf(node) });
     for (const binding of importBindings) bindings.push({ ...binding, edge_index: edgeIndex, kind });
   }
 
@@ -432,8 +440,8 @@ function parseSource(file) {
           ? namesFromPattern(parent.id, '*')
           : [];
         addEdge('require', sourceString(node.arguments[0]), node, foundBindings);
-      } else if (isDynamicImport && node.arguments.length && node.arguments[0].type === 'StringLiteral') {
-        addEdge('dynamic_import', sourceString(node.arguments[0]), node);
+      } else if (isDynamicImport && node.arguments.length) {
+        addEdge('dynamic_import', staticModuleSpecifier(node.arguments[0]), node);
       }
       calls.push({
         callee: file.content.slice(callee.start, callee.end).slice(0, 160),
@@ -451,8 +459,8 @@ function parseSource(file) {
           line: lineOf(node),
         });
       }
-    } else if (node.type === 'ImportExpression' && node.source && node.source.type === 'StringLiteral') {
-      addEdge('dynamic_import', sourceString(node.source), node);
+    } else if (node.type === 'ImportExpression' && node.source) {
+      addEdge('dynamic_import', staticModuleSpecifier(node.source), node);
     } else if (node.type === 'TSImportType' && node.argument && node.argument.type === 'TSLiteralType') {
       addEdge('type_import', sourceString(node.argument.literal), node);
     }
