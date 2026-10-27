@@ -1,5 +1,24 @@
 ## Lightning Azent v0.1 native interface — staged, tests pending (2026-10-28 KST)
 
+### Owner acceleration & plan-only preflight (2026-10-28)
+
+From the HAE repository root, run **one offline command** on the owner's Windows Python 3.11+ checkout:
+
+```powershell
+python packages/lightning-azent/verify_local.py
+```
+
+The verifier checks Git SHA/clean branch, in-memory Python syntax, the full LA test suite, native run/resume, CSV import/replay, two interval ticks, the original HAE regression, and an offline isolated wheel smoke when installed packaging dependencies permit it. It records PASS/FAIL/SKIP and command logs as `verify_result.json` in a unique OS temporary directory. All write scenarios use synthetic temporary SQLite and CSV. `--skip-legacy` or `--skip-wheel` reduce test coverage and must not be reported as full acceptance. **The full script/Windows checkout has not yet been executed.**
+
+The new **read-only plan preview** for HAE review is:
+
+```powershell
+$env:PYTHONPATH="packages/lightning-azent"
+python -m lightning_azent preflight docs/lightning-azent/fixtures/csv-filter-import.json
+```
+
+`LAExecutor.preflight(plan)` exposes the same validated, redacted metadata: input version, trigger, ordered step IDs/operations, CSV-root and local-write-approval needs. It does **not** read actual CSV data, execute a workflow, issue OAuth consent, contact connectors, create SQLite, or replace a true execution dry-run. Whole-package verification remains a release gate.
+
 The independent package now exposes `azent.ir.v0` as a strictly versioned, bounded **native interface** mapped into the owner-authored `axflow.ir.v0` v0 core. `axflow.ir.v0` stays accepted for legacy HAE parity. Unknown IR versions/operations fail closed; native/legacy input dictionaries are not mutated. An independent `LAExecutor` provides `prepare`, `execute`, `resume`, `schedule`, `status`, and `capabilities` with lazy database opening and explicit local write approval. No additional operation, connector, n8n code or OAuth support is implied.
 
 A `resume` request requires an existing manual run ID and the exact original normalized plan; missing runs, changed plans, missing write approval and a deleted business ledger are rejected before the engine initializes SQLite. For source CLI recovery use `python -m lightning_azent resume plan.json --state state.sqlite --data business.sqlite --run-id ExistingID --synthetic` and `--approve-writes` when required. No externally executed workflow replay is supported. Existing manual-run recovery also performs read-only SQLite business-ledger schema and quick-integrity checks before initializing Engine. It additionally cross-checks completed local SQLite write/import step checkpoints against existing business row receipts; a removed row blocks manual resume instead of returning an unverified cached success. Incomplete step writes remain eligible for idempotent retry. It refuses to recreate missing, empty, incompatible or damaged local business ledgers. These checks do not independently validate every historic business record or external side effect. For CLI CSV execution, a missing `--input-root` is also rejected before creating SQLite files.
