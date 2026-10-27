@@ -1,3 +1,9 @@
+## P31 complete — packaged DBVORA provenance and offline state
+A temporary Windows zipapp connected only to a synthetic loopback contract stub. Packaged UI/API safely displayed the allowlisted provenance and table metadata; injected paths/markup were absent. After taking the stub offline, the UI showed offline state and cleared provenance/tables/relations. Temporary processes, tab, artifact and fixtures were removed. **88% PARTIAL** remains; this does not prove actual DBVORA installation/customer behavior or restore.
+
+## Remaining work boundary
+Before starting the next item, compare the acceptance matrix for a distinct permission-free gap. D2 restore, F5 OAuth consent, F7 independent review, F8 signed/customer release and B1 commercial validation require their stated owner/external prerequisites; do not simulate their acceptance with a synthetic stub.
+
 ## P30 complete — Windows zipapp browser workflow
 The built zipapp (SHA-256 `2c1f6f15af81c6cf302bd2e7f4bcb6753a2dc0b67d2126d820431b50c5964155`) completed the synthetic browser flow with explicit write approval and a 2/2-step, 2-row receipt. Read-only checks confirmed separate business/runtime SQLite files and no input data in runtime storage. Temporary package, server, browser tab and fixture were removed; port 8774 is closed. A–E estimate is **88% PARTIAL** (A100/B95/C95/D95/E55).
 

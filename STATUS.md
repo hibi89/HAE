@@ -1,3 +1,12 @@
+## P31 — packaged DBVORA provenance and offline state verified (2026-10-27 KST)
+- Built a temporary Windows zipapp from the current feature/axflow-mvp source (artifact SHA-256 fab5dc8a8faeb4712a12a25bd86cd7974fbb56225e6619ac233cc7e42653ec42) and connected it only to a synthetic loopback DBVORA p0-01.v1 contract stub and a synthetic input folder.
+- **Online browser/API:** UI displayed opaque DB ID, CPU unavailable, measured SQLite file size, table catalog and declared-FK provenance; one synthetic table rendered. API normalized response omitted injected path/HTML keys. Browser showed zero injected images.
+- **Offline browser:** stopped the stub and refreshed. UI returned to dbvora-status offline, cleared provenance, removed the prior table, and cleared relation content.
+- **Failure/cause and recovery:** the default PowerShell request was blocked by Windows loopback socket permissions; the approved loopback-only retry passed. The first offline assertion expected Korean text, while the API's actual error message is English; after inspecting the DOM, the assertion was corrected to check the offline class and cleared data. No product failure.
+- **Cleanup:** both servers stopped, browser tab closed, temporary zipapp/stub/fixture removed, ports 8775 and 18771 confirmed closed. P5 at http://127.0.0.1:8767/ remains open.
+- **Tests:** packaged build, API redaction assertion, visible online UI, and offline/stale-data assertions PASS. No complete Python rerun; P27 remains 61/61 PASS and P28 Node VM regression remains PASS.
+- **Progress remains 88% PARTIAL** (A100/B95/C95/D95/E55). P31 verifies package wiring with a stub; it does not verify DBVORA installation, customer/multi-asset databases or restore, so D remains partial.
+
 ## P30 — packaged Windows zipapp browser workflow verified (2026-10-27 KST)
 - Built the standard-library `.pyz` on Windows Python 3.11.9 with `python tools\\package_axflow.py --output <temporary-path>\\axflow.pyz`; artifact SHA-256 `2c1f6f15af81c6cf302bd2e7f4bcb6753a2dc0b67d2126d820431b50c5964155` (32,191 bytes).
 - Launched that exact artifact on loopback port 8774, opened its bundled UI in a temporary browser tab, entered a supported Korean task for a two-row synthetic CSV, inspected the generated plan, and confirmed the run remained disabled until synthetic write approval.

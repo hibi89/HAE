@@ -1,3 +1,13 @@
+## Latest checkpoint — P31 packaged DBVORA provenance
+1. **Source:** feature/axflow-mvp@99058617d8b35806b02be41a84fcd7ec5bee1c66; no product source changed. Documentation branch before P31: 79636e921d8c37c9d7fbaa7168393da8653287e5.
+2. **Artifact:** temporary Windows zipapp SHA-256 fab5dc8a8faeb4712a12a25bd86cd7974fbb56225e6619ac233cc7e42653ec42.
+3. **Online:** synthetic API stub passed the read-only health/inventory contract; packaged browser displayed opaque ID, CPU-unavailable/size/catalog/FK provenance, one table, and no path or injected markup. /api/dbvora omitted unallowlisted path/HTML fields.
+4. **Offline:** after stopping only the synthetic API stub and refreshing, UI had offline class, no tables, empty provenance, and empty relations.
+5. **Failures:** default PowerShell loopback GET was blocked by WinError 10013; approved loopback call passed. Initial UI assertion expected Korean offline copy, but actual adapter message is English; state inspection showed offline behavior was correct, so assertions checked status class/data clearing. No app failure.
+6. **Cleanup:** server(s), tab, temporary zipapp/stub/fixture removed; ports 8775 and 18771 closed. P5 http://127.0.0.1:8767/ remains open.
+7. **Evidence/progress:** P27 full Python suite remains 61/61 PASS, P28 Node regression PASS. A–E stays 88% PARTIAL (A100/B95/C95/D95/E55); customer/multi-asset and restore proof remain absent.
+8. **Next:** the high-value remaining work requires DBVORA restore approval, OAuth consent, independent security review, signed installer or customer release evidence. Continue only if another permission-free synthetic test closes a distinct gap.
+
 ## Latest checkpoint — P30 Windows zipapp visible workflow
 1. **Source:** `feature/axflow-mvp@99058617d8b35806b02be41a84fcd7ec5bee1c66`; no product source changed. Documentation branch before P30: `d7e22423315ad8f5b2607a003f10cc309632ba32`.
 2. **Artifact:** standard-library `.pyz`, 32,191 bytes, SHA-256 `2c1f6f15af81c6cf302bd2e7f4bcb6753a2dc0b67d2126d820431b50c5964155`.
