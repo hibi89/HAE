@@ -128,6 +128,22 @@ class LAExecutor:
             "steps": len(prepared.runtime_plan["steps"]),
         }
 
+    def verify_receipts(self, plan: object, run_id: str) -> dict[str, object]:
+        """Read-only integrity check for a persisted run and business receipts."""
+        normalized = prepare_plan(plan).runtime_plan
+        if not isinstance(run_id, str) or not IDENTIFIER.fullmatch(run_id):
+            raise PlanError("run_id must be a safe identifier")
+        existing = inspect_run(self.state_path, run_id)
+        expected_hash = hashlib.sha256(canonical_json(normalized).encode("utf-8")).hexdigest()
+        if existing.get("plan_hash") != expected_hash:
+            raise PlanError("persisted run plan does not match supplied plan")
+        try:
+            inspect_business_ledger(self.business_path)
+            inspect_completed_business_receipts(self.state_path, self.business_path, run_id, normalized)
+        except RunLogError as exc:
+            raise PlanError(str(exc)) from exc
+        return {"run_id": run_id, "verified": True}
+
     def status(self, run_id: str) -> dict[str, object]:
         """Read-only status query; never initializes an absent runtime DB."""
         return inspect_run(self.state_path, run_id)
