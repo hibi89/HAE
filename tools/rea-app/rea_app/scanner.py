@@ -171,10 +171,18 @@ def walk_source(root_path: Path, limits: ScanLimits) -> ScanResult:
             should_read = _is_supported_source(candidate) or name.casefold() in MANIFEST_NAMES or _is_tsconfig(name)
             content: str | None = None
             try:
-                with candidate.open("rb") as handle:
+                # Reject a final-component symlink swap at open time on POSIX,
+                # and reject a different file identity on supported platforms.
+                # A pre-open resolve/stat check alone is subject to path races.
+                flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+                descriptor = os.open(candidate, flags)
+                with os.fdopen(descriptor, "rb") as handle:
                     opened_stat = os.fstat(handle.fileno())
                     if not stat.S_ISREG(opened_stat.st_mode):
                         skipped.append({"path": relative, "reason": "not_regular_file"})
+                        continue
+                    if (opened_stat.st_dev, opened_stat.st_ino) != (file_stat.st_dev, file_stat.st_ino):
+                        skipped.append({"path": relative, "reason": "file_identity_changed"})
                         continue
                     # Hash every accepted file so compare mode can detect changes
                     # in inventory-only files without retaining their contents.
