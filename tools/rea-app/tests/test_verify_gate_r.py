@@ -5,12 +5,18 @@ import contextlib
 import importlib.util
 import io
 import os
+import shutil
 import stat
 import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
+from tests.windows_link_support import (
+    JunctionUnavailable,
+    create_directory_junction,
+    remove_directory_junction,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location("verify_gate_r", ROOT / "verify_gate_r.py")
@@ -98,6 +104,27 @@ class TestGateRSourceAttribution(unittest.TestCase):
                     self.assertFalse(self.checked())
                 finally:
                     original.unlink()
+                    relocated.rename(original)
+
+    def test_native_junctioned_parent_directories_are_rejected(self) -> None:
+        if os.name != "nt":
+            self.skipTest("native Windows junction fixture requires Windows")
+        if not shutil.which("powershell.exe") and not shutil.which("pwsh.exe"):
+            self.skipTest("PowerShell is unavailable")
+        for name in ("rea_app", "tests"):
+            with self.subTest(directory=name):
+                original = self.root / name
+                relocated = self.root / (name + "_junction_target")
+                original.rename(relocated)
+                try:
+                    create_directory_junction(original, relocated)
+                except JunctionUnavailable as exc:
+                    relocated.rename(original)
+                    self.skipTest(str(exc))
+                try:
+                    self.assertFalse(self.checked())
+                finally:
+                    remove_directory_junction(original)
                     relocated.rename(original)
 
     def test_manifest_file_reparse_and_nonregular_are_rejected(self) -> None:

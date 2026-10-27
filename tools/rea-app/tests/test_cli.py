@@ -10,6 +10,11 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+from tests.windows_link_support import (
+    JunctionUnavailable,
+    create_directory_junction,
+    remove_directory_junction,
+)
 
 TOOL_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(TOOL_ROOT))
@@ -647,6 +652,30 @@ class ReaAppCliTests(unittest.TestCase):
         with patch.object(scanner.os, "name", "nt"):
             self.assertTrue(scanner._is_link_or_reparse_point(ReparsePath(0x400)))
             self.assertFalse(scanner._is_link_or_reparse_point(ReparsePath(0)))
+
+    def test_native_windows_directory_junction_is_skipped_without_traversal(self) -> None:
+        if os.name != "nt":
+            self.skipTest("native Windows junction fixture requires Windows")
+        target = self.base / "outside-source-root"
+        target.mkdir()
+        marker = target / "private-marker.ts"
+        marker.write_text("export const outside = true;\n", encoding="utf-8")
+        linked = self.source / "outside-junction"
+        try:
+            create_directory_junction(linked, target)
+        except JunctionUnavailable as exc:
+            self.skipTest(str(exc))
+        try:
+            result = walk_source(self.source, ScanLimits())
+            self.assertNotIn("outside-junction/private-marker.ts",
+                             {item.path for item in result.files})
+            self.assertTrue(any(
+                item["path"] == "outside-junction" and item["reason"] == "symlink"
+                for item in result.skipped_files
+            ))
+            self.assertEqual(marker.read_text(encoding="utf-8"), "export const outside = true;\n")
+        finally:
+            remove_directory_junction(linked)
 
 
 if __name__ == "__main__":

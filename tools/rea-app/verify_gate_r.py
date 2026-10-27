@@ -31,7 +31,7 @@ SOURCE_BLOBS = {
     "rea_app/package-lock.json": "0bbde3cd132070df076a478a63056673687852d4",
     "pyproject.toml": "e44bdca16128701fb1ac32fc3cce9e8755d6957d",
     "tests/parser_adapter.test.cjs": "a9f6c5c3ccd83f261c3c0eea527772775f25ddd3",
-    "tests/test_cli.py": "929f3c41cee6494b658dfe3ccab653f477923d3f",
+    "tests/test_cli.py": "832b76d51da9123f21762417cd532794ef2d35f8",
     "tests/test_bundle.py": "1cc3607521f21e81ca408823682351d8b4f88430",
     "tests/test_diagram.py": "6f58530a825eec4eb9741acc1e3820e3a7c96771",
     "tests/test_bundle_real_parser.py": "1c2a51a8c72181d341faaf0a998cf4c4628ed394",
@@ -41,7 +41,8 @@ SOURCE_BLOBS = {
     "tests/test_scan_open_races.py": "7b0872d3b92f168b3e1d2d5dc9d3ef17d8ca6249",
     "tests/test_scan_snapshot_integrity.py": "a309e31b5b6c015d993fe39da90fcf93088261f0",
     "tests/test_scan_sensitive_exclusions.py": "3f40479907fe923137f9c018a57b2d3df08ba023",
-    "tests/test_verify_gate_r.py": "2e9b94a59abb34c6c0e520991d72ae5eb8d56ad2",
+    "tests/test_verify_gate_r.py": "8dc34b103ebb126b1df97c4a1e4fd738323950a7",
+    "tests/windows_link_support.py": "ffdd4f227453fe06cb162b7159ad7eaf922b8529",
 }
 
 
