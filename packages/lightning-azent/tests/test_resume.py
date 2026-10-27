@@ -109,6 +109,16 @@ class ResumeAcceptanceTests(unittest.TestCase):
         self.assertFalse(self.business.exists())
         self.assertEqual(self.executor.status("PinnedNoWrite")["status"], "completed")
 
+    def test_completed_resume_never_recreates_missing_business_ledger(self):
+        plan = self.fixture("conditional-route.json")
+        self.assertEqual(self.executor.execute(plan, "NoRecreate"), {"route": "accepted"})
+        self.business.unlink()  # The synthetic temporary business DB is intentionally removed.
+        with self.assertRaisesRegex(PlanError, "ledger is missing"):
+            self.executor.resume(plan, "NoRecreate")
+        self.assertFalse(self.business.exists())
+        self.assertEqual(self.executor.status("NoRecreate")["status"], "completed")
+
+
 
 if __name__ == "__main__":
     unittest.main()
