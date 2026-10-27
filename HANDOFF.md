@@ -1,5 +1,18 @@
 # HANDOFF — AX FLOW + REA_APP (bootstrap, 2026-10-27 KST)
 
+## Latest checkpoint — P16 local UI E2E and read-only execution
+1. **Task:** fixed the hidden write-approval guard so a read-only preview can execute without a write checkbox; the UI now reports the correct read-only action.
+2. **Branch/base:** `feature/axflow-mvp`, previous HEAD `788868c3568d891d4bbaadf6976464d2894117af`.
+3. **Changed paths:** `apps/ax-flow/axflow/static/app.js`, `apps/ax-flow/README.md`, `STATUS.md`, `HANDOFF.md`, `docs/NEXT_TASK.md`.
+4. **Tests:** Windows Python 3.11, `python -m unittest discover -s tests -v` — **60/60 PASS** with permitted loopback; `node --check axflow/static/app.js` — **PASS**. Browser preview + read-only lookup for synthetic id 2 returned source row 2; explicitly approved full import saved rows 1 and 2 and returned a completed 2/2-step receipt. Direct SQLite query confirmed exactly two rows.
+5. **Failures and recovery:** default sandbox test run failed with WinError 10013 (8 failures/10 errors); exact suite rerun with loopback permission passed. A malformed test request without “CSV” was refused by the bounded planner. Initial read-only browser execution was silently blocked by the unconditional checkbox check; fixed. Three synthetic servers sharing 8765 caused a stale one-row fixture response; inspected process args, stopped the two stale listeners, and kept the isolated two-row server.
+6. **Scope/data:** isolated temporary fixture only; no customer data, external API or DBVORA write. The DBVORA panel remains unconfigured in this server.
+7. **Blueprint/progress:** C advances from 80 to 90 based on the tested GUI journey; equal-weight A–E estimate **79%** (A100/B95/C90/D60/E50). Product remains PARTIAL.
+8. **Risks/rollback:** only the read-only UI run gate and message changed; previous branch head `788868c3568d891d4bbaadf6976464d2894117af` is the rollback base. No force-push.
+9. **Next:** do permitted DBVORA read-only browser linkage only if the actual service/source is available; otherwise preserve its unavailable state. Keep the standalone engine, restore, customer credentials/data and release actions on their existing review/approval gates.
+10. **Owner review:** site is open at `http://127.0.0.1:8765/` with the synthetic two-row import receipt visible. The chief reviewer can verify the completed flow.
+
+
 ## P15 — review site currently available
 1. **Environment:** synthetic AX FLOW UI is running in managed session `32804`, listener `127.0.0.1:8765` (observed PID `22416`). Temporary fixture root: `C:\Users\haein\AppData\Local\Temp\axflow-review-cada4201409a49208b052e25b014152c`.
 2. **Evidence:** startup emitted “AX FLOW local UI ready”; loopback listener was present and GET returned HTTP 200 with `text/html; charset=utf-8`. Live `POST /api/preview` returned 200, workflow `csv_to_sqlite`, 2 steps, and explicit approval required; runtime/business DB files remained absent. Two synthetic contacts only; no run/write was initiated.

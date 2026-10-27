@@ -193,9 +193,11 @@ for (const input of [taskInput, csvInput]) {
 approvalInput.addEventListener("change", updateRunButton);
 
 runButton.addEventListener("click", async () => {
-  if (!approvalInput.checked || previewKey !== requestKey()) return;
+  if ((requiresApproval && !approvalInput.checked) || previewKey !== requestKey()) return;
   runButton.disabled = true;
-  setMessage("합성 CSV를 검사한 뒤 로컬 SQLite에 저장합니다…");
+  setMessage(requiresApproval
+    ? "합성 CSV를 검사한 뒤 로컬 SQLite에 저장합니다…"
+    : "합성 CSV를 읽기 전용으로 검색합니다…");
   try {
     const response = await api("/api/run", {
       method: "POST",

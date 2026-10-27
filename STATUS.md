@@ -1,5 +1,14 @@
 # STATUS — 2026-10-27 KST
 
+## P16 — browser E2E and read-only approval gate fixed (2026-10-27 KST)
+- Fixed `apps/ax-flow/axflow/static/app.js`: read-only plans no longer return early when the hidden write-approval checkbox is unchecked; their progress message now describes a read-only search.
+- Visible browser E2E at `http://127.0.0.1:8765/` used only `C:\\Users\\haein\\AppData\\Local\\Temp\\axflow-ui-e2e-20261027-01` synthetic fixtures. Read-only query for id 2 returned one match at source row 2 without returning row values. Explicitly approved full import returned a completed receipt, 2/2 steps, and 2 saved rows.
+- Direct synthetic SQLite verification for run `Guic80754a86663`: runtime status `completed`, two completed steps; business table has exactly two rows with row numbers 1 and 2.
+- Verification: `python -m unittest discover -s tests -v` — **60/60 PASS** with the authorized loopback test permission; `node --check axflow/static/app.js` — **PASS**. The first default-sandbox suite attempt produced 8 failures and 10 errors from WinError 10013; the permitted loopback rerun passed.
+- Failure record: an earlier read-only browser click returned no receipt because the UI guard required write approval unconditionally; fixed and the same read-only flow now completes. One request without the required “CSV” wording was rejected by the bounded planner as unsupported. Three stale synthetic servers shared port 8765 and produced a one-row fixture mismatch; their arguments were inspected, two stale servers stopped, and one isolated two-row server retained.
+- A–E heuristic is now **79%** (A100/B95/C90/D60/E50; equal weights), product remains **PARTIAL**. The synthetic GUI journey is verified; general AI planning, live DBVORA, security review, restore, signed installer and customer/release evidence remain open. The independent engine stays on hold for chief review.
+
+
 ## P15 — synthetic localhost UI prepared for review (2026-10-27 KST)
 - The earlier detached hidden process did not remain available after its shell exited. It was replaced with a managed long-running session `32804`; app output reports ready at `http://127.0.0.1:8765/`.
 - Verified live listener `127.0.0.1:8765` and HTTP GET **200** (`text/html; charset=utf-8`). Listener PID observed: `22416`.

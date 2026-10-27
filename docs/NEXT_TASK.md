@@ -1,5 +1,13 @@
 ## P10 complete — interval hard-crash replay (60/60 full-suite pass)
 
+## P16 — local UI read-only and import E2E verified
+The visible local UI now completes both a read-only lookup and a write-approved synthetic import. Querying `id=2` returned one match at original row 2 with row contents withheld. The approved import of the same two-row fixture returned a completed receipt (2/2 steps, 2 saved rows); a separate SQLite query confirmed stored row numbers 1 and 2. The UI guard bug that required write approval even for read-only plans is fixed.
+
+Python full suite **60/60 PASS** with authorized loopback permission; `node --check axflow/static/app.js` PASS. Default-sandbox localhost tests initially failed from WinError 10013; the permitted rerun passed. A duplicate stale synthetic server on port 8765 caused a one-row mismatch; only the isolated two-row server remains. Progress heuristic is **79% / PARTIAL** (A100/B95/C90/D60/E50). DBVORA live linkage, restore, customer data, security review, signed installer, and customer/release evidence remain open. The standalone AX FLOW engine remains on hold for chief review.
+
+**Next:** attempt the permitted DBVORA read-only browser linkage only with the actual separate service/source; otherwise retain an explicit unavailable state. Do not start engine expansion before the morning review.
+
+
 ## P15 — localhost UI ready for review
 Managed session `32804` serves the synthetic UI at `http://127.0.0.1:8765/`; listener and HTTP GET 200 were verified. Live `POST /api/preview` returned 200 for `csv_to_sqlite` (2 steps, write approval required) and created no DB files. Only two rows in a temporary synthetic CSV are configured; no run was initiated. Codex browser-open is queued, and visual click/render remains unverified. The earlier detached process did not persist; managed execution solved that. No source changed; progress remains 77% / PARTIAL.
 
