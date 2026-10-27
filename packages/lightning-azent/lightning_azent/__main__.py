@@ -83,6 +83,8 @@ def main() -> int:
                         raise PlanError("schedule requires an interval trigger")
                     if not 1 <= args.max_runs <= MAX_SCHEDULE_RUNS:
                         raise PlanError(f"--max-runs must be 1..{MAX_SCHEDULE_RUNS}")
+                if not args.approve_writes and any(step["op"] in {"sqlite_put", "sqlite_import_csv"} for step in plan["steps"]):
+                    raise ApprovalRequired("explicit --approve-writes required for local SQLite writes")
                 engine = Engine(args.state, args.data, input_root=args.input_root)
                 if args.command == "run":
                     result = engine.execute(plan, args.run_id,
