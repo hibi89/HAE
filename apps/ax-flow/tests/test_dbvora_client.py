@@ -2,6 +2,7 @@ import json
 import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from unittest.mock import patch
 
 from axflow.dbvora_client import DbvoraClient
 
@@ -124,6 +125,15 @@ class DbvoraClientTests(unittest.TestCase):
         self.assertEqual(server.requests, [("GET", "/health"), ("GET", "/api/inventory")])
         self.assertNotIn("rows", json.dumps(result))
         self.assertNotIn("path", json.dumps(result))
+
+    def test_loopback_client_never_loads_environment_proxy_settings(self):
+        server, origin = self.start_server()
+        with patch("urllib.request.getproxies", side_effect=AssertionError(
+            "local DBVORA calls must not inherit an environment proxy"
+        )):
+            result = DbvoraClient(origin).fetch_inventory()
+        self.assertTrue(result["available"], result)
+        self.assertEqual(server.requests, [("GET", "/health"), ("GET", "/api/inventory")])
 
     def test_provenance_allowlist_drops_paths_and_untrusted_markup(self):
         inventory = {
