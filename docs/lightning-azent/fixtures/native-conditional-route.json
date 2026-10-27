@@ -1,0 +1,50 @@
+{
+  "version": "azent.ir.v0",
+  "steps": [
+    {
+      "id": "source",
+      "op": "literal",
+      "value": {
+        "amount": 150,
+        "label": "sample"
+      }
+    },
+    {
+      "id": "check",
+      "op": "condition",
+      "from": "source",
+      "field": "amount",
+      "operator": "gte",
+      "value": 100
+    },
+    {
+      "id": "yes",
+      "op": "literal",
+      "value": {
+        "route": "accepted"
+      },
+      "when": {
+        "condition": "check",
+        "equals": true
+      }
+    },
+    {
+      "id": "no",
+      "op": "literal",
+      "value": {
+        "route": "rejected"
+      },
+      "when": {
+        "condition": "check",
+        "equals": false
+      }
+    },
+    {
+      "id": "selected",
+      "op": "branch",
+      "condition": "check",
+      "then": "yes",
+      "else": "no"
+    }
+  ]
+}
