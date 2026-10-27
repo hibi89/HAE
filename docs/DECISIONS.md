@@ -26,3 +26,13 @@ Owner clarified hard planning intent: **REA_APP + n8n-inspired wholly independen
 ADR-009: freeze a scope-limited v1 blueprint; Codex GPT-6 Extra-High is implementation/test agent while chief GPT-6 owns architecture/acceptance; feature growth deferred if W1/W2 fails. Both programs remain distinct tools. The 2026 3-hackathon deadlines overlap W3, and available coding hours/provider gates can invalidate the stretch deadline. No Codex session/background work is started by publishing docs.
 
 Active master schedule: docs/MASTER_SCHEDULE.md (v2). Detailed day/week work: docs/FAST_TRACK_5_WEEK.md; frozen target: docs/TARGET_BLUEPRINT_V1.md; Codex: docs/CODEX_EXTRA_HIGH_ORDER.md. Original 21-week baseline retained in Git history.
+
+## 2026-10-27 — owner named independent workflow engine LIGHTNING AZENT
+
+**ADR-010 ADOPTED — LIGHTNING AZENT:** Owner explicitly chose `Lightning Azent`, coined `Azent` for "A to Z" autonomous automation capability vision. It is the **independent n8n-informed implementation**, not a modified n8n fork and not a synonym for AX FLOW. Naming itself is approved; a new repository/domain/trademark/public product release is not yet approved.
+
+**ADR-011 ADOPTED — RESTORED DEVELOPMENT SEQUENCE:** REA_APP proven analyzer and lawful n8n functional research **first**, independently specified Lightning Azent engine **second**, AX FLOW AI/UI/DBVORA consumer integration **third**. AX FLOW existing Python runner code developed in parallel is retained as synthetic reference/compatibility baseline, NOT treated as the final independent engine. Avoid repeating work but do not begin new platform feature expansion until engine contract review.
+
+**ADR-012 DESIGN — EXTRACT WITHOUT DESTRUCTIVE RENAME:** After research/acceptance Gate N, create isolated `packages/lightning-azent/` under existing private repository with separate feature branch, preserve AX FLOW existing imports through compatibility facade and run parity tests before switching backend. No repo/branch/package was created by this naming/plan commit. Exact target `docs/LIGHTNING_AZENT_MASTER_PLAN.md`, requirements and blueprint retained unchanged.
+
+The historical 7-day hackathon-reusable subset target is not a guarantee of completion for the sequential three-product architecture. The old features remain usable as a pinned synthetic proof, without reclassifying them as customer-ready.
