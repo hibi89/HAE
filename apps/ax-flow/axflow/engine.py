@@ -83,6 +83,7 @@ def validate(plan: object) -> dict:
             "condition": {"id", "op", "from", "field", "operator", "value"},
             "branch": {"id", "op", "condition", "then", "else"},
             "csv_read": {"id", "op", "path"},
+            "csv_normalize": {"id", "op", "from", "transforms"},
             "csv_filter": {"id", "op", "from", "field", "operator", "value"},
             "sqlite_put": {"id", "op", "from"},
             "sqlite_import_csv": {"id", "op", "from"},
@@ -100,7 +101,7 @@ def validate(plan: object) -> dict:
         allowed = fields.get(op)
         if allowed is None or not allowed <= set(step) or set(step) - allowed - optional.get(op, set()):
             raise PlanError(f"unknown operation or invalid fields for {ident}")
-        if op in {"field", "map", "condition", "csv_filter", "sqlite_put", "sqlite_import_csv", "sqlite_get"} and (
+        if op in {"field", "map", "condition", "csv_normalize", "csv_filter", "sqlite_put", "sqlite_import_csv", "sqlite_get"} and (
                 not isinstance(step["from"], str) or step["from"] not in seen):
             raise PlanError("step source must reference an earlier step")
         if (op in {"field", "map", "condition", "sqlite_put", "sqlite_get"} and
@@ -133,14 +134,23 @@ def validate(plan: object) -> dict:
                 if not isinstance(transform, str) or transform not in {
                         "identity", "trim", "lower", "upper", "number", "string"}:
                     raise PlanError("unsupported map transform")
+        if op == "csv_normalize":
+            transforms = step["transforms"]
+            if (not isinstance(transforms, dict) or not 1 <= len(transforms) <= MAX_CSV_COLUMNS):
+                raise PlanError("csv_normalize transforms must contain 1–64 column mappings")
+            for field, transform in transforms.items():
+                if not isinstance(field, str) or not IDENTIFIER.fullmatch(field):
+                    raise PlanError("CSV normalization columns must be safe identifiers")
+                if not isinstance(transform, str) or transform not in {"trim", "lower", "upper", "number", "string"}:
+                    raise PlanError("unsupported CSV normalization transform")
         if op == "condition":
             if not isinstance(step["field"], str) or not IDENTIFIER.fullmatch(step["field"]):
                 raise PlanError("condition field must be a safe identifier")
             if not isinstance(step["operator"], str) or step["operator"] not in {"eq", "ne", "gt", "gte", "lt", "lte", "contains"}:
                 raise PlanError("unsupported condition operator")
         if op == "csv_filter":
-            if step_ops.get(step["from"]) != "csv_read":
-                raise PlanError("csv_filter source must be a csv_read step")
+            if step_ops.get(step["from"]) not in {"csv_read", "csv_normalize"}:
+                raise PlanError("csv_filter source must be a csv_read or csv_normalize step")
             if not isinstance(step["field"], str) or not IDENTIFIER.fullmatch(step["field"]):
                 raise PlanError("CSV filter field must be a safe identifier")
             operator = step["operator"]
@@ -161,7 +171,7 @@ def validate(plan: object) -> dict:
                 raise PlanError("contains cannot use a numeric CSV filter")
         if op == "condition" and step_ops.get(step["from"]) == "csv_filter" and step["field"] != "matched_count":
             raise PlanError("CSV filter conditions may inspect only matched_count")
-        if op in {"field", "map", "sqlite_put", "sqlite_get"} and step_ops.get(step.get("from")) == "csv_filter":
+        if op in {"field", "map", "sqlite_put", "sqlite_get"} and step_ops.get(step.get("from")) in {"csv_read", "csv_normalize", "csv_filter"}:
             raise PlanError("CSV filter row data may not flow into generic value operations")
         if op == "branch":
             condition = step["condition"]
@@ -172,7 +182,7 @@ def validate(plan: object) -> dict:
             if (not isinstance(then_step, str) or then_step not in seen or
                     not isinstance(else_step, str) or else_step not in seen):
                 raise PlanError("branch outputs must reference earlier steps")
-            if {step_ops.get(then_step), step_ops.get(else_step)} & {"csv_read", "csv_filter"}:
+            if {step_ops.get(then_step), step_ops.get(else_step)} & {"csv_read", "csv_normalize", "csv_filter"}:
                 raise PlanError("CSV row data may not be exposed as a branch output")
         if op in {"sqlite_put", "sqlite_import_csv", "sqlite_get"}:
             attempts = step.get("max_attempts", 1)
@@ -190,8 +200,10 @@ def validate(plan: object) -> dict:
                 raise PlanError("when must reference an earlier condition and a boolean equals value")
         if op == "sqlite_get" and step_ops.get(step["from"]) != "sqlite_put":
             raise PlanError("sqlite_get source must be a sqlite_put step")
-        if op == "sqlite_import_csv" and step_ops.get(step["from"]) not in {"csv_read", "csv_filter"}:
-            raise PlanError("sqlite_import_csv source must be a csv_read or csv_filter step")
+        if op == "csv_normalize" and step_ops.get(step["from"]) != "csv_read":
+            raise PlanError("csv_normalize source must be a csv_read step")
+        if op == "sqlite_import_csv" and step_ops.get(step["from"]) not in {"csv_read", "csv_normalize", "csv_filter"}:
+            raise PlanError("sqlite_import_csv source must be a csv_read, csv_normalize, or csv_filter step")
         seen.add(ident)
         step_ops[ident] = op
     try:
@@ -326,6 +338,13 @@ class Engine:
                     if self._step_receipt(op, current) != persisted:
                         raise PlanError("CSV filter result changed since this run was checkpointed")
                     results[sid] = current
+                elif op == "csv_normalize" and saved[1] == "completed":
+                    # Normalized rows are rebuilt in memory from the hash-checked source;
+                    # runtime receipts store only counts, lineage and duplicate row numbers.
+                    current = self._evaluate_step(step, results, outcomes, run_id, False)
+                    if self._step_receipt(op, current) != persisted:
+                        raise PlanError("CSV normalization result changed since this run was checkpointed")
+                    results[sid] = current
                 else:
                     results[sid] = persisted
                 outcomes[sid] = saved[1]
@@ -413,15 +432,53 @@ class Engine:
             return step["value"]
         if op == "csv_read":
             return self._read_csv(step["path"])
+        if op == "csv_normalize":
+            source = results[step["from"]]
+            if not isinstance(source, dict) or not isinstance(source.get("rows"), list):
+                raise PlanError("csv_normalize requires a csv_read result")
+            transforms = step["transforms"]
+            headers = source.get("headers", [])
+            if any(field not in headers for field in transforms):
+                missing = next(field for field in transforms if field not in headers)
+                raise PlanError(f"CSV field {missing} not found in {step['from']}")
+            rows = []
+            seen_rows = set()
+            duplicate_row_numbers = []
+            for row_number, row in enumerate(source["rows"], start=1):
+                if not isinstance(row, dict) or any(field not in row for field in headers):
+                    raise PlanError("csv_normalize received a malformed CSV row")
+                normalized = dict(row)
+                for field, transform in transforms.items():
+                    normalized[field] = self._transform(normalized[field], transform)
+                fingerprint = canonical_json(normalized)
+                if fingerprint in seen_rows:
+                    duplicate_row_numbers.append(row_number)
+                else:
+                    seen_rows.add(fingerprint)
+                rows.append(normalized)
+            return {
+                "source_path": source["source_path"],
+                "source_sha256": source["source_sha256"],
+                "headers": headers,
+                "row_count": source["row_count"],
+                "normalized_count": len(rows),
+                "duplicate_count": len(duplicate_row_numbers),
+                "duplicate_row_numbers": duplicate_row_numbers,
+                "row_numbers": list(range(1, len(rows) + 1)),
+                "rows": rows,
+            }
         if op == "csv_filter":
             source = results[step["from"]]
             if not isinstance(source, dict) or not isinstance(source.get("rows"), list):
-                raise PlanError("csv_filter requires a csv_read result")
+                raise PlanError("csv_filter requires a csv_read or csv_normalize result")
             if step["field"] not in source.get("headers", []):
                 raise PlanError(f"CSV field {step['field']} not found in {step['from']}")
             transform = step.get("transform", "identity")
             matches = []
-            for row_number, row in enumerate(source["rows"], start=1):
+            row_numbers = source.get("row_numbers", list(range(1, len(source["rows"]) + 1)))
+            if len(row_numbers) != len(source["rows"]):
+                raise PlanError("CSV row lineage is malformed")
+            for row_number, row in zip(row_numbers, source["rows"]):
                 if not isinstance(row, dict) or step["field"] not in row:
                     raise PlanError("csv_filter received a malformed CSV row")
                 candidate = self._transform(row[step["field"]], transform)
@@ -479,11 +536,22 @@ class Engine:
                 raise PlanError("sqlite_import_csv requires a CSV result")
             digest = source["source_sha256"]
             if isinstance(source.get("rows"), list):
-                rows = [(row_number, row) for row_number, row in enumerate(source["rows"], start=1)]
+                row_numbers = source.get("row_numbers", list(range(1, len(source["rows"]) + 1)))
+                if len(row_numbers) != len(source["rows"]):
+                    raise PlanError("CSV row lineage is malformed")
+                rows = list(zip(row_numbers, source["rows"]))
             elif isinstance(source.get("matches"), list):
                 rows = [(item["row_number"], item["values"]) for item in source["matches"]]
             else:
                 raise PlanError("sqlite_import_csv requires a csv_read or csv_filter result")
+            seen_rows = set()
+            duplicate_row_numbers = []
+            for row_number, row in rows:
+                fingerprint = canonical_json(row)
+                if fingerprint in seen_rows:
+                    duplicate_row_numbers.append(row_number)
+                else:
+                    seen_rows.add(fingerprint)
             with self._business(timeout=sqlite_timeout) as con:
                 for row_number, row in rows:
                     payload = canonical_json(row)
@@ -507,7 +575,12 @@ class Engine:
                         raise PlanError("replayed CSV row does not match its original source")
             if inject_stop_after_business:
                 raise InjectedStop("after durable CSV import, before runtime receipt")
-            return {"imported_rows": len(rows), "source_sha256": digest}
+            return {
+                "imported_rows": len(rows),
+                "duplicate_count": len(duplicate_row_numbers),
+                "duplicate_row_numbers": duplicate_row_numbers,
+                "source_sha256": digest,
+            }
         # sqlite_get
         store = step["from"]
         if outcomes.get(store) == "skipped":
@@ -529,6 +602,11 @@ class Engine:
             if op == "csv_filter":
                 return {key: value[key] for key in (
                     "source_path", "source_sha256", "row_count", "matched_count", "matched_row_numbers"
+                )}
+            if op == "csv_normalize":
+                return {key: value[key] for key in (
+                    "source_path", "source_sha256", "row_count", "normalized_count",
+                    "duplicate_count", "duplicate_row_numbers",
                 )}
             return value
         return {key: value[key] for key in ("source_path", "source_sha256", "headers", "row_count")}

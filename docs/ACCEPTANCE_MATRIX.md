@@ -1,10 +1,12 @@
 # AX FLOW Definition of Done — evidence matrix
 
-**Evidence status at 2026-10-27 KST.** All status is limited to recorded bounded synthetic tests. PASS does not imply customer, production, or cross-platform readiness. Blueprint estimate: A100/B95/C95/D95/E60 = **89% PARTIAL**.
+**Evidence status at 2026-10-27 KST.** All status is limited to recorded bounded synthetic tests. PASS does not imply customer, production, or cross-platform readiness. Blueprint estimate: A100/B95/C95/D95/E65 = **90% PARTIAL** (heuristic).
 
-**Latest full AX FLOW regression (P32):** Windows Python 3.11.9, `python -m unittest discover -s tests -v` from `apps/ax-flow` — **61/61 PASS** with authorized synthetic loopback. Node UI regression and syntax checks PASS.
+**Latest full AX FLOW regression (P35):** Windows Python 3.11.9, `python -m unittest discover -s tests -v` from `apps/ax-flow` — **66/66 PASS** in 28.609 s with authorized synthetic loopback. Node UI regression and syntax checks PASS.
 
 **P33 package integration:** current-source Windows zipapp (32,191 bytes) served its bundled page/assets and read a synthetic SQLite catalog through exact DBVORA `feature/p0-db-map@31b8257468d28743fb2d3767d1caa56938df756c` source. FK metadata present, POST rejected, source unchanged, no data/path leakage. This improves D1/E evidence without claiming customer release.
+
+**P35 normalization evidence:** explicit column transformations, normalized filtering/import, duplicate-row receipts, source-lineage preservation, pre-write failure safety and crash replay are covered by the 66-test suite; duplicates are retained and runtime receipts omit row values.
 
 | ID | Component | Required proof | Current |
 |---|---|---|---|
@@ -13,7 +15,7 @@
 | F1 | Typed workflow IR | independently validated versioned schema, invalid/injection inputs fail closed | PASS — bounded synthetic IR validation/rejection and CLI workflows exercised |
 | F2 | Runtime SQLite + executor | deterministic CLI, durable journal, restart recovery, migrations/backup tests | PARTIAL — deterministic ledger, migrations, retries and crash/replay tested; backup/restore acceptance absent |
 | F3 | Business-data handling | user-selected SQLite read/write with integrity, no conflation with runtime DB | PASS — synthetic CSV→business SQLite flow, separate runtime DB, explicit write approval, integrity/idempotency checks |
-| F4 | AI & attachments | natural language → runnable plan, files parsed locally, bounded repair/dry-run, no manual nodes/JSON | PARTIAL — four bounded CSV intents and fail-closed UI tested; P16/P19 and P29 verify a supported visible browser flow; no general AI, arbitrary attachments or bounded AI repair |
+| F4 | AI & attachments | natural language → runnable plan, files parsed locally, bounded repair/dry-run, no manual nodes/JSON | PARTIAL — bounded full/filtered/conditional/lookup CSV flows plus an explicit single-column normalization/import path and duplicate report tested; visible browser flow verified previously; no general AI, arbitrary attachments or bounded AI repair |
 | F5 | Connectors/auth | real user OAuth consent (no bypass), scoped Gmail send / Sheets calls with explicit approval | NOT_STARTED — requires owner consent and real credentials |
 | D1 | DBVORA integration | supported SQLite read-only catalog → UI schema/relations/size/provenance; API offline handling; no raw data leakage | PARTIAL — P24 visible synthetic schema/PK/FK/size verified against exact source; P27–P28 provenance allowlist, unavailable state and offline clearing verified; P31 packaged stub online/offline verified; P32 source-app adapter and P33 current Windows zipapp both read exact DBVORA feature/p0-db-map API, showing FK metadata and omitting data/path; customer/multi-asset and customer-installed service remain unverified |
 | D2 | Data backup/restore | independently restored source, same content and source unchanged, corruption/restart safety on supported platform | NOT_STARTED — separately owner-approval gated; no restore was performed |

@@ -195,6 +195,7 @@ previewButton.addEventListener("click", async () => {
     requiresApproval = response.requires_approval;
     const descriptions = {
       csv_to_sqlite: "CSV 전체를 로컬 SQLite에 저장하는 흐름입니다.",
+      csv_normalize_import: "지정한 CSV 열을 정규화하고 중복 행을 보고한 뒤 로컬 SQLite에 저장합니다.",
       csv_filtered_import: "조건에 맞는 CSV 행만 로컬 SQLite에 저장합니다.",
       csv_conditional_import: "조건이 맞을 때만 CSV 행을 로컬 SQLite에 저장합니다.",
       csv_lookup: "읽기 전용으로 일치 행 수와 원본 행 번호만 확인합니다.",
@@ -239,7 +240,14 @@ runButton.addEventListener("click", async () => {
     if (Number.isInteger(response.result.imported_rows)) {
       rowCountLabel.textContent = "저장 행";
       rowCountOutput.textContent = String(response.result.imported_rows);
-      resultCopy.textContent = response.result.imported_rows + "개 행을 이 PC의 선택된 합성 데이터 SQLite 파일에 저장했습니다.";
+      const duplicateCount = Number.isInteger(response.result.duplicate_count) ? response.result.duplicate_count : 0;
+      const duplicateRows = Array.isArray(response.result.duplicate_row_numbers)
+        ? " (원본 행 " + response.result.duplicate_row_numbers.join(", ") + ")"
+        : "";
+      const duplicateSummary = duplicateCount
+        ? " 중복 행 " + duplicateCount + "개" + duplicateRows + "도 삭제하지 않고 저장했습니다."
+        : " 중복 행은 없습니다.";
+      resultCopy.textContent = response.result.imported_rows + "개 행을 이 PC의 선택된 합성 데이터 SQLite 파일에 저장했습니다." + duplicateSummary;
     } else if (Number.isInteger(response.result.matched_count)) {
       rowCountLabel.textContent = "일치 행";
       rowCountOutput.textContent = String(response.result.matched_count);

@@ -1,3 +1,15 @@
+## Latest checkpoint — P35 bounded CSV normalization and duplicate reporting
+1. **Goal:** continue closing verified Blueprint gaps on `hibi89/AX_FLOW` `feature/axflow-mvp`; preserve the synthetic-only boundary.
+2. **Implemented:** validated `csv_normalize` IR with per-column trim/lower/upper/number/string transforms, one explicit English/Korean normalization request in the bounded planner, normalized filtering/import, exact duplicate detection, redacted duplicate count/source-row receipt, and UI summary. Duplicates are reported and retained; runtime receipts do not persist row payloads.
+3. **Verified:** Windows Python 3.11.9 full suite **66/66 PASS** in 28.609 s (`python -m unittest discover -s tests -v`, from `apps/ax-flow`, synthetic loopback authorized). Node syntax checks and UI regression PASS; package tests are included in the Python suite.
+4. **Integrity/recovery:** source file bytes unchanged; a post-business-commit injected stop resumed without duplicate writes. Invalid numeric normalization fails before business writes. Normalized filtering retains original CSV row numbers. Runtime ledger excludes row payloads.
+5. **Current estimate:** **90% PARTIAL** (A100/B95/C95/D95/E65), heuristic. No release readiness implied.
+6. **Baseline/current branch:** parent `97ea53c66763f86c36a39e204726154b8df72e7a`; target branch `feature/axflow-mvp`. The P35 source and evidence updates are committed together; exact commit SHA is reported by the branch update.
+7. **Failure record:** one exact-result assertion needed the added duplicate keys; fixed. A cross-process busy-cap test failed once in a targeted engine run, then passed isolated and in the final full suite. Treat it as intermittent lock-contention evidence to revisit. P34 visible browser check was skipped before navigation because the Windows helper could not verify the current URL. P34 services/temp folder were cleaned; no listener remains.
+8. **Scope/site:** synthetic fixtures only; no external login, customer source, deployment, DBVORA write or paid API. No site needs to stay open for P35.
+9. **Next:** inspect the pinned DBVORA `feature/p0-db-map` implementation read-only for a supported local backup/restore path. If one exists without extra approval/auth, test only with disposable synthetic source/backup/restore clones; never target an original/user/customer DB. If unsupported, stop that path and record the exact host/tool constraint; continue a separate permission-free reliability check. Do not implement the standalone AX FLOW engine.
+10. **Time:** 2026-10-27 11:32 KST. This checkpoint passes the synthetic workflow regression, not all Blueprint or release gates.
+
 ## Latest checkpoint — P33 packaged AX FLOW + actual DBVORA API
 1. **Goal:** continue AX FLOW toward the complete Blueprint using current code and test evidence.
 2. **Completed:** built a Windows zipapp from the exact current remote AX FLOW application files and connected its real `serve` process to the exact read-only DBVORA API on `feature/p0-db-map`, using only a temporary synthetic database.

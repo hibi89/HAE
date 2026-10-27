@@ -1,3 +1,17 @@
+## P35 — bounded CSV normalization and duplicate receipt (2026-10-27 11:32 KST)
+- **Base:** AX FLOW `feature/axflow-mvp@97ea53c66763f86c36a39e204726154b8df72e7a`. Added validated `csv_normalize` IR for explicit per-column trim/lower/upper/number/string transformations. The bounded planner recognizes one English/Korean trim/lower/upper request and requires a local SQLite import.
+- **Behavior:** normalizes rows in memory; preserves original row numbers and the source SHA-256; detects exact duplicate rows after the selected transformation; reports duplicate count and source row numbers in a redacted result; preserves duplicate rows rather than deleting them. Normalized row payloads are not persisted in runtime receipts. Normalized filter → import keeps source-row lineage. Invalid number conversions fail before any business write.
+- **Tests:** Windows Python 3.11.9, `python -m unittest discover -s tests -v` from `apps/ax-flow` — **66/66 PASS** in 28.609 s with the already-authorized synthetic loopback. Node `--check` for `app.js` and `test_ui_provenance.cjs`, Node UI regression, and `git diff --check` PASS. The suite also ran package/localhost smoke tests.
+- **Failure causes/recovery:** the first engine run exposed an old exact-result assertion that omitted new duplicate-summary keys; the expected contract was updated. A targeted engine run then hit the existing cross-process SQLite busy cap once; the isolated rerun and final complete suite both passed. Record this as intermittent lock-contention evidence, not as a reproducible normalization failure. A visible browser check was skipped in P34 because the UI helper could not verify the active URL; no navigation occurred.
+- **Data/scope:** only synthetic CSV/SQLite fixtures were used. Original CSV hashes stayed unchanged; runtime receipts contain only metadata; duplicate rows remain stored. No website, OAuth, customer data, external database, DBVORA write, or deployment was used.
+- **Progress:** **90% PARTIAL** (A100/B95/C95/D95/E65), a heuristic increase for tested workflow and acceptance evidence. D2 restore, customer/multi-asset use, OAuth, independent security, signed distribution, and customer/commercial release evidence remain open.
+
+## P34 — visible browser check stopped before navigation (2026-10-27 11:30 KST)
+- Attempted a visible UI verification after the packaged API smoke. The Windows UI helper could not verify the current browser URL with enough confidence and stopped before navigation, as required by its safety boundary.
+- No browser URL was opened or clicked; no user action or site was required. The temporary P34 service was stopped, the P34 folder removed, and a netstat check showed no active listener.
+- **Result:** browser-only check SKIPPED because the automation surface could not establish the active URL. This is not an application failure; the P35 in-process loopback API/UI regression is separate evidence.
+- **Progress remains 89% PARTIAL** (A100/B95/C95/D95/E60). No product source changed in P34.
+
 ## P33 — Windows zipapp reads actual DBVORA API (2026-10-27 11:18 KST)
 - **AX FLOW baseline:** `feature/axflow-mvp` at docs parent `a06651e9feafc3fc746f25c7138bacf498c960c4`; package helper `tools/package_axflow.py` matched remote blob SHA `f2ccde2770b093d76780e82a913369f1b4a6e664`. All 12 files in `apps/ax-flow/axflow/` matched current remote blob SHAs.
 - **Artifact:** built a new Windows standard-library zipapp; SHA-256 `7b29c766c26a331cf0bef88c20120be950a00f72712653d8a20ac0cfcea1b6df`, 32,191 bytes.

@@ -31,6 +31,19 @@ _NEGATION = re.compile(
     re.IGNORECASE,
 )
 _FIELD = r"[A-Za-z_][A-Za-z0-9_]{0,63}"
+_NORMALIZE_FIELD = r"[A-Za-z_][A-Za-z0-9_]{0,31}"
+_ENGLISH_NORMALIZE = re.compile(
+    rf"\b(?P<action>trim|strip|lowercase|lower|uppercase|upper)\s+"
+    rf"(?:(?:the\s+)?(?:whitespace|spaces)\s+(?:in|from|around)\s+)?"
+    rf"(?:the\s+)?(?P<field>{_NORMALIZE_FIELD})(?:\s+(?:column|field))?\b",
+    re.IGNORECASE,
+)
+_KOREAN_NORMALIZE = re.compile(
+    rf"(?P<field>{_NORMALIZE_FIELD})\s*(?:열|컬럼)(?:의)?\s*"
+    r"(?P<instruction>(?:(?:앞뒤)\s*)?공백\s*(?:을\s*)?(?:제거|정리)|"
+    r"소문자(?:로\s*)?(?:변환|변경)|대문자(?:로\s*)?(?:변환|변경))",
+    re.IGNORECASE,
+)
 _VALUE = r'(?:\"[^\"\r\n]{1,80}\"|\'[^\'\r\n]{1,80}\'|-?\d+(?:\.\d+)?|[A-Za-z가-힣_][A-Za-z0-9가-힣_-]{0,63})'
 _ENGLISH_FILTER = re.compile(
     rf"(?<![A-Za-z0-9_])(?P<field>{_FIELD})\s*(?P<operator>>=|<=|==|=|>|<|equals?)\s*"
@@ -72,6 +85,25 @@ def _condition(task: str) -> tuple[str, str, object, str] | None:
     return match.group("field"), operator, value, transform
 
 
+def _normalization(task: str) -> tuple[re.Match[str], str] | None:
+    matches = [(match, match.group("action").casefold())
+               for match in _ENGLISH_NORMALIZE.finditer(task)]
+    matches.extend((match, "korean") for match in _KOREAN_NORMALIZE.finditer(task))
+    if not matches:
+        return None
+    if len(matches) != 1:
+        raise PlanError("one explicit CSV column normalization is supported per request")
+    match, action = matches[0]
+    if action == "korean":
+        instruction = match.group("instruction")
+        transform = "trim" if "공백" in instruction else ("lower" if "소문자" in instruction else "upper")
+    else:
+        transform = "trim" if action in {"trim", "strip"} else (
+            "lower" if action in {"lower", "lowercase"} else "upper"
+        )
+    return match, transform
+
+
 def _base_steps(csv_path: str) -> list[dict]:
     plan = build_template("csv_to_sqlite", csv_path=csv_path)
     return [plan["steps"][0]]
@@ -79,6 +111,8 @@ def _base_steps(csv_path: str) -> list[dict]:
 
 def workflow_name(plan: dict) -> str:
     operations = [step["op"] for step in plan["steps"]]
+    if "csv_normalize" in operations and "sqlite_import_csv" in operations:
+        return "csv_normalize_import"
     if "branch" in operations and "sqlite_import_csv" in operations:
         return "csv_conditional_import"
     if "csv_filter" in operations and "sqlite_import_csv" in operations:
@@ -95,12 +129,20 @@ def requires_write_approval(plan: dict) -> bool:
 def plan_request(task: str, csv_path: str) -> dict:
     """Convert one supported English/Korean CSV request into validated native IR.
 
-    Supported intents are full import, comparison-filtered import, conditional
-    import, and read-only row-count lookup. Everything else fails closed.
+    Supported intents are full import, bounded single-column normalization followed
+    by import, comparison-filtered import, conditional import, and read-only row-count
+    lookup. Everything else fails closed.
     """
     if not isinstance(task, str) or not task.strip() or len(task) > MAX_REQUEST_CHARS:
         raise PlanError("task must be 1–512 characters")
-    if _NEGATION.search(task) or _UNSUPPORTED.search(task):
+    if _NEGATION.search(task):
+        raise PlanError("this request includes an unsupported or negated action")
+    normalization = _normalization(task)
+    unsupported_task = task
+    if normalization is not None:
+        match, _ = normalization
+        unsupported_task = task[:match.start()] + task[match.end():]
+    if _UNSUPPORTED.search(unsupported_task):
         raise PlanError("this request includes an unsupported or negated action")
     if not _CSV.search(task):
         raise PlanError("describe a supported task using a CSV file")
@@ -111,12 +153,24 @@ def plan_request(task: str, csv_path: str) -> dict:
     has_sqlite = bool(_SQLITE.search(task))
     lookup = bool(_LOOKUP_ACTION.search(task))
 
+    if normalization is not None and not (imports and has_sqlite):
+        raise PlanError("CSV normalization requires an explicit local SQLite save action")
+
+    def normalized_source(steps: list[dict]) -> str:
+        if normalization is None:
+            return "input"
+        match, transform = normalization
+        steps.append({"id": "normalized", "op": "csv_normalize", "from": "input",
+                      "transforms": {match.group("field"): transform}})
+        return "normalized"
+
     if conditional:
         if not (predicate and imports and has_sqlite):
             raise PlanError("conditional import requires one CSV comparison and a local SQLite save action")
         steps = _base_steps(csv_path)
+        source = normalized_source(steps)
         steps.extend([
-            {"id": "filtered", "op": "csv_filter", "from": "input", "field": predicate[0],
+            {"id": "filtered", "op": "csv_filter", "from": source, "field": predicate[0],
              "operator": predicate[1], "value": predicate[2], "transform": predicate[3]},
             {"id": "has_matches", "op": "condition", "from": "filtered", "field": "matched_count",
              "operator": "gt", "value": 0},
@@ -127,15 +181,18 @@ def plan_request(task: str, csv_path: str) -> dict:
             {"id": "result", "op": "branch", "condition": "has_matches", "then": "imported", "else": "empty"},
         ])
     elif imports and has_sqlite:
+        steps = _base_steps(csv_path)
+        source = normalized_source(steps)
         if predicate:
-            steps = _base_steps(csv_path)
             steps.extend([
-                {"id": "filtered", "op": "csv_filter", "from": "input", "field": predicate[0],
+                {"id": "filtered", "op": "csv_filter", "from": source, "field": predicate[0],
                  "operator": predicate[1], "value": predicate[2], "transform": predicate[3]},
                 {"id": "imported", "op": "sqlite_import_csv", "from": "filtered"},
             ])
         else:
-            return build_template("csv_to_sqlite", csv_path=csv_path)
+            if normalization is None:
+                return build_template("csv_to_sqlite", csv_path=csv_path)
+            steps.append({"id": "imported", "op": "sqlite_import_csv", "from": source})
     elif lookup and predicate:
         steps = _base_steps(csv_path)
         steps.append({"id": "result", "op": "csv_filter", "from": "input", "field": predicate[0],

@@ -71,6 +71,8 @@ class WebUITests(unittest.TestCase):
         self.assertEqual((script_status, css_status), (200, 200))
         self.assertNotIn(b"https://", script)
         self.assertNotIn(b"https://", css)
+        self.assertIn(b"duplicate_count", script)
+        self.assertIn(b"csv_normalize_import", script)
         self.assertIn(b"DBVORA", body)
         self.assertIn(b"/api/dbvora", script)
         self.assertFalse(self.state.exists())
@@ -244,6 +246,37 @@ class WebUITests(unittest.TestCase):
                 "SELECT COUNT(*) FROM csv_records WHERE run_id=?", (no_match["run_id"],)
             ).fetchone()[0]
         self.assertEqual(count, 0)
+
+    def test_browser_normalization_import_reports_duplicate_rows_without_raw_data(self):
+        (self.inputs / "normalize.csv").write_text(
+            "id,name\n21, PrivateMarker \n21,PrivateMarker\n", encoding="utf-8"
+        )
+        task = "Trim whitespace in the name column, then import this CSV into local SQLite"
+        code, _, preview = self.post_json("/api/preview", {"task": task, "csv_path": "normalize.csv"})
+        self.assertEqual(code, 200, preview)
+        self.assertEqual(preview["workflow"], "csv_normalize_import")
+        self.assertTrue(preview["requires_approval"])
+        self.assertEqual([step["op"] for step in preview["plan"]["steps"]], [
+            "csv_read", "csv_normalize", "sqlite_import_csv",
+        ])
+
+        code, _, response = self.post_json("/api/run", {
+            "task": task, "csv_path": "normalize.csv", "preview_id": preview["preview_id"],
+            "approve_writes": True,
+        })
+        self.assertEqual(code, 200, response)
+        self.assertEqual(response["result"]["imported_rows"], 2)
+        self.assertEqual(response["result"]["duplicate_count"], 1)
+        self.assertEqual(response["result"]["duplicate_row_numbers"], [2])
+        self.assertNotIn("PrivateMarker", json.dumps(response["status"]))
+        with closing(sqlite3.connect(self.business)) as business:
+            self.assertEqual(business.execute(
+                "SELECT COUNT(*) FROM csv_records WHERE run_id=?", (response["run_id"],)
+            ).fetchone()[0], 2)
+            self.assertEqual(business.execute(
+                "SELECT payload_json FROM csv_records WHERE run_id=? AND row_number=1",
+                (response["run_id"],),
+            ).fetchone()[0], '{"id":"21","name":"PrivateMarker"}')
 
     def test_run_rejects_missing_or_mismatched_preview_token(self):
         _, _, preview = self.post_json("/api/preview", {

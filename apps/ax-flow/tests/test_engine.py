@@ -198,7 +198,10 @@ class TestEngine(unittest.TestCase):
         self.assertEqual(inspect_run(self.root / "csv-state.db", "CsvReplay")["status"], "failed")
         csv_path.write_bytes(original)
         result = engine.execute(plan, "CsvReplay", approve_writes=True)
-        self.assertEqual(result, {"imported_rows": 2, "source_sha256": hashlib.sha256(original).hexdigest()})
+        self.assertEqual(result, {
+            "imported_rows": 2, "duplicate_count": 0, "duplicate_row_numbers": [],
+            "source_sha256": hashlib.sha256(original).hexdigest(),
+        })
         self.assertEqual(inspect_run(self.root / "csv-state.db", "CsvReplay")["status"], "completed")
         with closing(sqlite3.connect(self.root / "csv-business.db")) as business:
             self.assertEqual(business.execute(
@@ -330,6 +333,101 @@ class TestEngine(unittest.TestCase):
             self.assertEqual(business.execute(
                 "SELECT payload_json FROM csv_records WHERE run_id='TemplateRun' AND row_number=1"
             ).fetchone()[0], '{"id":"7","name":"Synthetic"}')
+
+    def test_csv_normalization_reports_duplicates_preserves_rows_and_replays_safely(self):
+        input_root = self.root / "normalized-input"
+        input_root.mkdir()
+        csv_path = input_root / "contacts.csv"
+        original = (
+            "id,email,name\n"
+            "1,EXAMPLE-SECRET-MARKER@EXAMPLE.COM,Alice  \n"
+            "1,example-secret-marker@example.com, Alice\n"
+            "2,other@example.com,Bob\n"
+        ).encode("utf-8")
+        csv_path.write_bytes(original)
+        plan = {"version": "axflow.ir.v0", "steps": [
+            {"id": "input", "op": "csv_read", "path": "contacts.csv"},
+            {"id": "normalized", "op": "csv_normalize", "from": "input", "transforms": {
+                "email": "lower", "name": "trim",
+            }},
+            {"id": "imported", "op": "sqlite_import_csv", "from": "normalized"},
+        ]}
+        validate(plan)
+        engine = Engine(self.root / "normal-state.db", self.root / "normal-business.db", input_root)
+        with self.assertRaises(InjectedStop):
+            engine.execute(plan, "NormalizedRun", approve_writes=True, inject_stop_after_business=True)
+        result = Engine(self.root / "normal-state.db", self.root / "normal-business.db", input_root).execute(
+            plan, "NormalizedRun", approve_writes=True
+        )
+        self.assertEqual(result["imported_rows"], 3)
+        self.assertEqual(result["duplicate_count"], 1)
+        self.assertEqual(result["duplicate_row_numbers"], [2])
+        self.assertEqual(csv_path.read_bytes(), original)
+
+        with closing(sqlite3.connect(self.root / "normal-business.db")) as business:
+            rows = business.execute(
+                "SELECT row_number,payload_json FROM csv_records WHERE run_id=? ORDER BY row_number",
+                ("NormalizedRun",),
+            ).fetchall()
+            self.assertEqual([row[0] for row in rows], [1, 2, 3])
+            self.assertEqual(json.loads(rows[0][1]), {
+                "email": "example-secret-marker@example.com", "id": "1", "name": "Alice",
+            })
+            self.assertEqual(rows[0][1], rows[1][1])
+            self.assertEqual(business.execute(
+                "SELECT COUNT(*) FROM csv_records WHERE run_id=?", ("NormalizedRun",)
+            ).fetchone()[0], 3)
+        self.assertNotIn("EXAMPLE-SECRET-MARKER", (self.root / "normal-state.db").read_bytes().decode("latin1"))
+        status = inspect_run(self.root / "normal-state.db", "NormalizedRun")
+        self.assertEqual(status["status"], "completed")
+        self.assertIsNone(status["error_type"])
+
+    def test_csv_normalization_failure_happens_before_business_write(self):
+        input_root = self.root / "invalid-normal-input"
+        input_root.mkdir()
+        csv_path = input_root / "amounts.csv"
+        original = b"amount\nnot-a-number\n"
+        csv_path.write_bytes(original)
+        plan = {"version": "axflow.ir.v0", "steps": [
+            {"id": "input", "op": "csv_read", "path": "amounts.csv"},
+            {"id": "normalized", "op": "csv_normalize", "from": "input", "transforms": {"amount": "number"}},
+            {"id": "imported", "op": "sqlite_import_csv", "from": "normalized"},
+        ]}
+        engine = Engine(self.root / "invalid-normal-state.db", self.root / "invalid-normal-business.db", input_root)
+        with self.assertRaises(PlanError):
+            engine.execute(plan, "InvalidNormalize", approve_writes=True)
+        self.assertEqual(csv_path.read_bytes(), original)
+        with closing(sqlite3.connect(self.root / "invalid-normal-business.db")) as business:
+            self.assertEqual(business.execute("SELECT COUNT(*) FROM csv_records").fetchone()[0], 0)
+        status = inspect_run(self.root / "invalid-normal-state.db", "InvalidNormalize")
+        self.assertEqual(status["status"], "failed")
+        self.assertEqual(status["step_outcomes"]["failed"], 1)
+
+    def test_csv_normalize_filter_import_retains_original_row_numbers(self):
+        input_root = self.root / "filtered-normal-input"
+        input_root.mkdir()
+        (input_root / "contacts.csv").write_text(
+            "id,name,active\n1, Alice ,yes\n1,Alice,yes\n2,Bob,no\n", encoding="utf-8"
+        )
+        plan = {"version": "axflow.ir.v0", "steps": [
+            {"id": "input", "op": "csv_read", "path": "contacts.csv"},
+            {"id": "normalized", "op": "csv_normalize", "from": "input", "transforms": {"name": "trim"}},
+            {"id": "filtered", "op": "csv_filter", "from": "normalized", "field": "active",
+             "operator": "eq", "value": "yes"},
+            {"id": "imported", "op": "sqlite_import_csv", "from": "filtered"},
+        ]}
+        engine = Engine(self.root / "filtered-normal-state.db", self.root / "filtered-normal-business.db", input_root)
+        result = engine.execute(plan, "FilteredNormalize", approve_writes=True)
+        self.assertEqual(result["imported_rows"], 2)
+        self.assertEqual(result["duplicate_count"], 1)
+        self.assertEqual(result["duplicate_row_numbers"], [2])
+        with closing(sqlite3.connect(self.root / "filtered-normal-business.db")) as business:
+            rows = business.execute(
+                "SELECT row_number,payload_json FROM csv_records WHERE run_id=? ORDER BY row_number",
+                ("FilteredNormalize",),
+            ).fetchall()
+        self.assertEqual([row[0] for row in rows], [1, 2])
+        self.assertEqual(json.loads(rows[1][1])["name"], "Alice")
 
     def test_template_cli_keeps_synthetic_guard_and_rejects_unknown_names(self):
         without_guard = subprocess.run([

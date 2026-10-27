@@ -1,3 +1,13 @@
+## P35 complete — bounded CSV normalization and duplicate reporting
+Added a fail-closed, validated single-column normalization step and a narrow English/Korean planner path. The flow keeps rows in memory, preserves original row numbers and source SHA-256, reports exact duplicate rows after transformation, retains rather than deletes them, and never writes row payloads into runtime receipts. Normalization can precede filtering and SQLite import. Failure tests prove invalid numeric conversions stop before business writes; restart tests prove replay remains idempotent.
+
+**Verification:** Windows Python 3.11.9 full suite **66/66 PASS** in 28.609 s with authorized synthetic loopback. Node syntax checks, UI provenance regression, and package tests PASS. Source CSV hashes remained unchanged. P35 raises the heuristic estimate to **90% PARTIAL** (A100/B95/C95/D95/E65); no customer or release gate closes.
+
+Failure record: an old exact-result assertion initially omitted the new duplicate summary fields and was corrected. The cross-process SQLite busy-cap test failed once in a targeted engine run, but an isolated rerun and the final full suite passed. P34's visible browser attempt was skipped before navigation because the Windows helper could not verify the current URL; no site needs to remain open.
+
+## Next atomic task — inspect and test synthetic DBVORA backup/restore
+Read the pinned `hibi89/DBVORA` `feature/p0-db-map@31b8257468d28743fb2d3767d1caa56938df756c` source and existing operator instructions for a supported local backup/restore command. Do not change DBVORA source. If the workflow runs without additional approval or external authentication, create disposable synthetic SQLite source, backup and restore copies under a temporary folder and verify restored schema/data/FKs plus unchanged source SHA/size/mtime. Exercise corruption/restart checks only when the supported interface permits them. Never restore over an original or customer path. If Windows/host support or permissions block the operation, stop and record the exact cause; do not repeat the denied WSL/Docker setup. No website is needed.
+
 ## P33 complete — packaged AX FLOW connected to actual DBVORA
 Built a 32,191-byte Windows zipapp (SHA-256 `7b29c766c26a331cf0bef88c20120be950a00f72712653d8a20ac0cfcea1b6df`) from the current remote AX FLOW source. Its packaged local server read a synthetic database through the exact DBVORA `feature/p0-db-map@31b8257468d28743fb2d3767d1caa56938df756c` API. Table/FK metadata arrived; row markers and paths did not; POST was rejected; source hash/size/mtime stayed fixed. Packaged UI assets served. All test services, package, source copy and fixture were removed; no TCP connection remains.
 
