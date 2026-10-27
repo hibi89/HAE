@@ -166,6 +166,103 @@ class RealBundleMvpAcceptanceTests(unittest.TestCase):
             self.assertEqual(before_bytes, snapshot(before))
             self.assertEqual(after_bytes, snapshot(after))
 
+    def test_bundle_compares_module_edges_and_package_boundaries(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="rea-bundle-architecture-diff-") as temporary:
+            root = Path(temporary)
+            before, after, output = root / "baseline", root / "current", root / "reports"
+            for directory in (before, after):
+                (directory / "src").mkdir(parents=True)
+                (directory / "package.json").write_bytes(
+                    b'{"name":"synthetic-example","main":"./src/main.ts"}\n'
+                )
+                (directory / "src/main.ts").write_bytes(
+                    b'export function run() { return read(); }\n'
+                )
+            (before / "packages/old/src").mkdir(parents=True)
+            (before / "packages/old/package.json").write_bytes(b'{"name":"old-store"}\n')
+            (before / "packages/old/src/index.ts").write_bytes(
+                b'export function read() { return "old"; }\n'
+            )
+            (before / "src/main.ts").write_bytes(
+                b'import { read } from "../packages/old/src/index";\n'
+                b'export function run() { return read(); }\n'
+            )
+            (after / "packages/new/src").mkdir(parents=True)
+            (after / "packages/new/package.json").write_bytes(b'{"name":"new-store"}\n')
+            (after / "packages/new/src/index.ts").write_bytes(
+                b'export function read() { return "new"; }\n'
+            )
+            (after / "src/main.ts").write_bytes(
+                b'import { read } from "../packages/new/src/index";\n'
+                b'export function run() { return read(); }\n'
+            )
+
+            def snapshot(directory: Path) -> dict[str, bytes]:
+                return {path.relative_to(directory).as_posix(): path.read_bytes()
+                        for path in sorted(directory.rglob("*")) if path.is_file()}
+
+            before_bytes, after_bytes = snapshot(before), snapshot(after)
+            environment = os.environ.copy()
+            environment["PYTHONPATH"] = str(TOOL_ROOT)
+            command = [sys.executable, "-m", "rea_app", "bundle", str(before),
+                       str(after), "--output-dir", str(output)]
+
+            def run() -> subprocess.CompletedProcess[str]:
+                return subprocess.run(
+                    command, cwd=TOOL_ROOT, env=environment, text=True,
+                    encoding="utf-8", errors="replace", capture_output=True,
+                    check=False, timeout=90,
+                )
+
+            first = run()
+            self.assertEqual(first.returncode, 0, first.stderr + first.stdout)
+            impact = json.loads((output / "change-impact.json").read_text(encoding="utf-8"))
+            architecture = impact["architecture_changes"]
+            self.assertEqual(
+                [item["path"] for item in architecture["modules"]["added"]],
+                ["packages/new/src/index.ts"],
+            )
+            self.assertEqual(
+                [item["path"] for item in architecture["modules"]["removed"]],
+                ["packages/old/src/index.ts"],
+            )
+            self.assertEqual(
+                [(item["from_path"], item["to_path"]) for item in architecture["dependencies"]["added"]],
+                [("src/main.ts", "packages/new/src/index.ts")],
+            )
+            self.assertEqual(
+                architecture["dependencies"]["added"][0]["evidence"],
+                [{"kind": "import", "evidence": {"path": "src/main.ts", "line": 1}}],
+            )
+            self.assertEqual(
+                [(item["from_path"], item["to_path"]) for item in architecture["dependencies"]["removed"]],
+                [("src/main.ts", "packages/old/src/index.ts")],
+            )
+            self.assertEqual(
+                [(item["root"], item["name"]) for item in architecture["packages"]["added"]],
+                [("packages/new", "new-store")],
+            )
+            self.assertEqual(
+                [(item["root"], item["name"]) for item in architecture["packages"]["removed"]],
+                [("packages/old", "old-store")],
+            )
+            self.assertEqual(impact["summary"]["added_internal_dependencies"], 1)
+            self.assertEqual(impact["summary"]["removed_internal_dependencies"], 1)
+            self.assertIn("Architecture delta: +1/-1 modules", first.stdout)
+            self.assertIn("+1/-1 resolved internal dependencies", first.stdout)
+            self.assertIn("+1/-1 packages", first.stdout)
+            markdown = (output / "change-impact.md").read_text(encoding="utf-8")
+            self.assertIn("## Module architecture changes", markdown)
+            self.assertIn("src/main.ts:1", markdown)
+            self.assertIn("packages/new", markdown)
+
+            first_files = {path.name: path.read_bytes() for path in output.iterdir()}
+            again = run()
+            self.assertEqual(again.returncode, 0, again.stderr + again.stdout)
+            self.assertEqual(first_files, {path.name: path.read_bytes() for path in output.iterdir()})
+            self.assertEqual(before_bytes, snapshot(before))
+            self.assertEqual(after_bytes, snapshot(after))
+
 
 if __name__ == "__main__":
     unittest.main()

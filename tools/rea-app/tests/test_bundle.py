@@ -49,7 +49,14 @@ class BundleCommandTests(unittest.TestCase):
                               "export": {"path": "app.ts", "line": 1}}},
             ],
         }
-        self.impact_report = {"summary": {"syntax_errors": 0}, "changed_files": [{"path": "app.ts", "status": "modified"}]}
+        self.impact_report = {
+            "summary": {
+                "syntax_errors": 0, "added_modules": 0, "removed_modules": 0,
+                "added_internal_dependencies": 0, "removed_internal_dependencies": 0,
+                "added_packages": 0, "removed_packages": 0, "changed_packages": 0,
+            },
+            "changed_files": [{"path": "app.ts", "status": "modified"}],
+        }
 
     def fake_analysis(self):
         return (patch.object(cli, "walk_source", side_effect=["baseline_scan", "current_scan"]),

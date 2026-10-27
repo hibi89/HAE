@@ -130,6 +130,144 @@ def _skipped_coverage(named_scans: list[tuple[str, ScanResult]], cap: int = 250)
     }
 
 
+def _package_owner(path: str, packages_by_root: dict[str, dict[str, Any]]) -> dict[str, Any] | None:
+    candidate = path
+    while True:
+        package = packages_by_root.get(candidate)
+        if package is not None:
+            return package
+        if "/" not in candidate:
+            break
+        candidate = candidate.rsplit("/", 1)[0]
+    return packages_by_root.get(".")
+
+
+def _module_architecture(report: dict[str, Any]) -> dict[str, Any]:
+    packages_by_root = {
+        package["root"]: {
+            "root": package["root"],
+            "name": package.get("name"),
+        }
+        for package in report["packages"]
+    }
+    packages = {}
+    for package in report["packages"]:
+        entrypoints = [
+            {
+                "field": entry.get("field"),
+                "resolved_path": entry.get("resolved_path"),
+                "status": entry.get("status"),
+            }
+            for entry in package["entrypoints"]
+        ]
+        entrypoints.sort(key=lambda item: (
+            item["field"] or "", item["resolved_path"] or "", item["status"] or "",
+        ))
+        packages[package["root"]] = {
+            "root": package["root"],
+            "name": package.get("name"),
+            "entrypoints": entrypoints,
+        }
+
+    modules = {}
+    for item in report["files"]:
+        if item["analysis"] != "javascript_typescript_source":
+            continue
+        owner = _package_owner(item["path"], packages_by_root)
+        modules[item["path"]] = {
+            "path": item["path"],
+            "package": owner,
+        }
+
+    dependencies: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for edge in report["dependency_edges"]:
+        if edge["resolution"] not in {"internal", "internal_alias"} or not edge["to_path"]:
+            continue
+        key = (edge["from_path"], edge["to_path"])
+        dependencies.setdefault(key, []).append({
+            "kind": edge["kind"],
+            "evidence": edge["evidence"],
+        })
+    for evidence in dependencies.values():
+        evidence.sort(key=lambda item: (
+            item["evidence"]["path"], item["evidence"]["line"], item["kind"],
+        ))
+    return {"modules": modules, "packages": packages, "dependencies": dependencies}
+
+
+def _architecture_changes(baseline_report: dict[str, Any], current_report: dict[str, Any]) -> dict[str, Any]:
+    before = _module_architecture(baseline_report)
+    after = _module_architecture(current_report)
+
+    before_modules, after_modules = before["modules"], after["modules"]
+    common_modules = set(before_modules) & set(after_modules)
+    module_package_changes = [
+        {
+            "path": path,
+            "baseline": before_modules[path]["package"],
+            "current": after_modules[path]["package"],
+        }
+        for path in sorted(common_modules)
+        if before_modules[path]["package"] != after_modules[path]["package"]
+    ]
+
+    before_packages, after_packages = before["packages"], after["packages"]
+    common_packages = set(before_packages) & set(after_packages)
+    package_changes = {
+        "added": [after_packages[root] for root in sorted(set(after_packages) - set(before_packages))],
+        "removed": [before_packages[root] for root in sorted(set(before_packages) - set(after_packages))],
+        "changed": [
+            {
+                "root": root,
+                "baseline": before_packages[root],
+                "current": after_packages[root],
+            }
+            for root in sorted(common_packages)
+            if before_packages[root] != after_packages[root]
+        ],
+    }
+
+    before_dependencies, after_dependencies = before["dependencies"], after["dependencies"]
+
+    def describe_dependencies(
+        dependencies: dict[tuple[str, str], list[dict[str, Any]]],
+        keys: set[tuple[str, str]],
+    ) -> list[dict[str, Any]]:
+        return [
+            {
+                "from_path": source,
+                "to_path": target,
+                "evidence": dependencies[(source, target)],
+            }
+            for source, target in sorted(keys)
+        ]
+
+    module_changes = {
+        "added": [after_modules[path] for path in sorted(set(after_modules) - set(before_modules))],
+        "removed": [before_modules[path] for path in sorted(set(before_modules) - set(after_modules))],
+        "package_changes": module_package_changes,
+    }
+    dependency_changes = {
+        "added": describe_dependencies(after_dependencies, set(after_dependencies) - set(before_dependencies)),
+        "removed": describe_dependencies(before_dependencies, set(before_dependencies) - set(after_dependencies)),
+    }
+    return {
+        "baseline": {
+            "modules": len(before_modules),
+            "packages": len(before_packages),
+            "internal_dependencies": len(before_dependencies),
+        },
+        "current": {
+            "modules": len(after_modules),
+            "packages": len(after_packages),
+            "internal_dependencies": len(after_dependencies),
+        },
+        "modules": module_changes,
+        "dependencies": dependency_changes,
+        "packages": package_changes,
+    }
+
+
 def build_change_impact(
     baseline: ScanResult,
     current: ScanResult,
@@ -141,6 +279,7 @@ def build_change_impact(
     if current_report is None:
         current_report = build_report(current, parser_timeout)
     named_reports = [("baseline", baseline_report), ("current", current_report)]
+    architecture = _architecture_changes(baseline_report, current_report)
     before = _file_index(baseline)
     after = _file_index(current)
     paths = sorted(set(before) | set(after))
@@ -197,9 +336,18 @@ def build_change_impact(
             "transitive_dependent_records": sum(len(item["transitive_dependents"]) for item in impacts),
             "impacted_entrypoint_records": sum(len(item["impacted_entrypoints"]) for item in impacts),
             "syntax_errors": baseline_report["summary"]["syntax_errors"] + current_report["summary"]["syntax_errors"],
+            "added_modules": len(architecture["modules"]["added"]),
+            "removed_modules": len(architecture["modules"]["removed"]),
+            "module_package_changes": len(architecture["modules"]["package_changes"]),
+            "added_internal_dependencies": len(architecture["dependencies"]["added"]),
+            "removed_internal_dependencies": len(architecture["dependencies"]["removed"]),
+            "added_packages": len(architecture["packages"]["added"]),
+            "removed_packages": len(architecture["packages"]["removed"]),
+            "changed_packages": len(architecture["packages"]["changed"]),
         },
         "changed_files": changed_files,
         "impacts": impacts,
+        "architecture_changes": architecture,
         "coverage": {
             "dependency_basis": "Resolved in-root JavaScript/TypeScript import, re-export and require edges from both snapshots.",
             "limits": "Static dependency reachability only; runtime behavior, Python dependencies, dynamic resolution, and external package internals are not inferred.",
@@ -220,6 +368,10 @@ def render_change_impact_markdown(report: dict[str, Any]) -> str:
         f"- Direct dependent records: {summary['direct_dependent_records']}; transitive: {summary['transitive_dependent_records']}",
         f"- Impacted package entrypoints: {summary['impacted_entrypoint_records']}",
         f"- Syntax errors across both snapshots: {summary['syntax_errors']}", "",
+        f"- Architecture: +{summary['added_modules']}/-{summary['removed_modules']} modules; "
+        f"+{summary['added_internal_dependencies']}/-{summary['removed_internal_dependencies']} internal dependencies; "
+        f"+{summary['added_packages']}/-{summary['removed_packages']} packages; "
+        f"{summary['changed_packages']} changed package boundaries.", "",
         "## Changed files", "",
     ]
     if not report["changed_files"]:
@@ -241,6 +393,47 @@ def render_change_impact_markdown(report: dict[str, Any]) -> str:
                 f"  - impacted entrypoint `{entry['package'] or entry['manifest_path']}` "
                 f"({entry['snapshot']} `{entry['path']}`, evidence `{entry['evidence']['path']}:{entry['evidence']['line']}`)"
             )
+    architecture = report["architecture_changes"]
+    lines.extend(["", "## Module architecture changes", ""])
+    lines.append(
+        f"Baseline: {architecture['baseline']['modules']} modules, {architecture['baseline']['packages']} packages, "
+        f"{architecture['baseline']['internal_dependencies']} internal dependencies. Current: "
+        f"{architecture['current']['modules']} modules, {architecture['current']['packages']} packages, "
+        f"{architecture['current']['internal_dependencies']} internal dependencies."
+    )
+    for kind in ("added", "removed"):
+        for item in architecture["modules"][kind]:
+            package = item["package"]
+            owner = f" (package `{package['name'] or package['root']}`)" if package else ""
+            lines.append(f"- {kind.title()} module `{item['path']}`{owner}.")
+    for item in architecture["modules"]["package_changes"]:
+        lines.append(
+            f"- Module `{item['path']}` moved package boundary from "
+            f"`{(item['baseline'] or {}).get('name') or (item['baseline'] or {}).get('root') or 'none'}` to "
+            f"`{(item['current'] or {}).get('name') or (item['current'] or {}).get('root') or 'none'}`."
+        )
+    for kind in ("added", "removed"):
+        for item in architecture["dependencies"][kind]:
+            lines.append(f"- {kind.title()} dependency `{item['from_path']}` → `{item['to_path']}`.")
+            for evidence in item["evidence"]:
+                location = evidence["evidence"]
+                lines.append(f"  - {evidence['kind']} evidence `{location['path']}:{location['line']}`")
+    for kind in ("added", "removed"):
+        for item in architecture["packages"][kind]:
+            lines.append(f"- {kind.title()} package `{item['name'] or item['root']}` at `{item['root']}`.")
+    for item in architecture["packages"]["changed"]:
+        lines.append(
+            f"- Changed package boundary `{item['root']}`: "
+            f"`{item['baseline']['name'] or item['root']}` → `{item['current']['name'] or item['root']}`."
+        )
+    if not any((
+        architecture["modules"]["added"], architecture["modules"]["removed"],
+        architecture["modules"]["package_changes"], architecture["dependencies"]["added"],
+        architecture["dependencies"]["removed"], architecture["packages"]["added"],
+        architecture["packages"]["removed"], architecture["packages"]["changed"],
+    )):
+        lines.append("No module, package boundary, or resolved internal dependency changes were observed.")
+    lines.append("Only bounded JS/TS source modules and resolved in-root dependency edges are compared; this is not runtime architecture discovery.")
     coverage = report["coverage"]
     lines.extend([
         "", "## Coverage limits", "",
