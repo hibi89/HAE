@@ -179,7 +179,7 @@ async function loadDbvora() {
   try {
     renderDbvora(await api("/api/dbvora"));
   } catch {
-    dbvoraStatus.textContent = "AX FLOW 로컬 서비스에서 DBVORA 상태를 확인할 수 없습니다.";
+    dbvoraStatus.textContent = "HAE 로컬 서비스에서 DBVORA 상태를 확인할 수 없습니다.";
     dbvoraStatus.className = "dbvora-status offline";
     dbvoraMeta.textContent = "";
   } finally {
