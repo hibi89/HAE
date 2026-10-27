@@ -1,3 +1,9 @@
+## REA_APP P37 — next verified Gate R step (2026-10-27 KST)
+
+- Source code fix published: Linux FIFO swap hang now mitigated with `O_NONBLOCK` and retained `fstat` nonregular/inode guards. Exact GitHub blobs scanner `ac3b5960378924c29e24c87cc58b67c315818c8a`, new regression `59aa669caadcbb31fc5a96629002196728c31a80`. QA evidence [P37](tools/rea-app/P37_FIFO_SWAP_GUARD.md) is at repository path `tools/rea-app/P37_FIFO_SWAP_GUARD.md` (11/11 local, previously 1 timeout before fix).
+- Remote `verify_gate_r.py` pins new scanner/test; trusted runner pins updated verifier; **16/16 remote manifest matched** and 0 unreviewed executables, P37 code baseline `8a9cf035eecad14ad105853f38cb681a66005120` before docs.
+- Next priority **not more speculative feature hardening**: on an authorized complete, clean REA_APP branch checkout with actual `@babel/parser@7.29.9`, run `cd tools/rea-app && python run_gate_r_evidence.py`, capture source 16/16, Python full suite and real Babel suite pass/fail/skips/exit, branch SHA and OS/Windows limitations. Linux focused 11/11 is **not full Gate R**. No new paid CI or unverifiable success claim. Windows junction/reparse still pending; product deployment N/A.
+
 ## REA_APP P36 — FIFO open-stall risk / next decision (2026-10-27 17:50 KST)
 
 - Current remote source audit on `REA_APP@e3263980e874b7d3b8a5378851d50738dc526d6a`: manifest **16/16 exact matched**, zero unreviewed executable sources, latest changes since P35 code commit documentation only. No current-head full Python/Babel test passed or run.
