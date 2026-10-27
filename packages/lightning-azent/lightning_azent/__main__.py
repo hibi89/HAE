@@ -11,6 +11,7 @@ from . import __version__
 from .contract import PreparedPlan, capabilities, prepare_plan
 from .engine import ApprovalRequired, Engine, IDENTIFIER, PlanError, StepRetryExhausted, StepTimeout, MAX_SPEC_BYTES, validate
 from .runlog import RunLogError, inspect_run
+from .runtime import LAExecutor
 from .scheduler import MAX_SCHEDULE_RUNS, interval_ticks
 
 
@@ -44,7 +45,7 @@ def _read_plan(path: Path) -> PreparedPlan:
 def main() -> int:
     parser = argparse.ArgumentParser(prog="lightning-azent")
     parser.add_argument("--version", action="version", version=__version__)
-    parser.add_argument("command", choices=("capabilities", "validate", "run", "status", "schedule"))
+    parser.add_argument("command", choices=("capabilities", "validate", "run", "resume", "status", "schedule"))
     parser.add_argument("plan", nargs="?", type=Path)
     parser.add_argument("--state", type=Path)
     parser.add_argument("--data", type=Path)
@@ -80,7 +81,7 @@ def main() -> int:
                 # Validate the request before Engine.__init__ creates SQLite files.
                 # Invalid identifiers/triggers/bounds must remain side-effect-free.
                 trigger_type = plan.get("trigger", {"type": "manual"})["type"]
-                if args.command == "run":
+                if args.command in {"run", "resume"}:
                     if not isinstance(args.run_id, str) or not IDENTIFIER.fullmatch(args.run_id):
                         raise PlanError("run requires a safe --run-id")
                     if trigger_type != "manual":
@@ -94,15 +95,20 @@ def main() -> int:
                         raise PlanError(f"--max-runs must be 1..{MAX_SCHEDULE_RUNS}")
                 if not args.approve_writes and any(step["op"] in {"sqlite_put", "sqlite_import_csv"} for step in plan["steps"]):
                     raise ApprovalRequired("explicit --approve-writes required for local SQLite writes")
-                engine = Engine(args.state, args.data, input_root=args.input_root)
-                if args.command == "run":
-                    result = engine.execute(plan, args.run_id,
-                                            approve_writes=args.approve_writes)
+                if args.command == "resume":
+                    # The facade verifies a persisted run exists before DB initialization.
+                    result = LAExecutor(args.state, args.data, args.input_root).resume(
+                        plan, args.run_id, approve_writes=args.approve_writes)
                 else:
-                    result = list(interval_ticks(
-                        plan, engine, args.schedule_id,
-                        max_runs=args.max_runs,
-                        approve_writes=args.approve_writes))
+                    engine = Engine(args.state, args.data, input_root=args.input_root)
+                    if args.command == "run":
+                        result = engine.execute(plan, args.run_id,
+                                                approve_writes=args.approve_writes)
+                    else:
+                        result = list(interval_ticks(
+                            plan, engine, args.schedule_id,
+                            max_runs=args.max_runs,
+                            approve_writes=args.approve_writes))
         print(json.dumps(result, ensure_ascii=False, sort_keys=True, allow_nan=False))
         return 0
     except (PlanError, ApprovalRequired, RunLogError, StepRetryExhausted,
