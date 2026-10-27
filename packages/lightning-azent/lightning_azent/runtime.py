@@ -76,6 +76,8 @@ class LAExecutor:
         expected_hash = hashlib.sha256(canonical_json(normalized).encode("utf-8")).hexdigest()
         if existing["plan_sha256"] != expected_hash:
             raise PlanError("same run id cannot be reused with a different plan")
+        if not self.business_path.is_file():
+            raise PlanError("existing business SQLite ledger is missing; refusing to recreate it")
         return self._new_engine().execute(normalized, run_id, approve_writes=approve_writes)
 
     def schedule(self, plan: object, schedule_id: str, *, max_runs: int = 1,
