@@ -7,6 +7,7 @@ import sqlite3
 import sys
 from pathlib import Path
 
+from . import __version__
 from .contract import PreparedPlan, capabilities, prepare_plan
 from .engine import ApprovalRequired, Engine, IDENTIFIER, PlanError, StepRetryExhausted, StepTimeout, MAX_SPEC_BYTES, validate
 from .runlog import RunLogError, inspect_run
@@ -42,6 +43,7 @@ def _read_plan(path: Path) -> PreparedPlan:
 
 def main() -> int:
     parser = argparse.ArgumentParser(prog="lightning-azent")
+    parser.add_argument("--version", action="version", version=__version__)
     parser.add_argument("command", choices=("capabilities", "validate", "run", "status", "schedule"))
     parser.add_argument("plan", nargs="?", type=Path)
     parser.add_argument("--state", type=Path)
