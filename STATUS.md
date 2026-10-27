@@ -1,5 +1,11 @@
 # STATUS — 2026-10-27 KST
 
+## P16 — REA_APP clean dependency install verified (2026-10-27 KST)
+- Added the pinned npm lockfile for `@babel/parser@7.29.9` and changed the README setup step to `npm ci`.
+- Verification from `tools/rea-app`: `npm ci --ignore-scripts --no-audit --no-fund` PASS; Python suite **11/11 PASS**; `npm run test:parser` PASS; `npm ls --all` shows only the pinned parser and three resolved Babel transitives.
+- Failure cause/resolution: offline `npm ci` failed with `ENOTCACHED` because the cache lacked `@babel/types@7.29.11`; rerunning with network access and no install scripts/audit succeeded. No credentials were used.
+- Actual Windows junction fixture remains unverified because Windows denied junction creation (`Access denied`); synthetic reparse-attribute test passes. Overall status remains **77% / PARTIAL**.
+
 ## REA_APP parser verification checkpoint (2026-10-27 KST)
 - Re-ran the bounded analyzer against synthetic fixtures after installing the pinned public `@babel/parser@7.29.9` required by this branch's README. `python -m unittest discover -s tests -v`: **10/10 PASS**; `npm run test:parser`: PASS. Checked the analyzer/parser implementation files against `REA_APP`; local and remote source blobs matched exactly.
 - The regression now copies only the Python package and parser adapter to an isolated temporary tool root to prove missing-parser fail-closed behavior. It no longer assumes that clearing `NODE_PATH` hides a package installed beside the real adapter.

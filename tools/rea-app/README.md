@@ -11,7 +11,7 @@ are inventory-only in this MVP.
 Install Node.js 20+ and the pinned parser package from this directory:
 
 ```powershell
-npm install
+npm ci
 python -m rea_app scan C:\path\to\authorized\source --output-dir C:\path\to\reports
 ```
 
