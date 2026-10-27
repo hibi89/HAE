@@ -1,3 +1,10 @@
+## Lightning Azent P4 next executable checkpoint (2026-10-28 KST)
+
+1. **Run current exact branch:** `hibi89/HAE@feature/lightning-azent`. Source currently includes missing-CSV-root and missing-business-ledger preflight safeguards; use `git rev-parse HEAD` on authorized checkout and compare with remote final SHA before any test claims.
+2. **Run tests, not just inspect source:** `python -m compileall -q packages/lightning-azent`; `PYTHONPATH=packages/lightning-azent python -m unittest discover -s packages/lightning-azent/tests -v`. Expected 28 authored definitions across four files; outcomes **unknown, 0 executed** on this session.
+3. **Safety receipts:** Run synthetic missing-input-root CLI denial and missing-business-ledger resume denial. Both must leave state/business SQLite untouched as specified. Then original three workflows, native/legacy parity, crash resume, original HAE suite and installed wheel smoke.
+4. **Halt point:** No customer-facing HAE import migration, external connectors, OAuth, commercial claims or UI polish before executable acceptance. Do not create paid CI, transfer private repository to another cloud execution service, or force push without approval.
+
 ## Lightning Azent P3 verification first — 2026-10-28 KST
 
 - **SOURCE:** `feature/lightning-azent`; newest P3 code is `f9ba24b9ad6cb13a958696f97af769f53f112ddb` before this next-task update. CLI now supports `resume` through the read-only-ledger-pinned `LAExecutor.resume`. The normalized plan hash is checked before Engine DB setup, then checked again in the engine transaction.
