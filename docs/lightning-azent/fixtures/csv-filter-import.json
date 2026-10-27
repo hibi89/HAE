@@ -1,0 +1,24 @@
+{
+  "version": "axflow.ir.v0",
+  "steps": [
+    {
+      "id": "source",
+      "op": "csv_read",
+      "path": "orders.csv"
+    },
+    {
+      "id": "filtered",
+      "op": "csv_filter",
+      "from": "source",
+      "field": "amount",
+      "operator": "gte",
+      "value": 100,
+      "transform": "number"
+    },
+    {
+      "id": "imported",
+      "op": "sqlite_import_csv",
+      "from": "filtered"
+    }
+  ]
+}
