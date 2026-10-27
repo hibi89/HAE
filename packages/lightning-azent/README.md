@@ -19,7 +19,7 @@ python -m lightning_azent capabilities
 python -m lightning_azent validate docs/lightning-azent/fixtures/native-conditional-route.json
 ```
 
-**All 43 LA test definitions (7 initial + 6 CLI-denial + 9 native IR + 10 recovery + 4 concurrency/preflight + 7 SQLite backup/restore) are NOT RUN AS A FULL SUITE in this GitHub-only build session.** They include 3 real local synthetic workflows, rejection with no SQLite creation, native CLI run, version compatibility, and interval restart. Earlier REA_APP Windows Gate R results are for REA_APP only, not LA. Do not merge/switch HAE imports until the new tests and original HAE suite pass.
+**All 49 LA test definitions (7 initial + 6 CLI-denial + 9 native IR + 10 recovery + 4 concurrency/preflight + 7 SQLite backup/restore + 6 receipt checks) are NOT RUN AS A FULL SUITE in this GitHub-only build session.** They include 3 real local synthetic workflows, rejection with no SQLite creation, native CLI run, version compatibility, and interval restart. Earlier REA_APP Windows Gate R results are for REA_APP only, not LA. Do not merge/switch HAE imports until the new tests and original HAE suite pass.
 
 # Lightning Azent — isolated execution package (development stage)
 
