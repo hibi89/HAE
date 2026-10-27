@@ -632,3 +632,12 @@ Reconcile docs/ACCEPTANCE_MATRIX.md with executed evidence and keep approval-gat
 - **Progress estimate:** 77% on the A–E equal-weight tracking heuristic (A100/B95/C80/D60/E50). Product remains PARTIAL and not customer ready.
 - **Website:** no new site needs to be opened. Existing localhost UI `http://127.0.0.1:8765/` is still available; current UI is synthetic and schedule CLI remains separate.
 - **Next:** continue only with permission-free release-quality checks. Do not claim full acceptance until browser-visible UI, DBVORA restore authorization/evidence, independent security review and installer/customer/release gates are satisfied.
+
+
+## 2026-10-28 KST — Windows SQLite handle cleanup fix committed; rerun pending
+- **Branch / SHA:** `feature/lightning-azent` / `861132ec0b10dd022b9ce9e605c4047e59c847fb`.
+- **Change:** LA tests now use `tests/sqlite_test_utils.py`, whose connection context preserves commit/rollback behavior and always closes the SQLite connection. Applied to `test_mvp.py`, `test_native_contract.py`, `test_resume.py`, `test_runlog_receipts.py`, and `test_state_backup.py`. The single-command `verify_local.py` also wraps all five SQLite connections with `contextlib.closing` and explicitly commits its deliberate CSV-row tampering fixture.
+- **Rationale:** Python's `with sqlite3.connect(...)` transaction context does not itself close the connection. On Windows this can hold temporary SQLite files open and cause `WinError 32` during cleanup.
+- **Source-level check:** All five changed test modules were reread from GitHub; no `with sqlite3.connect(...)` remains in those modules. The verifier was reread; all five connection sites close and the deliberate delete is explicitly committed.
+- **Tests / CI:** Full Windows 49-case suite and verifier are **NOT RUN after this change**. GitHub combined commit status has zero status entries; CI is non-blocking and no paid CI was triggered. This is a reasoned fix, not a claimed reproduction or PASS.
+- **Next:** Run `python packages/lightning-azent/verify_local.py` on the authenticated Windows Python 3.11+ checkout at this exact SHA. If it still fails, capture the full traceback and fix the first concrete failure; do not wait on CI unless required to proceed.
