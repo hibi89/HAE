@@ -1,3 +1,10 @@
+## Lightning Azent P4 — preflight CSV root and missing business-ledger recovery guard (2026-10-28 KST)
+
+- **CODE:** `__main__.py` now rejects synthetic CSV plans without explicit `--input-root` before Engine initializes SQLite. `runtime.py` `resume()` now rejects an absent prior business SQLite ledger after the read-only state/plan hash check, rather than silently recreating an empty DB when the original state is missing.
+- **REGRESSION DEFINITIONS:** Added `test_csv_missing_input_root_fails_before_sqlite_creation` and `test_completed_resume_never_recreates_missing_business_ledger`. New total **28 Python test definitions**: test_mvp 7, test_cli_preflight 6, test_native_contract 9, test_resume 6. **0/28 executed on exact current SHA**, therefore not a PASS report.
+- **GITHUB:** Only LA branch modified, commits `e607540a`, `7d022fbe`, `a499225b`, `7c573141` plus README change `8211a1cd`; unchanged HAE/REA_APP source and no external data/CI/deploy. Source and tests fetched and static edits checked through GitHub connector. Next runnable gate remains authoritative.
+- **NEXT:** Authenticated checkout -> compileall -> 28 tests -> 3 synthetic fixture receipts including resume denial/recovery -> original HAE regression -> clean wheel/CLI -> only then customer-facing HAE adapter. Production not applicable.
+
 ## Lightning Azent P3 — manual resume and preflight plan pin (2026-10-28 KST)
 
 - **ACTUAL CHANGE:** LA CLI now accepts `resume` for an existing, synthetic manual run, using `LAExecutor.resume` instead of initializing the SQLite engine first. Existing `run`, `schedule`, `status`, `validate` interfaces remain unchanged.
