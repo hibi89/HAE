@@ -108,10 +108,13 @@ class LAExecutor:
             options["clock"] = clock
         if sleeper is not None:
             options["sleeper"] = sleeper
-        return interval_ticks(
-            normalized, self._new_engine(), schedule_id,
-            max_runs=max_runs, approve_writes=approve_writes, **options,
-        )
+        def scheduled_runs() -> Iterator[dict[str, object]]:
+            yield from interval_ticks(
+                normalized, self._new_engine(), schedule_id,
+                max_runs=max_runs, approve_writes=approve_writes, **options,
+            )
+
+        return scheduled_runs()
 
     def status(self, run_id: str) -> dict[str, object]:
         """Read-only status query; never initializes an absent runtime DB."""
