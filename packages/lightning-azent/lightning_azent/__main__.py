@@ -7,6 +7,7 @@ import sqlite3
 import sys
 from pathlib import Path
 
+from .contract import PreparedPlan, capabilities, prepare_plan
 from .engine import ApprovalRequired, Engine, IDENTIFIER, PlanError, StepRetryExhausted, StepTimeout, MAX_SPEC_BYTES, validate
 from .runlog import RunLogError, inspect_run
 from .scheduler import MAX_SCHEDULE_RUNS, interval_ticks
@@ -25,7 +26,7 @@ def _reject_constant(value: str) -> None:
     raise ValueError("non-finite JSON value is prohibited")
 
 
-def _read_plan(path: Path) -> dict:
+def _read_plan(path: Path) -> PreparedPlan:
     if not path.is_file() or path.stat().st_size > MAX_SPEC_BYTES:
         raise PlanError("plan must be an existing, bounded JSON file")
     try:
@@ -36,12 +37,12 @@ def _read_plan(path: Path) -> dict:
                           parse_constant=_reject_constant)
     except (OSError, ValueError, UnicodeError, RecursionError) as exc:
         raise PlanError("plan is not valid bounded UTF-8 JSON") from exc
-    return validate(plan)
+    return prepare_plan(plan)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(prog="lightning-azent")
-    parser.add_argument("command", choices=("validate", "run", "status", "schedule"))
+    parser.add_argument("command", choices=("capabilities", "validate", "run", "status", "schedule"))
     parser.add_argument("plan", nargs="?", type=Path)
     parser.add_argument("--state", type=Path)
     parser.add_argument("--data", type=Path)
@@ -54,16 +55,22 @@ def main() -> int:
                         help="required for execution; real customer data is not supported")
     args = parser.parse_args()
     try:
-        if args.command == "status":
+        if args.command == "capabilities":
+            if args.plan is not None:
+                raise PlanError("capabilities accepts no plan argument")
+            result = capabilities()
+        elif args.command == "status":
             if args.plan is not None or args.state is None or args.run_id is None:
                 raise PlanError("status requires --state and --run-id without a plan")
             result = inspect_run(args.state, args.run_id)
         else:
             if args.plan is None:
                 raise PlanError("this command requires a plan JSON path")
-            plan = _read_plan(args.plan)
+            prepared = _read_plan(args.plan)
+            plan = prepared.runtime_plan
             if args.command == "validate":
-                result = {"valid": True, "version": plan["version"],
+                result = {"valid": True, "version": prepared.source_version,
+                          "runtime_compat_version": plan["version"],
                           "steps": len(plan["steps"])}
             else:
                 if not args.synthetic or args.state is None or args.data is None:
