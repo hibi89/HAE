@@ -1,3 +1,10 @@
+## Lightning Azent P6 verification gate (2026-10-28 KST)
+
+1. **New source:** per-schedule OS lock in `scheduler.py`; `test_scheduler_lock.py` added. 29 LA test definitions now. Exact scheduler original/patch SHA and focused source-pinned Linux mock-engine check documented in STATUS/HANDOFF.
+2. **Immediate full verifier:** On authorized checkout of `feature/lightning-azent`, capture `git rev-parse HEAD`, `python --version`, run `python -m compileall -q packages/lightning-azent`, `$env:PYTHONPATH='packages/lightning-azent'` and `python -m unittest discover -s packages/lightning-azent/tests -v`. Record full pass/fail/skip count, especially Windows `msvcrt.locking` and `test_scheduler_lock`.
+3. **Acceptance:** Run three native/legacy synthetic workflows, crash-before-receipt resume without duplicated SQLite business rows, dedicated two-process same-schedule lock denial, original `apps/ax-flow/tests` regression, and fresh installed wheel CLI smoke. Only then add HAE adapter with version handshake.
+4. **Prohibited:** No paid CI without approval, no public external endpoint, no secrets/customer data, no new repository or Vercel setting changes, no false whole-suite PASS based on the isolated 1/1 check.
+
 ## Lightning Azent P4 next executable checkpoint (2026-10-28 KST)
 
 1. **Run current exact branch:** `hibi89/HAE@feature/lightning-azent`. Source currently includes missing-CSV-root and missing-business-ledger preflight safeguards; use `git rev-parse HEAD` on authorized checkout and compare with remote final SHA before any test claims.
