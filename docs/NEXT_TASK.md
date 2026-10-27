@@ -1,5 +1,11 @@
 # Next work unit — 2026-10-27 KST (ACTIVE fast-track)
 
+## P5 acceptance update — live source API shown in AX FLOW UI (2026-10-27 KST)
+
+The synthetic CSV→SQLite→DBVORA flow is now verified end to end. AX FLOW wrote two rows to `business.db`; the pinned DBVORA API read its schema, and the visible AX FLOW panel showed `csv_records`, columns/PK positions, measured size and a successful refresh. Read-only response checks found no row values or path, and the database hash/mtime remained unchanged. The fixture has no foreign key, so no relationship is displayed; a separate source-backed API fixture verified FK metadata.
+
+The initial hyphenated run ID was rejected by the safety validator before writes; an underscore-only ID passed. Customer DBs, packaged service, restore, security review and release are still not verified.
+
 ## Current checkpoint (P5 synthetic DBVORA integration passed)
 
 On `feature/dbvora-integration@54b4c9336dc9a0dee0cd0418364b89fc1f34dc59`, AX FLOW's bounded local UI now reads the actual DBVORA `p0-01.v1` API over `127.0.0.1` only and displays measured file size, tables, columns, PKs, FKs and declared relationships. Windows Python 3.11 suite **42/42 PASS** and JavaScript syntax check passes. A live synthetic smoke using DBVORA source at `feature/p0-db-map@31b8257468d28743fb2d3767d1caa56938df756c` completed the Korean request→preview→approved CSV import→status→DBVORA inventory path and verified the business SQLite file stayed unchanged during inventory.
