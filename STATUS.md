@@ -1,5 +1,14 @@
 # STATUS — 2026-10-27 KST
 
+## P23 — REA_APP scanned its own source without mutation (2026-10-27 KST)
+- Ran the REA_APP CLI twice against the authorized `tools/rea-app` source root. Reports were written outside the scanned root and were not uploaded.
+- Both runs indexed **12 files**, emitted **6 dependency edges**, and reported **0 syntax errors**.
+- A SHA-256 snapshot over every source-tree file matched before and after both scans: `25727acc32315e90f8d75415ce0fa2f5aaf203630c492d7b0694e085da922878`.
+- JSON and Markdown outputs were byte-identical across the two output folders: `6e759262fb4763170ec60b820381251e7eaf335de069c4952af5dcd2243ee8bd` and `d80ea18466d2b4151acc032bfbae27a9c12a2aa3ca2a8a7f3348cb0a3e863c3a`.
+- P22 tests remain **11/11 Python PASS** and Node parser assertions PASS. No product source changed; the self-scan smoke adds evidence but does not increase the existing **86% PARTIAL** tracking estimate.
+- **Remaining release gates:** independently verified DBVORA restore, independent security assessment, signed Windows distribution and customer/release evidence. These need their separate approval/owner review; do not implement independent AX FLOW engine work while its hold remains active.
+
+
 ## P22 — REA_APP branch source and bounded analyzer MVP reverified (2026-10-27 KST)
 - Remote `REA_APP` branch HEAD: `1409d9d383e1515a1c19350252a1c7a6f534d04d`. The local workspace Git directory is unborn (`No commits yet on REA_APP`), so remote HEAD remains authoritative. All 11 analyzer/parser/test/readme/notices source files match remote Git blob SHAs; local `package-lock.json` parses to the same JSON as remote but has a final blank-line/line-ending difference.
 - **Tests:** from `tools/rea-app`, `python -m unittest discover -s tests -v` — **11/11 PASS**; `npm run test:parser` — **PASS**.

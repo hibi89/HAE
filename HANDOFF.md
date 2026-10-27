@@ -1,5 +1,17 @@
 # HANDOFF — AX FLOW + REA_APP (bootstrap, 2026-10-27 KST)
 
+## Latest checkpoint — P23 REA_APP self-scan acceptance
+1. **Task:** run REA_APP against its own source tree without executing inspected code or transmitting reports.
+2. **Source:** authorized local `tools/rea-app`; reports stored in sibling temporary output folders, outside source root, then removed.
+3. **First run:** 12 files indexed, 6 dependency edges, 0 syntax errors.
+4. **Second run:** same counts and no syntax errors.
+5. **Determinism:** JSON and Markdown outputs were byte-identical; SHA-256 recorded in STATUS.
+6. **Integrity:** full source-tree SHA-256 snapshot was unchanged before and after both runs.
+7. **Tests:** P22 Python suite 11/11 and Node parser assertions PASS; no source files changed.
+8. **Failure record:** no P23 test failure. Prior local lockfile formatting difference is semantically equivalent; actual Windows symlink fixture remains SKIPPED (WinError 1314).
+9. **Progress:** **86% PARTIAL** (A100/B95/C95/D90/E50); no percentage increase from repeated acceptance evidence.
+10. **Next/gates:** no further code expansion while the independent engine hold is active. DBVORA restore, independent security assessment, signed installer and customer/release validation need their existing owner approvals. P5 preview `http://127.0.0.1:8767/` remains open.
+
 ## Latest checkpoint — P22 REA_APP branch re-verification
 1. **Task:** verify the authorized REA_APP analyzer source, tests and deterministic CLI output.
 2. **Remote branch:** `REA_APP@1409d9d383e1515a1c19350252a1c7a6f534d04d`.

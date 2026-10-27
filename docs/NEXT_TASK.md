@@ -1,3 +1,9 @@
+## P23 complete — REA_APP self-scan is deterministic and read-only
+Two scans of `tools/rea-app` itself indexed 12 files, found 6 dependency edges and had no syntax errors. JSON and Markdown reports were byte-identical, and a full source-tree SHA-256 stayed unchanged. Reports and fixtures were removed without upload. Python tests 11/11 and Node parser tests passed in P22.
+
+## Current boundary — approval-gated full-product release evidence
+Current product tracking remains **86% / PARTIAL**. The remaining work is not represented as complete: independently verified DBVORA source-preserving restore, independent security assessment, signed Windows distribution and customer/release evidence. Hold those until their owner approvals are available, and keep independent AX FLOW engine implementation on hold for chief review. No additional design document is needed. The P5 DBVORA preview remains open at `http://127.0.0.1:8767/`.
+
 ## P22 complete — REA_APP branch and bounded analyzer checks passed
 Remote `REA_APP@1409d9d383e1515a1c19350252a1c7a6f534d04d`: Python tests **11/11 PASS**, Node parser assertions PASS. Two independent synthetic CLI scans emitted the same JSON and Markdown, indexing 3 files with 1 import edge and 0 syntax errors. All code/test blobs match remote; the local package-lock JSON is semantically identical despite a trailing newline difference. The local checkout has no Git commit; do not claim local HEAD.
 
