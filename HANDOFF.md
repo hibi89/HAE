@@ -8,7 +8,8 @@
 7. **Estimate:** **91% PARTIAL** (A100/B100/C95/D95/E65), heuristic.
 8. **Open gates:** D2 DBVORA restore remains NOT_STARTED and its source fix needs separate approval; OAuth, independent security, customer and commercial gates remain open.
 9. **Site/environment:** no site/auth/server; synthetic fixtures only; P42 temp folders cleaned.
-10. **Next:** race two backup processes on one new target; prove one success, one safe refusal, valid final ledger, unchanged source and no staging leak. No DBVORA edit or standalone engine.
+10. **Implementation commit:** `01eb4e5869d64342a69fdae29fe3c93c33425e5a`.
+11. **Next:** race two backup processes on one new target; prove one success, one safe refusal, valid final ledger, unchanged source and no staging leak. No DBVORA edit or standalone engine.
 
 
 ## Latest checkpoint — P40 precision-safe numeric CSV normalization
