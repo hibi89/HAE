@@ -72,7 +72,7 @@ def main() -> int:
             prepared = _read_plan(args.plan)
             plan = prepared.runtime_plan
             if args.command == "validate":
-                result = LAExecutor.validate(plan)
+                result = LAExecutor.validate({**plan, "version": prepared.source_version})
             elif args.command == "preflight":
                 result = preflight_summary(prepared)
             else:
