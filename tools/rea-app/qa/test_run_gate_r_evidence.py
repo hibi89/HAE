@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 
 SOURCE = Path(__file__).resolve().parents[1] / 'run_gate_r_evidence.py'
-PASS_TEXT = '''SOURCE VERIFIED: 15/15\nPYTHON_ALL: PASS\nDEPENDENCY VERIFIED: @babel/parser@7.29.9\nNODE_PARSER: PASS\nSUMMARY: source=PASS, python=PASS, node=PASS\nRan 20 tests\nOK (skipped=1)\n'''
+PASS_TEXT = '''SOURCE VERIFIED: 15/15 Git blobs match reviewed baseline\nPYTHON_ALL: PASS (exit 0)\nDEPENDENCY VERIFIED: @babel/parser@7.29.9\nNODE_PARSER: PASS (exit 0)\nSUMMARY: source=PASS, python=PASS, node=PASS\nRan 20 tests\nOK (skipped=1)\n'''
 
 class TestEvidenceRunner(unittest.TestCase):
     def setUp(self):
