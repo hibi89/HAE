@@ -8,7 +8,12 @@
 - Blueprint A remains **MVP_VERIFIED** for the supported synthetic JS/TS scope. Overall A–E estimate stays **77% / PARTIAL** due unrelated UI, restore, security, installer and customer/release gates.
 - n8n's allowed official-source structure review is recorded on `feature/axflow-mvp` at `8e8f89b5f797fdf77790a2fea57d6d7ad7b344a6`; no source/assets were copied.
 
-**Next:** REA_APP synthetic acceptance is reconfirmed. Do not expand source-analysis scope speculatively. Continue only with a concrete permission-free A–E gap; keep the standalone AX FLOW engine paused pending overall review. The P10 AX FLOW and n8n review evidence is on `feature/axflow-mvp`.
+**Next:** REA_APP synthetic acceptance is reconfirmed. Do not expand source-analysis scope speculatively.
+
+## P13 complete — Windows reparse attribute test added (Python 11/11)
+A unit test covers the scanner's Windows reparse attribute set/clear branch; Python 11/11 and Node parser assertions pass. Test commit: `98c6d6b399804b9041862caeb3124a0faa1146a0`. README now records the environment limit. A real junction fixture under the temp directory was denied by Windows with **Access denied**; no elevation was tried. The first PowerShell probe had a syntax error and executed no operations. The actual filesystem gate remains open; attribute-level coverage is not a substitute.
+
+Overall status remains **77% / PARTIAL**. Continue with a permission-free Blueprint gap. Do not bypass browser URL-confidence or external approval gates. Continue only with a concrete permission-free A–E gap; keep the standalone AX FLOW engine paused pending overall review. The P10 AX FLOW and n8n review evidence is on `feature/axflow-mvp`.
 
 
 **Owner decision supersedes 21-week plan:** first 2 weeks REA_APP + own n8n-like runner; next 3 weeks AX FLOW + parallel DBVORA integration. Read docs/FAST_TRACK_5_WEEK.md, docs/TARGET_BLUEPRINT_V1.md, docs/CODEX_EXTRA_HIGH_ORDER.md before any implementation.
