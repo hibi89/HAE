@@ -1,3 +1,15 @@
+## Latest checkpoint — P47 reject deeply nested JSON (2026-10-27 13:37 KST)
+1. **TASK:** Fail closed on JSON nesting that exceeds the decoder recursion limit.
+2. **Branch / SHAs:** `feature/axflow-mvp`; before `aec4b929338a3a7498c35e3e26d0b8844d2528f3`; code commit `59b100488efda792758bf84cc39760ab1f5913b5`.
+3. **Changed paths:** `apps/ax-flow/axflow/web.py`, `apps/ax-flow/tests/test_web.py`.
+4. **Tests:** targeted nested-JSON regression 1/1 PASS; full `python -m unittest discover -s tests -v` **81/81 PASS**; `node --check axflow/static/app.js` PASS; changed-file whitespace scan clean.
+5. **Failure/recovery:** before the fix, the new 1,200-level nested JSON request returned 500 with `RecursionError`. `_read_json` now maps it to the existing 400 invalid-JSON response. Both reruns passed.
+6. **Safety:** request size, local Host/Origin checks and upload staging limits are unchanged; no JSON body or traceback is returned. Synthetic localhost tests only.
+7. **Remaining gaps:** overall matrix stays 91% PARTIAL. OAuth, DBVORA restore, independent security review, signed/customer release, commercial evidence, and general AI/repair remain open or gated.
+8. **Rollback:** revert `59b100488efda792758bf84cc39760ab1f5913b5`; no shared matrix or executor changes.
+9. **Next:** choose another locally verifiable acceptance gap from the frozen blueprint and matrix.
+10. **Owner action:** no website or external credential is needed for this fix; keep standalone engine implementation on hold for chief review.
+
 ## Latest checkpoint — P45 stale-source snapshot rejection
 1. **Branch:** hibi89/AX_FLOW feature/axflow-mvp; P44 implementation 7a51e933a133abf57254d4e7b216f4eae2bf0f9a.
 2. **Proof:** injected one committed source update after staging and before the after-fingerprint. Backup rejected with source-changed error, published no target, removed stage, and the only row change was the injection.

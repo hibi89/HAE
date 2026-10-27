@@ -1,3 +1,11 @@
+## P47 complete — reject deeply nested JSON (2026-10-27 13:37 KST)
+A 1,200-level nested JSON request previously escaped the JSON parser's handled-error list and returned HTTP 500 with `RecursionError`. The parser now catches that exception and returns the bounded HTTP 400 invalid-JSON response. A new test verifies that the response contains no internal exception detail and creates no upload staging directory.
+
+**Verification:** targeted regression 1/1 PASS; full Windows suite 81/81 PASS; Node syntax PASS; changed-file whitespace scan clean.
+
+## Next atomic task — review remaining local gaps
+Use the original blueprint and current matrix to select another locally verifiable item. Keep general AI/provider work, OAuth, DBVORA source restore, independent security approval, signed customer distribution, and standalone engine work behind their existing gates. Do not edit the shared matrix from this branch.
+
 ## P45 complete — reject a stale runtime backup
 The test committed one synthetic run-status change after the backup stage was created and before the source-after fingerprint. The backup rejected the changed source, published no artifact, removed the stage, and the only business-visible row change was the injected test mutation.
 

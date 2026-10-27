@@ -1,3 +1,10 @@
+## Latest checkpoint — P47 reject deeply nested JSON (2026-10-27 13:37 KST)
+- Branch: `feature/axflow-mvp`; code commit `59b100488efda792758bf84cc39760ab1f5913b5`, parent `aec4b929338a3a7498c35e3e26d0b8844d2528f3`.
+- `_read_json` now catches `RecursionError` from deeply nested JSON and returns the existing bounded `invalid JSON request` client error. The new regression sends 1,200 nested arrays and verifies HTTP 400, no internal exception detail, and no upload staging directory.
+- Verification: targeted regression 1/1 PASS; full Windows suite **81/81 PASS** in 43.546 s; `node --check axflow/static/app.js` PASS; whitespace scan clean.
+- Failure record: before the fix, the targeted request returned HTTP 500 with `RecursionError` in its public error fields. Added the recursion exception to the JSON parse rejection path; targeted and full reruns passed. The local-only test needed the previously authorized loopback permission.
+- This is input hardening only. No engine, shared acceptance matrix, n8n code, DBVORA source, or customer data changed. Overall matrix remains **91% PARTIAL**; independent security review and other release gates remain open.
+
 ## P45 — discard snapshots when the source changes (2026-10-27 12:25 KST)
 - **Verification:** after staging completed, the test injected and committed one external status update before the source-after fingerprint. Backup rejected the snapshot with “source changed during backup”, published no target, removed the stage, and the only source-row delta matched the injected update; source hash changed as expected from that test mutation.
 - **Tests:** targeted test 1/1 PASS in 0.366 s. Full Windows Python 3.11.9 suite **77/77 PASS** in 40.902 s with synthetic local-loopback access. Node syntax/UI provenance and changed-file whitespace/conflict audit PASS.
