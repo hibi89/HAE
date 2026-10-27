@@ -1,3 +1,13 @@
+## P44 — optional architecture diagram in one MVP bundle command (2026-10-27 KST)
+
+```powershell
+python -m rea_app bundle C:\baseline C:\current --output-dir C:\reports --with-diagram
+```
+
+The normal `bundle` command still produces its original six files. With `--with-diagram`, the same already generated current `source-map.json` also yields `architecture.mmd` and `architecture.md` (**8 total**) without another parser run. Graph nodes are resolved relative JS/TS module paths, links contain syntax-level import line evidence; no target code is executed or uploaded. A large/unrenderable graph is rejected before any output files are written, and users can simply omit `--with-diagram` to preserve the six-file workflow.
+
+**Verification:** Reconstructed identical remote-candidate Git blobs of `rea_app/cli.py` (`b5c9e27c740a8f97335e61057a9276d71137dd96`) and `tests/test_bundle.py` (`484a874f967c770ad15e094ee2568342064596e4`) tested on Linux Python 3.13.5 in the isolated fixture: 22/22 focused tests PASS, including two new diagram-in-bundle cases and previous CLI contracts/diagram coverage. Mock analysis modules were used for bundle tests. Complete real Babel `@babel/parser@7.29.9` integration, Windows and full Gate R are **NOT YET VERIFIED**. No npm package was downloaded or substituted.
+
 ## P43 — visual architecture graph from an already saved source map
 
 Run the new zero-dependency offline export after any `scan` or `bundle` that has produced `source-map.json`:

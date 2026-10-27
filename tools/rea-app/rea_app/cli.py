@@ -179,6 +179,7 @@ def _bundle(args: argparse.Namespace) -> int:
         source_map = build_report(current, args.parser_timeout)
         impact = build_change_impact(baseline, current, args.parser_timeout, current_report=source_map)
         contracts = build_functional_contracts(source_map)
+        diagram = render_architecture_mermaid(source_map) if args.with_diagram else None
         artifacts = (
             ("source-map.json", json.dumps(source_map, ensure_ascii=False, sort_keys=True, indent=2) + "\n"),
             ("source-map.md", render_markdown(source_map)),
@@ -187,10 +188,15 @@ def _bundle(args: argparse.Namespace) -> int:
             ("functional-contracts.json", json.dumps(contracts, ensure_ascii=False, sort_keys=True, indent=2) + "\n"),
             ("functional-contracts.md", render_functional_contracts_markdown(contracts)),
         )
+        if diagram is not None:
+            artifacts += (
+                ("architecture.mmd", diagram),
+                ("architecture.md", "# REA_APP architecture\n\n```mermaid\n" + diagram + "```\n"),
+            )
         output.mkdir(parents=True, exist_ok=True)
         for filename, body in artifacts:
             _write_report(output / filename, body)
-    except (ScanError, OutputError, ParserError, ContractError, OSError) as exc:
+    except (ScanError, OutputError, ParserError, ContractError, DiagramError, OSError) as exc:
         print(f"REA_APP bundle stopped: {exc}", file=sys.stderr)
         return 3 if isinstance(exc, ParserError) else 2
     print(f"REA_APP bundle produced {len(artifacts)} reports; "
@@ -253,6 +259,7 @@ def build_argument_parser() -> argparse.ArgumentParser:
     bundle.add_argument("--max-file-bytes", type=int, default=1_000_000)
     bundle.add_argument("--max-total-bytes", type=int, default=20_000_000)
     bundle.add_argument("--parser-timeout", type=int, default=30)
+    bundle.add_argument("--with-diagram", action="store_true", help="also export Mermaid architecture diagram")
     bundle.set_defaults(handler=_bundle)
     diagram = commands.add_parser("diagram", help="render a Mermaid architecture graph from saved source-map.json")
     diagram.add_argument("source_map", type=Path, help="existing REA_APP source-map.json")

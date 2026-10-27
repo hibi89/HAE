@@ -1,3 +1,9 @@
+## REA_APP P44 next MVP gate (2026-10-27 KST)
+
+- Opt-in one-command architecture view added: `python -m rea_app bundle BASELINE CURRENT --output-dir OUT --with-diagram` writes 8 outputs; omitting option remains exactly 6. No extra parser calls. Focused Python suite **22/22 PASS on isolated stubs**; real Babel parser not available.
+- **Highest priority:** On an already authorized complete `REA_APP` checkout with `@babel/parser@7.29.9` installed, run `python -m unittest discover -s tests -p 'test_bundle_real_parser.py' -v` and `python verify_gate_r.py`; execute an actual `bundle --with-diagram` with small synthetic JS/TS source and confirm 8 reports, evidence edges/lines, source integrity/determinism. Fix any reproducing functionality issues. Do not mislabel code or synthetic stubs as real Node parser acceptance.
+- Then review frozen `docs/TARGET_BLUEPRINT_V1.md` against actual outputs. Security, Windows packaging and remaining compatibility checks are the final phase, while critical safety/secret rules remain enforced at MVP. No additional paid CI or outbound data transfer authorized.
+
 ## REA_APP P43 — next verified implementation step (2026-10-27 KST)
 
 - Implemented/locally tested evidence-only diagram CLI: `python -m rea_app diagram source-map.json --output-dir out` → `architecture.mmd` and `architecture.md` with resolved in-root import graph and line evidence. New 6/6 PASS, total isolated 20/20 PASS (source exact blob hashes in STATUS P43). No new dependency; useful offline even without the Babel installation.

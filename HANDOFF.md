@@ -1,3 +1,16 @@
+## REA_APP P44 handoff — diagram from bundle (2026-10-27 KST)
+
+1. **Owner goal/order:** REA_APP independent read-only JS/TS architecture analysis; MVP → frozen blueprint gap completion → final security/stability/compatibility. This update is to `REA_APP` branch only, not Lightning Azent, HAE or n8n.
+2. **Implementation:** `bundle` accepts optional `--with-diagram` and emits the existing 6 plus `architecture.mmd` and `architecture.md` (8) by calling existing `render_architecture_mermaid(source_map)`. Existing default behavior unchanged; requested diagram validated before any artifact write.
+3. **Design alternatives:** A) parse current again via separate `diagram` CLI (slower, multiple commands) vs B) reuse in-memory `source_map` (chosen; zero extra parser calls or runtime dependencies). Keeping flag optional avoids failing large bundles on diagram node/edge caps.
+4. **Executed tests:** Local Linux Python 3.13.5 fixture `/mnt/data/rea_p44`, `PYTHONPATH=. python -m unittest discover -s tests -v`: **22/22 PASS**, 0 failure/skip/error; synthetic tests include 2 new bundle-diagram cases and prior contracts/diagram CLI. `cli.py` Git blob `b5c9e27c740a8f97335e61057a9276d71137dd96`, `test_bundle.py` `484a874f967c770ad15e094ee2568342064596e4` exactly match locally run bytes.
+5. **Acceptance and blockers:** Real full Babel parser `@babel/parser@7.29.9` was missing (npm hostname unresolved); isolated graph/scanner/impact modules are import stubs. Genuine JS/TS bundle E2E, full repo Python, Node parser suite and Windows are **NOT VERIFIED**; Gate R PARTIAL. Do not treat 22 focused tests as full MVP readiness.
+6. **GitHub repo/branch/pins:** `hibi89/AX_FLOW` private, `REA_APP`, pre-change `bf14fb3666ce6ebbcec7e772065aa765ede5e079`. Modified CLI, bundle tests, verifier, evidence runner, README, STATUS, HANDOFF, NEXT_TASK. Verifier 23 source/test pins and runner pin refreshed; verify final HEAD/author/committer after push.
+7. **Runtime/deployment:** CLI-only, no Vercel URL (N/A); no browser runtime claimed. Optional Markdown embeds Mermaid source; Mermaid rendering not browser-tested.
+8. **Preservation & safety:** Git history preserved for rollback; no original project data, customer files, tokens, commercial source, paid workflow, npm download, production changes or force push. Output uses existing safe file writer. No destructive operations.
+9. **Next functional goal:** Obtain authorized complete checkout and pinned real Babel dependency, run existing `test_bundle_real_parser.py` then manual synthetic `bundle --with-diagram`, verify 8 reports/edges/line evidence/determinism and no source mutation; only then mark supported MVP acceptance, compare blueprint and implement missing functions.
+10. **Checkpoint:** 2026-10-27 KST; focused candidate code + tests 22 PASS; full real parser gate PARTIAL. After commit use latest remote SHA, not parent, in future handoffs.
+
 ## P43 REA_APP handoff — viewable architecture from saved analysis (2026-10-27 KST)
 
 1. **Goal/owner order:** REA_APP independent local read-only JS/TS analysis; MVP working → original frozen blueprint functionality → final security, stability, compatibility. Maintain scope distinct from HAE, Lightning Azent and n8n-derived code.

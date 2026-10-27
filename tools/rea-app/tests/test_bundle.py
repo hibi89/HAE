@@ -27,11 +27,17 @@ class BundleCommandTests(unittest.TestCase):
         self.args = argparse.Namespace(
             baseline=self.baseline, current=self.current, output_dir=self.output,
             max_files=100, max_file_bytes=1000, max_total_bytes=10000, parser_timeout=30,
+            with_diagram=False,
         )
         self.source_report = {
             "schema_version": "rea-app-source-map/v1",
             "summary": {"syntax_errors": 0},
             "packages": [{"root": ".", "name": "example"}],
+            "dependency_edges": [
+                {"from_path": "src/main.ts", "to_path": "src/lib.ts",
+                 "kind": "import", "resolution": "internal",
+                 "evidence": {"path": "src/main.ts", "line": 1}},
+            ],
             "function_contracts": [
                 {"symbol": "load", "exported_as": "load", "kind": "FunctionDeclaration",
                  "parameters": [{"name": "id", "type_annotation": "string"}],
@@ -70,6 +76,26 @@ class BundleCommandTests(unittest.TestCase):
         self.assertEqual(self.run_faked(), 0)
         self.assertEqual(contents, {name: (self.output / name).read_bytes() for name in files})
         self.assertEqual(prior, ((self.baseline / "app.ts").read_bytes(), (self.current / "app.ts").read_bytes()))
+
+    def test_optional_diagram_writes_two_additional_viewable_outputs(self):
+        self.args.with_diagram = True
+        self.assertEqual(self.run_faked(), 0)
+        self.assertEqual(len(list(self.output.iterdir())), 8)
+        diagram = (self.output / "architecture.mmd").read_text(encoding="utf-8")
+        markdown = (self.output / "architecture.md").read_text(encoding="utf-8")
+        self.assertIn('src/main.ts', diagram)
+        self.assertIn('src/lib.ts', diagram)
+        self.assertIn('import @ 1', diagram)
+        self.assertIn('```mermaid', markdown)
+        first = {p.name: p.read_bytes() for p in self.output.iterdir()}
+        self.assertEqual(self.run_faked(), 0)
+        self.assertEqual(first, {p.name: p.read_bytes() for p in self.output.iterdir()})
+
+    def test_optional_diagram_error_creates_no_partial_bundle(self):
+        self.args.with_diagram = True
+        self.source_report["dependency_edges"][0]["from_path"] = "../outside.ts"
+        self.assertEqual(self.run_faked(), 2)
+        self.assertFalse(self.output.exists())
 
     def test_reuses_current_report_instead_of_reparsing_current_tree(self):
         from contextlib import ExitStack
