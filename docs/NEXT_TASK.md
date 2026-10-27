@@ -1,6 +1,13 @@
 ## Latest verified fix — Windows CLI help encoding (2026-10-27 KST)
 On `feature/axflow-mvp@86ac854bd633e3a312aa54a5300e2f78f634dbfd`, default CP949 Windows console help now prints successfully after replacing two U+2013 characters with ASCII hyphens. Both `python -m axflow --help` and `python -m axflow serve --help` pass. The full Windows Python 3.11.9 suite is **60/60 PASS** with permitted loopback tests. The first failure was a real help-output encoding defect; no execution logic changed. Overall remains PARTIAL at the existing 79% heuristic.
 
+## P17 complete — source-backed DBVORA schema visible in AX FLOW (2026-10-27 KST)
+The synthetic CSV→SQLite workflow wrote two rows; the actual pinned DBVORA source read that business DB, and AX FLOW's visible local panel rendered its table, columns/PKs and measured size. Refresh passed. The API/UI withheld row values and source path; DB hash/mtime stayed unchanged. No declared FK exists in this import schema, so the UI accurately showed none. The full Windows Python 3.11.9 suite remains **60/60 PASS**.
+
+A first service attempt started before the synthetic DB existed and returned expected `FILE_UNAVAILABLE`; a hyphenated run ID was safely refused before writes. Fixture-first startup and an underscore-only run ID passed. Overall readiness is **83% PARTIAL** on A100/B95/C90/D80/E50 (equal weights); this replaces the previous 79% estimate. The chief-review hold on new independent-engine work remains active.
+
+**Keep open:** AX FLOW + DBVORA synthetic panel `http://127.0.0.1:8767/`; previous P16 review site `http://127.0.0.1:8765/`.
+
 ## P10 complete — interval hard-crash replay (60/60 full-suite pass)
 
 ## P16 — local UI read-only and import E2E verified
