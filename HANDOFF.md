@@ -1,14 +1,14 @@
-## Latest checkpoint — P41 Windows snapshot gate diagnosed
-1. **Branch/base:** `hibi89/AX_FLOW` `feature/axflow-mvp`; P40 code `d0e7a5a45f132b8a3cc7c9c4f5fd46e2a8e23bc8`, docs head `59f815b2cdabcd2d9f575bf19bb433fbf70fe4ab`.
-2. **DBVORA source:** exact `safe_zip.py` blob `a58d2c3bfd3b95a98ada74f59e208b58e35d2e13` opens staged files read-only before fsync.
-3. **Reproduction:** Windows read-only fsync failed `OSError errno 9`; read/write fsync passed.
-4. **SQLite check:** synthetic backup and independent fresh-path restore passed integrity/FK/row checks; source hash/size/mtime unchanged. Not product acceptance.
-5. **AX FLOW tests:** no source change; P40 full suite 71/71 PASS, Node syntax/UI regression PASS.
-6. **Harness failure:** initial teardown hit WinError 32 from unclosed SQLite handles; explicit `closing()` fixed it and cleanup passed.
-7. **Progress:** 90% PARTIAL (A100/B95/C95/D95/E65), heuristic.
-8. **Open gates:** D2 NOT_STARTED; DBVORA source fix needs separate approval. OAuth/security/customer/commercial release evidence remains open.
-9. **Site/environment:** no site/auth/server; synthetic temp data only, removed. Historical locked logs left untouched.
-10. **Next:** P42, add guarded runtime-ledger backup/restore only in AX FLOW, to a fresh path, with independent integrity/status tests; no overwrite, DBVORA edit or standalone engine.
+## Latest checkpoint — P42 runtime-ledger backup/restore
+1. **Branch/base:** `hibi89/AX_FLOW` `feature/axflow-mvp`; P41 docs parent `cb9c168addf897b1c25b0ad54fd509822d1bfb92`.
+2. **Feature:** synthetic-only CLI/zipapp `backup` and fresh-path `restore` for AX FLOW runtime SQLite; overwrite is refused.
+3. **Safety:** read-only source, schema/integrity checks, source SHA/size/mtime invariant, staged-file fsync and no-overwrite publish; no Windows power-loss claim.
+4. **Tests:** full Windows Python suite **74/74 PASS** in 39.330 s; Node syntax/UI regression and whitespace/conflict audit PASS.
+5. **Failure/recovery:** hardlink WinError 5 led to Windows rename; sandbox temp paths also failed, so only outputs moved into writable workspace temp. One misplaced package-test block caused NameError and was corrected.
+6. **Accepted scope:** runtime-ledger backup/restore closes F2. It does not back up business SQLite or DBVORA source.
+7. **Estimate:** **91% PARTIAL** (A100/B100/C95/D95/E65), heuristic.
+8. **Open gates:** D2 DBVORA restore remains NOT_STARTED and its source fix needs separate approval; OAuth, independent security, customer and commercial gates remain open.
+9. **Site/environment:** no site/auth/server; synthetic fixtures only; P42 temp folders cleaned.
+10. **Next:** race two backup processes on one new target; prove one success, one safe refusal, valid final ledger, unchanged source and no staging leak. No DBVORA edit or standalone engine.
 
 
 ## Latest checkpoint — P40 precision-safe numeric CSV normalization

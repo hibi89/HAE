@@ -181,6 +181,56 @@ class ZipappSmokeTests(unittest.TestCase):
         self.assertEqual(hashlib.sha256(valid_path.read_bytes()).hexdigest(), valid_hash)
         self.assertEqual((valid_path.stat().st_size, valid_path.stat().st_mtime_ns), valid_metadata)
 
+    def test_zipapp_cli_backs_up_and_restores_runtime_ledger_to_new_path(self):
+        repo = Path(__file__).resolve().parents[3]
+        workspace_temp = repo / ".verification-temp"
+        workspace_temp.mkdir(exist_ok=True)
+        destinations = tempfile.TemporaryDirectory(prefix="p42-package-backup-", dir=workspace_temp)
+        self.addCleanup(destinations.cleanup)
+        output_root = Path(destinations.name)
+        plan = {"version": "axflow.ir.v0", "steps": [
+            {"id": "source", "op": "literal", "value": {"fixture": "backup-only"}},
+        ]}
+        plan_path = self.outside / "state-backup-plan.json"
+        plan_path.write_text(json.dumps(plan), encoding="utf-8")
+        state = self.outside / "runtime.sqlite"
+        business = self.outside / "business.sqlite"
+        executed = self._run_packaged(
+            "run", plan_path, "--state", state, "--data", business,
+            "--run-id", "PackagedBackupRun", "--synthetic",
+        )
+        self.assertEqual(executed.returncode, 0, executed.stderr)
+        source_before = (hashlib.sha256(state.read_bytes()).hexdigest(), state.stat().st_size,
+                         state.stat().st_mtime_ns)
+        backup = output_root / "runtime-backup.sqlite"
+        created = self._run_packaged("backup", "--state", state, "--output", backup, "--synthetic")
+        self.assertEqual(created.returncode, 0, created.stderr)
+        self.assertNotIn(str(self.outside), created.stdout)
+        self.assertNotIn(str(output_root), created.stdout)
+        restored = output_root / "restored-runtime.sqlite"
+        restored_result = self._run_packaged(
+            "restore", "--backup", backup, "--state", restored, "--synthetic",
+        )
+        self.assertEqual(restored_result.returncode, 0, restored_result.stderr)
+        status = self._run_packaged(
+            "status", "--state", restored, "--run-id", "PackagedBackupRun", "--synthetic",
+        )
+        self.assertEqual(status.returncode, 0, status.stderr)
+        self.assertEqual(json.loads(status.stdout)["status"], "completed")
+        with closing(sqlite3.connect(restored)) as con:
+            self.assertEqual(con.execute("PRAGMA integrity_check").fetchone()[0], "ok")
+        self.assertEqual(
+            (hashlib.sha256(state.read_bytes()).hexdigest(), state.stat().st_size,
+             state.stat().st_mtime_ns), source_before,
+        )
+        existing = output_root / "existing-runtime.sqlite"
+        existing.write_bytes(b"existing-runtime-marker")
+        refused = self._run_packaged(
+            "restore", "--backup", backup, "--state", existing, "--synthetic",
+        )
+        self.assertEqual(refused.returncode, 2)
+        self.assertEqual(existing.read_bytes(), b"existing-runtime-marker")
+
     def test_package_builder_refuses_to_overwrite_an_existing_artifact(self):
         before = hashlib.sha256(self.package.read_bytes()).hexdigest()
         repo = Path(__file__).resolve().parents[3]

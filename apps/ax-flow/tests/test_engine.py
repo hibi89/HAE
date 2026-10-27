@@ -14,6 +14,7 @@ from pathlib import Path
 from axflow.engine import (ApprovalRequired, Engine, InjectedStop, PlanError, StepRetryExhausted,
                            StepTimeout, validate)
 from axflow.runlog import inspect_run
+from axflow.state_backup import StateBackupError, backup_runtime_state, restore_runtime_state
 from axflow.planner import plan_request, requires_write_approval
 from axflow.templates import build_template
 
@@ -43,6 +44,106 @@ class TestEngine(unittest.TestCase):
             self.engine.execute(self.plan, "Block")
         with closing(sqlite3.connect(self.root / "business.db")) as c:
             self.assertEqual(c.execute("SELECT COUNT(*) FROM records").fetchone()[0], 0)
+
+    def test_runtime_ledger_backup_and_restore_verify_fresh_paths_without_overwrite(self):
+        self.engine.execute(self.plan, "BackupRun", approve_writes=True)
+        source = self.root / "state.db"
+        workspace_temp = Path(__file__).resolve().parents[3] / ".verification-temp"
+        workspace_temp.mkdir(exist_ok=True)
+        destinations = tempfile.TemporaryDirectory(prefix="p42-engine-backup-", dir=workspace_temp)
+        self.addCleanup(destinations.cleanup)
+        output_root = Path(destinations.name)
+        backup = output_root / "state-backup.sqlite"
+        restored = output_root / "state-restored.sqlite"
+        source_before = (hashlib.sha256(source.read_bytes()).hexdigest(), source.stat().st_size,
+                         source.stat().st_mtime_ns)
+
+        result = backup_runtime_state(source, backup)
+        self.assertEqual(result["sqlite_integrity"], "ok")
+        self.assertTrue(result["source_unchanged"])
+        self.assertEqual(inspect_run(backup, "BackupRun")["status"], "completed")
+        restored_result = restore_runtime_state(backup, restored)
+        self.assertEqual(restored_result["sqlite_integrity"], "ok")
+        self.assertEqual(inspect_run(restored, "BackupRun")["step_outcomes"]["completed"], 4)
+        self.assertEqual(
+            (hashlib.sha256(source.read_bytes()).hexdigest(), source.stat().st_size,
+             source.stat().st_mtime_ns), source_before,
+        )
+
+        protected = output_root / "protected.sqlite"
+        protected.write_bytes(b"DO-NOT-OVERWRITE")
+        protected_before = protected.read_bytes()
+        with self.assertRaises(StateBackupError):
+            backup_runtime_state(source, protected)
+        with self.assertRaises(StateBackupError):
+            restore_runtime_state(backup, protected)
+        self.assertEqual(protected.read_bytes(), protected_before)
+
+        wrong = self.root / "not-a-ledger.sqlite"
+        with closing(sqlite3.connect(wrong)) as con:
+            con.execute("CREATE TABLE unrelated(value TEXT)")
+        rejected = output_root / "must-not-exist.sqlite"
+        with self.assertRaises(StateBackupError):
+            backup_runtime_state(wrong, rejected)
+        self.assertFalse(rejected.exists())
+
+        corrupt = self.root / "corrupt-backup.sqlite"
+        corrupt.write_bytes(b"not-a-sqlite-ledger")
+        corrupt_restore = output_root / "corrupt-restore.sqlite"
+        with self.assertRaises(StateBackupError):
+            restore_runtime_state(corrupt, corrupt_restore)
+        self.assertFalse(corrupt_restore.exists())
+        self.assertEqual(list(self.root.glob(".axflow-state-*.part")), [])
+
+    def test_cli_runtime_backup_restore_requires_synthetic_and_preserves_state(self):
+        self.engine.execute(self.plan, "CliBackupRun", approve_writes=True)
+        source = self.root / "state.db"
+        workspace_temp = Path(__file__).resolve().parents[3] / ".verification-temp"
+        workspace_temp.mkdir(exist_ok=True)
+        destinations = tempfile.TemporaryDirectory(prefix="p42-cli-backup-", dir=workspace_temp)
+        self.addCleanup(destinations.cleanup)
+        output_root = Path(destinations.name)
+        backup = output_root / "cli-backup.sqlite"
+        restored = output_root / "cli-restored.sqlite"
+        source_before = (hashlib.sha256(source.read_bytes()).hexdigest(), source.stat().st_size,
+                         source.stat().st_mtime_ns)
+        command = [sys.executable, "-m", "axflow"]
+
+        missing_guard = subprocess.run(
+            [*command, "backup", "--state", str(source), "--output", str(backup)],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(missing_guard.returncode, 2)
+        self.assertFalse(backup.exists())
+        created = subprocess.run(
+            [*command, "backup", "--state", str(source), "--output", str(backup), "--synthetic"],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(created.returncode, 0, created.stderr)
+        self.assertNotIn(str(self.root), created.stdout)
+        restored_run = subprocess.run(
+            [*command, "restore", "--backup", str(backup), "--state", str(restored), "--synthetic"],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(restored_run.returncode, 0, restored_run.stderr)
+        status = subprocess.run(
+            [*command, "status", "--state", str(restored), "--run-id", "CliBackupRun", "--synthetic"],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(status.returncode, 0, status.stderr)
+        self.assertEqual(json.loads(status.stdout)["status"], "completed")
+        self.assertEqual(
+            (hashlib.sha256(source.read_bytes()).hexdigest(), source.stat().st_size,
+             source.stat().st_mtime_ns), source_before,
+        )
+        protected = output_root / "existing-target.sqlite"
+        protected.write_bytes(b"existing-target-marker")
+        refused = subprocess.run(
+            [*command, "restore", "--backup", str(backup), "--state", str(protected), "--synthetic"],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(refused.returncode, 2)
+        self.assertEqual(protected.read_bytes(), b"existing-target-marker")
 
     def test_map_conditions_guards_and_if_else_are_durable(self):
         def plan_for(age):

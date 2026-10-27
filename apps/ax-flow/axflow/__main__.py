@@ -9,6 +9,7 @@ from pathlib import Path
 from .engine import ApprovalRequired, Engine, PlanError, StepRetryExhausted, StepTimeout, validate
 from .runlog import RunLogError, inspect_run
 from .scheduler import interval_ticks
+from .state_backup import StateBackupError, backup_runtime_state, restore_runtime_state
 from .templates import build_template
 
 
@@ -27,11 +28,13 @@ def _reject_json_constant(value: str) -> None:
 
 def main() -> int:
     p = argparse.ArgumentParser(prog="axflow")
-    p.add_argument("command", choices=("validate", "run", "resume", "status", "template", "serve", "schedule"))
+    p.add_argument("command", choices=("validate", "run", "resume", "status", "template", "serve", "schedule", "backup", "restore"))
     p.add_argument("plan", type=Path, nargs="?")
     p.add_argument("--name", help="built-in template name (template command)")
     p.add_argument("--csv", dest="csv_path", help="relative CSV path for csv_to_sqlite")
     p.add_argument("--state", type=Path)
+    p.add_argument("--backup", type=Path, help="existing runtime ledger backup (restore command)")
+    p.add_argument("--output", type=Path, help="new runtime ledger backup path (backup command)")
     p.add_argument("--data", type=Path)
     p.add_argument("--input-root", type=Path, help="explicit directory containing allowed synthetic CSV inputs")
     p.add_argument("--run-id")
@@ -50,7 +53,8 @@ def main() -> int:
         if a.command == "serve":
             if (a.plan is not None or a.name is not None or a.csv_path is not None or a.run_id is not None or
                     a.schedule_id is not None or a.max_runs is not None or
-                    a.approve_writes or a.input_root is None or a.state is None or a.data is None or
+                    a.approve_writes or a.backup is not None or a.output is not None or
+                    a.input_root is None or a.state is None or a.data is None or
                     not 1 <= a.port <= 65535):
                 raise PlanError(
                     "serve requires --input-root, --state, --data, --synthetic and port 1-65535; no plan or run options"
@@ -69,16 +73,38 @@ def main() -> int:
         if a.command == "template":
             if (a.plan is not None or a.state is not None or a.data is not None or
                     a.input_root is not None or a.run_id is not None or a.schedule_id is not None or
-                    a.max_runs is not None or a.approve_writes or a.port != 8765):
+                    a.max_runs is not None or a.approve_writes or a.backup is not None or
+                    a.output is not None or a.port != 8765):
                 raise PlanError("template accepts only --name, --csv and --synthetic")
             plan = build_template(a.name, csv_path=a.csv_path) if a.csv_path is not None else build_template(a.name)
             print(json.dumps(plan, ensure_ascii=False, sort_keys=True, indent=2))
             return 0
         if a.command == "status":
-            if a.state is None or a.run_id is None or a.schedule_id is not None or a.max_runs is not None:
+            if (a.state is None or a.run_id is None or a.schedule_id is not None or a.max_runs is not None or
+                    a.backup is not None or a.output is not None):
                 raise PlanError("status requires --state and --run-id")
             print(json.dumps(inspect_run(a.state, a.run_id), ensure_ascii=False, sort_keys=True))
             return 0
+        if a.command == "backup":
+            if (a.plan is not None or a.state is None or a.output is None or a.backup is not None or
+                    a.data is not None or a.input_root is not None or a.run_id is not None or
+                    a.schedule_id is not None or a.max_runs is not None or a.name is not None or
+                    a.csv_path is not None or a.approve_writes or a.port != 8765):
+                raise PlanError("backup requires only --state, --output and --synthetic")
+            result = backup_runtime_state(a.state, a.output)
+            print(json.dumps({"command": "backup", "result": result}, ensure_ascii=False, sort_keys=True))
+            return 0
+        if a.command == "restore":
+            if (a.plan is not None or a.state is None or a.backup is None or a.output is not None or
+                    a.data is not None or a.input_root is not None or a.run_id is not None or
+                    a.schedule_id is not None or a.max_runs is not None or a.name is not None or
+                    a.csv_path is not None or a.approve_writes or a.port != 8765):
+                raise PlanError("restore requires only --backup, --state and --synthetic")
+            result = restore_runtime_state(a.backup, a.state)
+            print(json.dumps({"command": "restore", "result": result}, ensure_ascii=False, sort_keys=True))
+            return 0
+        if a.backup is not None or a.output is not None:
+            raise PlanError("--backup and --output are only valid with backup or restore")
         if a.plan is None:
             raise PlanError("validate, run and resume require a workflow JSON file")
         if a.plan.stat().st_size > 65536:
@@ -94,7 +120,7 @@ def main() -> int:
             return 0
         if a.command == "schedule":
             if (a.state is None or a.data is None or a.schedule_id is None or a.max_runs is None or a.run_id is not None or
-                    a.name is not None or a.csv_path is not None):
+                    a.name is not None or a.csv_path is not None or a.backup is not None or a.output is not None):
                 raise PlanError("schedule requires a workflow, --state, --data, --schedule-id and --max-runs")
             engine = Engine(a.state, a.data, input_root=a.input_root)
             try:
@@ -115,7 +141,7 @@ def main() -> int:
         )
         print(json.dumps({"run_id": a.run_id, "status": "completed", "result": result}, ensure_ascii=False, sort_keys=True))
         return 0
-    except (PlanError, ApprovalRequired, StepRetryExhausted, StepTimeout,
+    except (PlanError, ApprovalRequired, StepRetryExhausted, StepTimeout, StateBackupError,
             RunLogError, OSError, ValueError, json.JSONDecodeError) as exc:
         print(f"AX FLOW stopped safely: {exc}", file=sys.stderr)
         return 2
