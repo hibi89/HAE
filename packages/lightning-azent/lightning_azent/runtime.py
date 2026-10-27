@@ -5,11 +5,12 @@ runtime/business SQLite file. This is the API boundary for future HAE use.
 """
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 from typing import Iterator
 
 from .contract import PreparedPlan, capabilities, prepare_plan
-from .engine import ApprovalRequired, Engine, IDENTIFIER, PlanError
+from .engine import ApprovalRequired, Engine, IDENTIFIER, PlanError, canonical_json
 from .runlog import inspect_run
 from .scheduler import MAX_SCHEDULE_RUNS, interval_ticks
 
@@ -69,9 +70,13 @@ class LAExecutor:
             raise PlanError("CSV workflows require an explicit input_root")
         if not approve_writes and any(step["op"] in _WRITE_OPS for step in normalized["steps"]):
             raise ApprovalRequired("explicit SQLite write approval required")
-        # A read-only lookup rejects missing ledgers and run IDs, without DB creation.
-        inspect_run(self.state_path, run_id)
-        return self._new_engine().execute(normalized, run_id, approve_writes=approve_writes)
+        # Match the persisted plan before Engine.__init__ opens either DB.
+        # Engine.execute also checks the hash transactionally against races.
+        existing = inspect_run(self.state_path, run_id)
+        expected_hash = hashlib.sha256(canonical_json(normalized).encode("utf-8")).hexdigest()
+        if existing["plan_sha256"] != expected_hash:
+            raise PlanError("same run id cannot be reused with a different plan")
+        return self._new_engine().execute(normalized, run_id, approve_writes=approve_writes
 
     def schedule(self, plan: object, schedule_id: str, *, max_runs: int = 1,
                  approve_writes: bool = False, clock=None, sleeper=None) -> Iterator[dict[str, object]]:
