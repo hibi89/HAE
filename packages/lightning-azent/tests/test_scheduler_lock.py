@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+import hashlib
 import os
 import subprocess
 import sys
@@ -155,6 +156,27 @@ with _schedule_lock(SimpleNamespace(state_path=state), "SharedSchedule"):
                     list(interval_ticks(plan, engine, "DeniedSchedule", max_runs=1,
                                         clock=lambda: 0.0, sleeper=lambda _: None))
                 self.assertEqual(list(Path(tmp).iterdir()), [], "denied request left schedule files")
+
+
+    def test_hardlinked_lock_does_not_mutate_other_file(self):
+        """A malicious hardlink at the lock path must never modify its target."""
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp) / "runtime.sqlite"
+            victim = Path(tmp) / "original.csv"
+            victim.write_bytes(b"customer-content")
+            lock_file = state.with_name(
+                f"{state.name}.la-{hashlib.sha256(b'SharedSchedule').hexdigest()[:16]}.lock"
+            )
+            os.link(victim, lock_file)
+            try:
+                with self.assertRaisesRegex(PlanError, "regular unlinked file"):
+                    with _schedule_lock(SimpleNamespace(state_path=state), "SharedSchedule"):
+                        self.fail("hardlinked path was accepted")
+                self.assertEqual(victim.read_bytes(), b"customer-content")
+                self.assertEqual(lock_file.read_bytes(), b"customer-content")
+            finally:
+                lock_file.unlink()
+
 
 
 if __name__ == "__main__":
