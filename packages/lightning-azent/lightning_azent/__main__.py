@@ -7,9 +7,9 @@ import sqlite3
 import sys
 from pathlib import Path
 
-from .engine import ApprovalRequired, Engine, PlanError, StepRetryExhausted, StepTimeout, MAX_SPEC_BYTES, validate
+from .engine import ApprovalRequired, Engine, IDENTIFIER, PlanError, StepRetryExhausted, StepTimeout, MAX_SPEC_BYTES, validate
 from .runlog import RunLogError, inspect_run
-from .scheduler import interval_ticks
+from .scheduler import MAX_SCHEDULE_RUNS, interval_ticks
 
 
 def _unique(pairs: list[tuple[str, object]]) -> dict:
@@ -68,15 +68,26 @@ def main() -> int:
             else:
                 if not args.synthetic or args.state is None or args.data is None:
                     raise PlanError("execution requires --synthetic, --state and --data")
+                # Validate the request before Engine.__init__ creates SQLite files.
+                # Invalid identifiers/triggers/bounds must remain side-effect-free.
+                trigger_type = plan.get("trigger", {"type": "manual"})["type"]
+                if args.command == "run":
+                    if not isinstance(args.run_id, str) or not IDENTIFIER.fullmatch(args.run_id):
+                        raise PlanError("run requires a safe --run-id")
+                    if trigger_type != "manual":
+                        raise PlanError("interval workflows require the schedule command")
+                else:
+                    if not isinstance(args.schedule_id, str) or not IDENTIFIER.fullmatch(args.schedule_id):
+                        raise PlanError("schedule requires a safe --schedule-id")
+                    if trigger_type != "interval":
+                        raise PlanError("schedule requires an interval trigger")
+                    if not 1 <= args.max_runs <= MAX_SCHEDULE_RUNS:
+                        raise PlanError(f"--max-runs must be 1..{MAX_SCHEDULE_RUNS}")
                 engine = Engine(args.state, args.data, input_root=args.input_root)
                 if args.command == "run":
-                    if not args.run_id:
-                        raise PlanError("run requires --run-id")
                     result = engine.execute(plan, args.run_id,
                                             approve_writes=args.approve_writes)
                 else:
-                    if not args.schedule_id:
-                        raise PlanError("schedule requires --schedule-id")
                     result = list(interval_ticks(
                         plan, engine, args.schedule_id,
                         max_runs=args.max_runs,
