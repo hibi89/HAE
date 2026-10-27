@@ -10,7 +10,7 @@ from contextlib import closing, contextmanager
 from pathlib import Path
 from typing import Iterator
 
-from .engine import Engine, IDENTIFIER, PlanError, canonical_json, validate
+from .engine import ApprovalRequired, Engine, IDENTIFIER, PlanError, canonical_json, validate
 
 MAX_SCHEDULE_RUNS = 1000
 
@@ -124,6 +124,12 @@ def interval_ticks(
         raise PlanError(f"max_runs must be from 1 to {MAX_SCHEDULE_RUNS}")
     if not isinstance(schedule_id, str) or not IDENTIFIER.fullmatch(schedule_id):
         raise PlanError("schedule_id must be a safe identifier")
+    if plan.get("trigger", {"type": "manual"})["type"] != "interval":
+        raise PlanError("schedule command requires an interval trigger")
+    if any(step["op"] == "csv_read" for step in plan["steps"]) and getattr(engine, "input_root", None) is None:
+        raise PlanError("CSV workflows require an explicit --input-root")
+    if not approve_writes and any(step["op"] in {"sqlite_put", "sqlite_import_csv"} for step in plan["steps"]):
+        raise ApprovalRequired("explicit --approve-writes required for local SQLite writes")
     with _schedule_lock(engine, schedule_id):
         tick, anchor = _ensure_schedule(engine, plan, schedule_id, clock())
         interval = plan["trigger"]["every_seconds"]
