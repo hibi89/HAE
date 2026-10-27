@@ -1,3 +1,10 @@
+## Pre-Gate Lightning Azent contracts and synthetic fixture freeze — 2026-10-27 KST
+- **Current development order unchanged:** REA_APP full Gate R regression **PENDING** → evidence-based permitted n8n contract research → independent Lightning Azent engine → HAE consumer integration. This entry is **prework**, not implementation or Gate N acceptance.
+- Draft independently specified six contracts and three synthetic fixtures in `docs/lightning-azent/FUNCTIONAL_CONTRACTS_DRAFT.md` (commit `cacb9093eb13b4ff253db85eddedff1455b615c0`), with legacy `axflow.ir.v0` plans under `docs/lightning-azent/fixtures/` and original `orders.csv`. Generated commits `3cf15ddd3c9d617e98273e7e9fbb0e19d09fe7f8`, `c5d9acc9c969ab1dffb211aa82244960d863ec20`, `a59f085a8ca4fe7895fa707a63b2459e16b5ad19`, `2adb4bed467675b952205ab7d2154c74943d0f82`.
+- Fixture JSON parsing and basic earlier-step references **3/3 static PASS**, not current runner validation, execution, DB, replay, or Windows evidence. Python/Node private checkout unable to retrieve via container `git ls-remote` (DNS unavailable); no new full repo tests run, no release gate promoted.
+- No Azent package or new repo created, no HAE runtime code changed. Gate R remains partially verified by older Windows evidence; P23/P24 current `REA_APP` SHA `33f6d345f8d4577194248eed4543d602819d3192` **unverified**. Existing AX FLOW P48/P49 full suite unverified.
+- Next: execute authorized current REA_APP source tests, then confirm permission/licensing, sign independent contracts, run synthetic fixture workflows, extract engine only when tests are recorded.
+
 ## FINAL PRODUCT BRAND — HAE (Humanized Automation Ecosystem), 2026-10-27 KST
 - Owner-confirmed **HAE** supersedes **AX FLOW** as customer-facing final product name. REA_APP → Lightning Azent → HAE remains the development sequence. DBVORA is separately integrated.
 - Updated main + active feature README, REQUIREMENTS, ARCHITECTURE, TARGET_BLUEPRINT, app README and decision/agent instructions; active feature local HTML/JS now displays HAE. Internal legacy `hibi89/AX_FLOW`, `apps/ax-flow/`, Python `axflow`, IR `axflow.ir.v0`, branch names unchanged for compatibility.
