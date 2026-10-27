@@ -1,3 +1,11 @@
+## Lightning Azent P1a — fail-closed CLI preflight, 2026-10-28 KST
+
+- **FUNCTIONAL CHANGE:** `packages/lightning-azent/lightning_azent/__main__.py` now rejects unsafe run IDs, unsafe schedule IDs, unsupported manual/interval trigger pairing and invalid `--max-runs` **before constructing Engine**. For write-bearing plans, missing `--approve-writes` is also rejected before opening/creating either SQLite file. Original HAE engine and REA_APP frozen source remain unchanged.
+- **REGRESSION FIXTURES:** Added 2 CLI preflight tests to existing `tests/test_mvp.py` and 5 to new `tests/test_cli_preflight.py`. Total new LA branch test definitions: **12** (7 + 5); all tests are **COMMITTED BUT NOT EXECUTED** in this session. They assert invalid or unapproved requests leave both runtime/business SQLite files absent, in addition to earlier 3 synthetic workflow cases.
+- **STATIC VERIFICATION:** GitHub source reread confirmed all four preflight predicates appear ahead of `Engine(...)` in CLI source; five new regression method names present, synthetic fixtures use disposable temp directories. This is source inspection only, **NOT test PASS**.
+- **CODE COMMITS:** `9b6a81881ff0273e07e7962f459a705ae17e311a` (2 tests), `ea45bbcd028ae921f7a4d31e1dd6909d4e4bcd20` (IDs/trigger bounds), `7f84a7a24a1ebd958164b9d5551f4ba8b55c72b1` (write approval), `ec3620ca8d75a401cde9bd8616e870ed434e3e4b` (5 focused tests). Source/test blobs fetched and verified.
+- **NEXT BLOCKER:** Run `$env:PYTHONPATH="packages/lightning-azent"; python -m unittest discover -s packages/lightning-azent/tests -v` against authorized clean repo checkout, then original `apps/ax-flow/tests` baseline. Fix first observed failure. LA standalone MVP is **UNVERIFIED** until real fixture execution, Windows and parity evidence. No paid CI or production deployment.
+
 ## Lightning Azent extraction P0 — 2026-10-27 KST (new branch, not merged)
 
 - **REA_APP FREEZE:** GitHub REA_APP HEAD and Codex handoff agree at `3fd0ac452ea3255a24998f550aba3cbf9e6a263d`; historical executed Gate R 25/25 source pins, 72 Python tests (66 pass/6 skip), Node Babel PASS, QA 11/11, installed wheel + locked npm + eight reports verified on authorized Windows environment. **This session did not rerun tests.** P54, REA_APP frontend and noncritical enhancements paused.
