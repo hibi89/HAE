@@ -1,5 +1,14 @@
 # HANDOFF — AX FLOW + REA_APP (bootstrap, 2026-10-27 KST)
 
+## Latest REA_APP verification — 2026-10-27
+1. **Branch/change:** `REA_APP`; test-only fix in `tools/rea-app/tests/test_cli.py`, commit `b815e72f3f0c9e0e1aad117b7db7b6cad9f84bc1`.
+2. **Tests:** Python 10/10 PASS; Node parser adapter PASS with the pinned `@babel/parser@7.29.9`. Core analyzer/parser files match the remote REA_APP blobs. The project sources were not changed.
+3. **Failure log:** initial environment had no parser dependency; five Python tests plus the Node assertion failed with the documented unavailable-parser message. After no-script install, the missing-parser test alone failed because `NODE_PATH=""` cannot hide a local dependency. It now runs from an isolated copied tool root with no `node_modules`; both suites pass. No registry authentication was needed and no package lock was created.
+4. **Progress:** Blueprint A remains verified for bounded synthetic JS/TS. Overall estimate stays 77%, status PARTIAL. No user-facing site or browser needed.
+5. **Other branch:** permitted n8n structure analysis and P10 AX FLOW interval crash test are checkpointed on `feature/axflow-mvp`; P10 full suite 60/60 PASS. AX FLOW engine expansion remains held.
+6. **Next:** choose only a concrete permission-free Blueprint gap; browser-visible E2E and gated restore/release actions remain unresolved.
+
+
 1. **Goal/requirements/technology:** AX FLOW is a local-first natural-language automation product: file input + safe OAuth onboarding + plan/validate/run/recover with CLI and minimal web UI; optional DBVORA. REA_APP is a distinct app source analysis/reconstruction-assistance tool. Python 3.11+ proposed for initial static analysis and local executor; final technology remains subject to design/approval.
 2. **Completed/change/decision:** GitHub private `hibi89/AX_FLOW` discovered empty; initial README created. Repo intended as private monorepo with separate source directories and branches. No features developed.
 3. **Tests:** 0 executed / 0 passed / 0 failed; GitHub content/branches may be re-read to verify docs/bootstrap only. No Windows, browsers, OAuth, Gmail or production validation.
