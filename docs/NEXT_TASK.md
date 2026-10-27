@@ -1,5 +1,9 @@
 # Next work unit — 2026-10-27 KST (verified checkpoint)
 
+## P19 — comparison-report fingerprint privacy — COMPLETE (2026-10-27 12:53 KST)
+- Code commit: fe8d9f533358fc6d62d97ccc38f645c8b1545eb9 on REA_APP, parent dadda9793849130aaff1f4726faf18f54c2ac7f8.
+- SHA-256 remains an internal comparison detail; report JSON/Markdown omit fingerprints. Added regression checks that fixture contents and their digest are absent. Python suite 14/14 PASS; npm run test:parser PASS.
+- Review finding: P18 omitted source content but still exposed reusable file hashes. P19 removed that unnecessary report field; no test failures during this correction.
 ## P18 — REA_APP change-impact report — COMPLETE (2026-10-27 12:49 KST)
 - Implementation commit: 150a056f1eb13dd352ef1a1be0ce9fb9324e98e3 on REA_APP, parent 1409d9d383e1515a1c19350252a1c7a6f534d04d.
 - Added `rea-app compare BASELINE CURRENT --output-dir REPORTS`. It rejects equal/overlapping roots and outputs inside either source root; applies each scan's existing file/byte caps; hashes indexed files without including their contents in the report; labels added/removed/modified paths; follows resolved in-root JS/TS dependencies from both snapshots with exact import evidence; lists affected package entrypoints.

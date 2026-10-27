@@ -1,6 +1,18 @@
 # HANDOFF — AX FLOW + REA_APP (bootstrap, 2026-10-27 KST)
 
-## Latest checkpoint — P18 REA_APP change-impact MVP (2026-10-27 12:49 KST)
+## Latest checkpoint — P19 comparison-report privacy hardening (2026-10-27 12:53 KST)
+1. Goal: maximize verified REA_APP progress and hand it to overall review; remain within the local, bounded analysis scope and keep the standalone AX FLOW engine on hold.
+2. Change: commit fe8d9f533358fc6d62d97ccc38f645c8b1545eb9 changes the P18 comparison report to keep SHA-256 fingerprints internal. JSON/Markdown report change status, size/category metadata and evidence but do not emit file hashes or contents. README and regression assertion updated.
+3. Tests: from tools/rea-app, python -m unittest discover -s tests -v — 14/14 PASS; npm run test:parser — PASS. Environment: Windows, Python 3.11.9, Node 24.21.0, npm 11.19.0, @babel/parser 7.29.9.
+4. State/progress: P18 change-impact feature remains deterministic and tested; P19 closes the report-fingerprint exposure found in review. Overall project estimate remains 91% PARTIAL per the separate feature/axflow-mvp matrix; this REA_APP work is not integrated there.
+5. Failure/pivot: P19 tests passed first run. Review found the prior report unnecessarily serialized reusable SHA-256 fingerprints despite omitting file contents; removed them and added a test that checks both literal source and its digest are absent. P18's first-run Windows path failure and its fix remain recorded below.
+6. Repository/branch/SHA/paths: hibi89/AX_FLOW, REA_APP at code commit fe8d9f533358fc6d62d97ccc38f645c8b1545eb9, parent dadda9793849130aaff1f4726faf18f54c2ac7f8. Changed tools/rea-app/rea_app/impact.py, tools/rea-app/tests/test_cli.py and tools/rea-app/README.md.
+7. Production/execution/site: local CLI only; no site is needed or running. No browser E2E, deployment or customer execution was claimed. Prior UI automation had stopped at the Windows browser-URL confidence guard.
+8. Originals/approvals/credentials: tests use synthetic data. No source tree is modified by the scanner; report omits source contents, hashes and absolute roots. No credential/customer data, external DB write or paid service was used.
+9. Next priority/approvals: present verified REA_APP and official-doc n8n findings to overall chief review. Do not implement the independent runner/engine before that review. Keep OAuth, DBVORA restore, commercial licensing, deployment and customer release gated.
+10. KST checkpoint/evidence baseline: 2026-10-27 12:53 KST. Shared cross-track matrix remains blob 4a1f223bfa0b73693972cecc11f4a5eda637c837 at feature/axflow-mvp@62d712053470518376bdab59d4eec53191c46c88; not changed here.
+
+## Prior checkpoint — P18 REA_APP change-impact MVP (2026-10-27 12:49 KST)
 1. Goal: complete REA_APP Blueprint A / R-A1 evidence within the authorized local, bounded, read-only analysis scope; then finish permitted n8n documentation review. Keep the standalone AX FLOW engine on hold for chief review.
 2. Change: commit 150a056f1eb13dd352ef1a1be0ce9fb9324e98e3 adds SHA-256 based two-snapshot file comparison, direct/transitive static dependency impacts, exact import evidence and affected package entrypoints; README documents the CLI and limits.
 3. Tests: from tools/rea-app, python -m unittest discover -s tests -v — 14/14 PASS; npm run test:parser — PASS; npm ls --all confirms pinned @babel/parser@7.29.9 and its three transitive packages. Environment: Windows, Python 3.11.9, Node 24.21.0, npm 11.19.0. Synthetic source snapshots were unchanged and reruns were byte-identical.

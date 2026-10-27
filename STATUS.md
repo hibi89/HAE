@@ -1,6 +1,14 @@
 # STATUS — 2026-10-27 KST
 
-## Latest checkpoint — P18 REA_APP change-impact report (2026-10-27 12:49 KST)
+## Latest checkpoint — P19 comparison-report privacy hardening (2026-10-27 12:53 KST)
+- Branch: REA_APP; code/test/README commit fe8d9f533358fc6d62d97ccc38f645c8b1545eb9, parent dadda9793849130aaff1f4726faf18f54c2ac7f8.
+- Comparison still uses SHA-256 internally to detect same-size edits, but JSON/Markdown no longer expose fingerprints. Changed-file reports retain status, size/category metadata, import evidence and impacted entrypoints only.
+- Added a regression asserting neither the fixture source text nor its SHA-256 appears in the report. Verification on Windows: python -m unittest discover -s tests -v — 14/14 PASS; npm run test:parser — PASS. No P19 test failure.
+- Failure found during review: P18's report omitted source text but exposed reusable file hashes. The report did not need fingerprints after classification; removed them from serialized output and verified the privacy property.
+- Project-wide status remains the last separate matrix: 91% PARTIAL (heuristic A100/B100/C95/D95/E65) at feature/axflow-mvp@62d712053470518376bdab59d4eec53191c46c88, blob 4a1f223bfa0b73693972cecc11f4a5eda637c837. This REA_APP update is not in the shared matrix.
+- Keep the standalone AX FLOW engine on hold for overall chief review. Real/customer data, OAuth, DBVORA writes/restore, commercial decisions, deployment and release remain gated.
+
+## Prior checkpoint — P18 REA_APP change-impact report (2026-10-27 12:49 KST)
 - Branch: REA_APP. Implementation and tests are in commit 150a056f1eb13dd352ef1a1be0ce9fb9324e98e3.
 - Added bounded compare of two non-overlapping, explicitly selected source roots; reports added/removed/modified indexed files, direct/transitive resolved JS/TS dependents, exact import-line evidence, and impacted package entrypoints. Report output remains outside both roots; each scan enforces its configured caps; skipped paths and static-analysis limits are disclosed.
 - Verification on Windows (Python 3.11.9, Node 24.21.0, npm 11.19.0, Babel parser 7.29.9) from tools/rea-app: python -m unittest discover -s tests -v — 14/14 PASS; npm run test:parser — PASS; npm ls --all confirms only the pinned parser and its three resolved Babel packages. Synthetic source roots remained byte-identical; repeated JSON and Markdown reports were byte-identical.
