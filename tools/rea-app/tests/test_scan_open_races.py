@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import os
+import subprocess
 import sys
+import textwrap
 import tempfile
 import unittest
 from pathlib import Path
@@ -74,6 +76,57 @@ class ScannerOpenRaceTests(unittest.TestCase):
                 for item in result.skipped_files
             ))
 
+
+    @unittest.skipUnless(os.name == "posix" and hasattr(os, "mkfifo") and hasattr(os, "O_NONBLOCK"),
+                         "POSIX FIFO with nonblocking open required")
+    def test_fifo_swap_does_not_block_or_leak_source(self) -> None:
+        # Spawn a child to bound a potential os.open FIFO deadlock in old scanners.
+        fixture = textwrap.dedent(r"""
+            import os
+            import tempfile
+            from pathlib import Path
+            from unittest.mock import patch
+            from rea_app.scanner import ScanLimits, walk_source
+
+            with tempfile.TemporaryDirectory(prefix="rea-fifo-swap-") as directory:
+                root = Path(directory) / "source"
+                root.mkdir()
+                victim = root / "entry.ts"
+                victim.write_text("export const original = true;\n", encoding="utf-8")
+                opened = os.open
+                swapped = False
+
+                def swap_to_fifo(path, flags, *args, **kwargs):
+                    global swapped
+                    if Path(path) == victim and not swapped:
+                        victim.unlink()
+                        os.mkfifo(victim)
+                        swapped = True
+                    return opened(path, flags, *args, **kwargs)
+
+                with patch("rea_app.scanner.os.open", side_effect=swap_to_fifo):
+                    result = walk_source(root, ScanLimits())
+                assert swapped
+                assert all(item.path != "entry.ts" for item in result.files)
+                assert {"path": "entry.ts", "reason": "not_regular_file"} in result.skipped_files
+                print("FIFO_SWAP_SAFE")
+        """)
+        completed = subprocess.run(
+            [sys.executable, "-c", fixture], cwd=TOOL_ROOT, text=True,
+            capture_output=True, timeout=3, check=False,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr + completed.stdout)
+        self.assertIn("FIFO_SWAP_SAFE", completed.stdout)
+
+    def test_nonblocking_flag_keeps_regular_source_readable(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="rea-normal-source-") as directory:
+            root = Path(directory)
+            (root / "entry.ts").write_text("export const intact = 42;\n", encoding="utf-8")
+            result = walk_source(root, ScanLimits())
+            self.assertEqual(len(result.files), 1)
+            self.assertEqual(result.files[0].path, "entry.ts")
+            self.assertEqual(result.files[0].content, "export const intact = 42;\n")
+            self.assertEqual(result.skipped_files, [])
 
 if __name__ == "__main__":
     unittest.main()
