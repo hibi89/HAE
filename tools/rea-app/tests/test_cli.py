@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -339,7 +340,23 @@ class ReaAppCliTests(unittest.TestCase):
 
     def test_missing_parser_fails_with_coverage_limitation(self) -> None:
         self.write("main.ts", "export const value = 1;\n")
-        result = self.run_scan(env={"NODE_PATH": ""})
+        isolated_tool = self.base / "isolated-tool"
+        shutil.copytree(TOOL_ROOT / "rea_app", isolated_tool / "rea_app")
+        shutil.copy2(TOOL_ROOT / "babel_parser_adapter.cjs", isolated_tool)
+        process_env = os.environ.copy()
+        process_env["PYTHONPATH"] = str(isolated_tool)
+        process_env["NODE_PATH"] = ""
+        result = subprocess.run(
+            [sys.executable, "-m", "rea_app", "scan", str(self.source),
+             "--output-dir", str(self.output)],
+            cwd=isolated_tool,
+            env=process_env,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            capture_output=True,
+            check=False,
+        )
         self.assertEqual(result.returncode, 3)
         self.assertIn("parser unavailable", result.stderr)
         self.assertFalse(self.output.exists())
