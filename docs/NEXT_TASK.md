@@ -1,3 +1,10 @@
+## REA_APP P48 next — close parser fixture gaps for Unicode paths and dynamic imports (2026-10-27 KST)
+
+- P47 added baseline/current callable contract deltas to the existing comparison report. Real Babel E2E verified ESM→CommonJS export-kind/signature changes, added/removed contracts, path:line evidence, no body/default leakage, deterministic reruns and unchanged snapshots. P47 code commit `625fe78cfa5115c44a4172de07fcd41346b44268` is pushed; evidence is `E:\HAE\REA_APP_GATE_EVIDENCE\gate-r-wzf_tu_t\evidence.json`.
+- **Next accuracy work:** Inspect current Babel adapter and existing tests for Unicode filenames and dynamic imports. Add real-parser synthetic fixtures for (1) Unicode module paths preserving exact evidence and resolved edges, (2) a statically analyzable dynamic import, and (3) an unresolved/computed dynamic import that remains explicitly unresolved instead of inventing a target. Check deterministic output, no source mutation, and no leaked bodies/defaults.
+- Preserve the existing adapter's supported resolution semantics; if the parser reports call sites but cannot statically resolve an expression, represent the limitation in coverage rather than guessing. Update the source verifier and trusted runner pins, run focused E2E, full Gate R and QA, then commit/push with clean evidence.
+- After fixture gaps, review fresh-PC install/bootstrap and local package viability without changing dependency pins; physical Windows symlink/junction checks remain conditional on privilege. No paid CI, customer source or hosted deployment.
+
 ## REA_APP P47 next — baseline/current exported contract comparison (2026-10-27 KST)
 
 - P46 closed the module-architecture comparison gap: the existing `change-impact.json/.md` now expose module, package-boundary, and resolved internal-edge changes with source evidence. Genuine Babel-backed E2E verifies nested package replacement, deterministic output and source preservation. P46 code commit `3f6a5e67754a2424d84a7b8e565c400cee768c58` is pushed; evidence is at `E:\HAE\REA_APP_GATE_EVIDENCE\gate-r-k6a1huat\evidence.json`.

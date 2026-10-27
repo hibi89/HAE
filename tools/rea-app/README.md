@@ -1,3 +1,11 @@
+## P47 — compare exported callable contracts across snapshots
+
+The existing `change-impact.json/.md` now show baseline/current callable API observations in `contract_changes`: added exports, exports no longer observed, and changed explicit signatures. Matching uses relative module path and exported name. Reported syntax fields include export kind, parameter shape/type flags, return annotation, async and generator; changes include evidence from both snapshots. The CLI prints the delta counts.
+
+The current-snapshot `functional-contracts.json/.md` output remains unchanged. Function bodies, actual default values, inferred types, side effects, and cross-file re-export signatures are omitted. A missing static contract is not a runtime compatibility verdict. No new files or parser runs were added; the existing six/eight bundle file counts remain intact.
+
+Verified with real Babel on a synthetic ESM-to-CommonJS API change: added/removed/changed exports, signature fields and path:line evidence; repeatable artifacts; source preservation; and no body/default-value leakage. P47 Gate R: 23/23 source pins, 65 Python tests (59 pass, 6 platform/environment skips), Node parser pass; QA 11/11 pass. See `STATUS.md` P47 for the evidence path and limits.
+
 ## P46 — compare module architecture across snapshots
 
 `compare` and `bundle` now show how the resolved JS/TS module architecture differs between baseline and current snapshots. The existing `change-impact.json` and `.md` include added/removed source modules, module package-owner moves, added/removed resolved in-root dependencies, and added/removed/changed package boundaries or entrypoints. Dependency links include their kind and source path:line evidence. Console output summarizes the delta.
