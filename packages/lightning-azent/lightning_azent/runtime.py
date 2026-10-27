@@ -135,7 +135,7 @@ class LAExecutor:
             raise PlanError("run_id must be a safe identifier")
         existing = inspect_run(self.state_path, run_id)
         expected_hash = hashlib.sha256(canonical_json(normalized).encode("utf-8")).hexdigest()
-        if existing.get("plan_hash") != expected_hash:
+        if existing["plan_sha256"] != expected_hash:
             raise PlanError("persisted run plan does not match supplied plan")
         try:
             inspect_business_ledger(self.business_path)
