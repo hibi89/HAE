@@ -141,6 +141,7 @@ def _compare(args: argparse.Namespace) -> int:
         f"{len(report['changed_files'])} indexed paths changed."
     )
     print(_architecture_summary(report["summary"]))
+    print(_contract_summary(report["summary"]))
     print(f"Reports: {output / 'change-impact.json'} and {output / 'change-impact.md'}")
     return 1 if report["summary"]["syntax_errors"] else 0
 
@@ -151,6 +152,13 @@ def _architecture_summary(summary: dict[str, int]) -> str:
         f"+{summary['added_internal_dependencies']}/-{summary['removed_internal_dependencies']} "
         f"resolved internal dependencies; +{summary['added_packages']}/-{summary['removed_packages']} packages; "
         f"{summary['changed_packages']} changed package boundaries."
+    )
+
+
+def _contract_summary(summary: dict[str, int]) -> str:
+    return (
+        f"API contract delta: +{summary['added_contracts']}/-{summary['removed_contracts']} "
+        f"added/removed, {summary['changed_contracts']} changed exported callables."
     )
 
 
@@ -219,6 +227,7 @@ def _bundle(args: argparse.Namespace) -> int:
         f"{len(impact['changed_files'])} changed files."
     )
     print(_architecture_summary(impact["summary"]))
+    print(_contract_summary(impact["summary"]))
     print(f"Reports: {output}")
     print("Generated files:")
     for filename, _ in artifacts:

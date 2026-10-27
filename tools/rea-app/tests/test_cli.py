@@ -279,6 +279,7 @@ class ReaAppCliTests(unittest.TestCase):
         self.assertEqual(report["summary"]["added_internal_dependencies"], 0)
         self.assertEqual(report["summary"]["removed_internal_dependencies"], 0)
         self.assertIn("Architecture delta: +0/-0 modules", result.stdout)
+        self.assertIn("API contract delta: +0/-0 added/removed, 0 changed", result.stdout)
         self.assertIn("src/main.ts", first_markdown.decode("utf-8"))
         self.assertNotIn('"export const load = () =>', first_json.decode("utf-8"))
         self.assertNotIn(hashlib.sha256(b"export const load = () => 2;\n").hexdigest(), first_json.decode("utf-8"))

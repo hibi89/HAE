@@ -54,6 +54,7 @@ class BundleCommandTests(unittest.TestCase):
                 "syntax_errors": 0, "added_modules": 0, "removed_modules": 0,
                 "added_internal_dependencies": 0, "removed_internal_dependencies": 0,
                 "added_packages": 0, "removed_packages": 0, "changed_packages": 0,
+                "added_contracts": 0, "removed_contracts": 0, "changed_contracts": 0,
             },
             "changed_files": [{"path": "app.ts", "status": "modified"}],
         }

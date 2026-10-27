@@ -130,6 +130,14 @@ def _skipped_coverage(named_scans: list[tuple[str, ScanResult]], cap: int = 250)
     }
 
 
+def _inline_code(value: str) -> str:
+    text = value.replace("\r", " ").replace("\n", " ")
+    delimiter = "`"
+    while delimiter in text:
+        delimiter += "`"
+    return f"{delimiter} {text} {delimiter}"
+
+
 def _package_owner(path: str, packages_by_root: dict[str, dict[str, Any]]) -> dict[str, Any] | None:
     candidate = path
     while True:
@@ -268,6 +276,71 @@ def _architecture_changes(baseline_report: dict[str, Any], current_report: dict[
     }
 
 
+def _callable_contracts(report: dict[str, Any]) -> dict[tuple[str, str], dict[str, Any]]:
+    export_kinds: dict[tuple[str, str], set[str]] = {}
+    for item in report["exports"]:
+        key = (item["path"], item["name"])
+        export_kinds.setdefault(key, set()).add(item["kind"])
+
+    contracts = {}
+    for item in report["function_contracts"]:
+        module = item["evidence"]["definition"]["path"]
+        exported_as = item["exported_as"]
+        key = (module, exported_as)
+        contracts[key] = {
+            "module": module,
+            "exported_as": exported_as,
+            "signature": {
+                "export_kinds": sorted(export_kinds.get(key, set())),
+                "parameters": [
+                    {
+                        "name": parameter.get("name"),
+                        "pattern": parameter.get("pattern"),
+                        "type_annotation": parameter.get("type_annotation"),
+                        "optional": bool(parameter.get("optional", False)),
+                        "rest": bool(parameter.get("rest", False)),
+                        "has_default": bool(parameter.get("has_default", False)),
+                    }
+                    for parameter in item["parameters"]
+                ],
+                "return_type_annotation": item.get("return_type_annotation"),
+                "async": bool(item.get("async", False)),
+                "generator": bool(item.get("generator", False)),
+            },
+            "evidence": item["evidence"],
+            "assurance": "explicit_syntax_only",
+        }
+    return contracts
+
+
+def _contract_changes(baseline_report: dict[str, Any], current_report: dict[str, Any]) -> dict[str, Any]:
+    before = _callable_contracts(baseline_report)
+    after = _callable_contracts(current_report)
+    before_keys, after_keys = set(before), set(after)
+    common = before_keys & after_keys
+    return {
+        "comparison_basis": "Module path and exported symbol; explicit parameter and return syntax, async/generator flags, and observed ESM/CommonJS export kind.",
+        "limitations": [
+            "Only unambiguous exported callable contracts with observed syntax are compared; absence is not a runtime compatibility verdict.",
+            "Inferred types, default values, function bodies, side effects, and cross-file re-export signatures are not compared.",
+        ],
+        "baseline_count": len(before),
+        "current_count": len(after),
+        "added": [after[key] for key in sorted(after_keys - before_keys)],
+        "removed": [before[key] for key in sorted(before_keys - after_keys)],
+        "changed": [
+            {
+                "module": key[0],
+                "exported_as": key[1],
+                "baseline": before[key],
+                "current": after[key],
+            }
+            for key in sorted(common)
+            if before[key]["signature"] != after[key]["signature"]
+        ],
+    }
+
+
 def build_change_impact(
     baseline: ScanResult,
     current: ScanResult,
@@ -280,6 +353,7 @@ def build_change_impact(
         current_report = build_report(current, parser_timeout)
     named_reports = [("baseline", baseline_report), ("current", current_report)]
     architecture = _architecture_changes(baseline_report, current_report)
+    contracts = _contract_changes(baseline_report, current_report)
     before = _file_index(baseline)
     after = _file_index(current)
     paths = sorted(set(before) | set(after))
@@ -344,10 +418,14 @@ def build_change_impact(
             "added_packages": len(architecture["packages"]["added"]),
             "removed_packages": len(architecture["packages"]["removed"]),
             "changed_packages": len(architecture["packages"]["changed"]),
+            "added_contracts": len(contracts["added"]),
+            "removed_contracts": len(contracts["removed"]),
+            "changed_contracts": len(contracts["changed"]),
         },
         "changed_files": changed_files,
         "impacts": impacts,
         "architecture_changes": architecture,
+        "contract_changes": contracts,
         "coverage": {
             "dependency_basis": "Resolved in-root JavaScript/TypeScript import, re-export and require edges from both snapshots.",
             "limits": "Static dependency reachability only; runtime behavior, Python dependencies, dynamic resolution, and external package internals are not inferred.",
@@ -372,6 +450,8 @@ def render_change_impact_markdown(report: dict[str, Any]) -> str:
         f"+{summary['added_internal_dependencies']}/-{summary['removed_internal_dependencies']} internal dependencies; "
         f"+{summary['added_packages']}/-{summary['removed_packages']} packages; "
         f"{summary['changed_packages']} changed package boundaries.", "",
+        f"- Callable contracts: +{summary['added_contracts']}/-{summary['removed_contracts']} added/removed; "
+        f"{summary['changed_contracts']} signature changes.", "",
         "## Changed files", "",
     ]
     if not report["changed_files"]:
@@ -434,6 +514,62 @@ def render_change_impact_markdown(report: dict[str, Any]) -> str:
     )):
         lines.append("No module, package boundary, or resolved internal dependency changes were observed.")
     lines.append("Only bounded JS/TS source modules and resolved in-root dependency edges are compared; this is not runtime architecture discovery.")
+    contracts = report["contract_changes"]
+    lines.extend(["", "## Exported callable contract changes", ""])
+    lines.append(
+        f"Observed callable contracts: {contracts['baseline_count']} baseline, "
+        f"{contracts['current_count']} current."
+    )
+
+    def format_contract(item: dict[str, Any]) -> str:
+        signature = item["signature"]
+        parameters = []
+        for parameter in signature["parameters"]:
+            label = parameter["name"] or parameter["pattern"] or "<parameter>"
+            if parameter["rest"]:
+                label = "..." + label
+            if parameter["optional"]:
+                label += "?"
+            if parameter["type_annotation"]:
+                label += ": " + parameter["type_annotation"]
+            if parameter["has_default"]:
+                label += " = <default>"
+            parameters.append(label)
+        prefix = "async " if signature["async"] else ""
+        prefix += "generator " if signature["generator"] else ""
+        result = f"{prefix}({', '.join(parameters)})"
+        if signature["return_type_annotation"]:
+            result += " -> " + signature["return_type_annotation"]
+        if signature["export_kinds"]:
+            result += " [" + ", ".join(signature["export_kinds"]) + "]"
+        return result
+
+    for kind in ("added", "removed"):
+        for item in contracts[kind]:
+            evidence = item["evidence"]["definition"]
+            lines.append(
+                f"- {kind.title()} {_inline_code(item['module'] + '::' + item['exported_as'])} "
+                f"{_inline_code(format_contract(item))}; "
+                f"evidence {_inline_code(evidence['path'] + ':' + str(evidence['line']))}."
+            )
+    for item in contracts["changed"]:
+        old_evidence = item["baseline"]["evidence"]["definition"]
+        new_evidence = item["current"]["evidence"]["definition"]
+        lines.append(f"- Changed {_inline_code(item['module'] + '::' + item['exported_as'])}:")
+        lines.append(
+            f"  - baseline {_inline_code(format_contract(item['baseline']))}; "
+            f"evidence {_inline_code(old_evidence['path'] + ':' + str(old_evidence['line']))}"
+        )
+        lines.append(
+            f"  - current {_inline_code(format_contract(item['current']))}; "
+            f"evidence {_inline_code(new_evidence['path'] + ':' + str(new_evidence['line']))}"
+        )
+    if not any((contracts["added"], contracts["removed"], contracts["changed"])):
+        lines.append("No exported callable additions, removals, or observed signature changes.")
+    lines.append(
+        "Contract differences reflect explicitly observed syntax only. Default values and function bodies are omitted; "
+        "a missing contract means it was not observed in the bounded snapshot, not a runtime compatibility verdict."
+    )
     coverage = report["coverage"]
     lines.extend([
         "", "## Coverage limits", "",
