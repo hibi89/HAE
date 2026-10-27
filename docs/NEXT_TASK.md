@@ -1,3 +1,10 @@
+## REA_APP P23 — next verified action (2026-10-27 KST)
+1. **Prioritize REA_APP current-HEAD verification, not AX FLOW feature expansion**: repo `hibi89/AX_FLOW`, `REA_APP`; new scanner + two unrun tests at `f39bc315...` / `f6b868d...`. Chief review `tools/rea-app/CHIEF_GATE_R_REVIEW.md`.
+2. In a connected local authorized checkout: `cd tools/rea-app && python -m unittest discover -s tests -v` then `npm run test:parser` using already provisioned pinned Babel 7.29.9; if dependency missing, describe blocker rather than silently installing a new service. Specifically run `python -m unittest discover -s tests -p 'test_scan_open_races.py' -v`. Verify OS/Python/Node/SHAs, PASS/FAIL/SKIP and source preservation; treat Windows POSIX-only test as skipped, not passed.
+3. Review final-component nofollow and device/inode mismatch behavior without claiming race-free handling for attacker-modifiable ancestor directories. Keep scans read-only on authorized stable snapshots.
+4. **Licensing gate:** n8n code scanning/running is NOT authorized by this note; official SUL and 2026-08-27 EULA warn on competitive-use and reverse engineering. Request permission/license review for specific source access. Use independent generic contracts, avoid proprietary code/assets, keep evidence links and limitations.
+5. After Gate R reproducible current-SHA acceptance, proceed to approved independent feature contracts and three synthetic workflows for Lightning Azent, then separate backend package and AX FLOW compatibility layer. No paid CI, new repo, external data, public ports, business DB or production changes.
+
 # Next work unit — 2026-10-27 KST (verified checkpoint)
 
 ## P22 complete — exact remote REA_APP verification (2026-10-27 13:15 KST)
