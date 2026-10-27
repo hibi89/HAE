@@ -1,3 +1,9 @@
+## Next after draft Azent fixtures (2026-10-27 KST)
+1. **Gate R first:** verify `REA_APP@33f6d345f8d4577194248eed4543d602819d3192` in authorized connected runner (Python unittest full+targeted P23/P24, Node parser pinned tests) and record source SHAs/OS/counts and Windows-specific SKIP. Do not equate file inspection with PASS.
+2. Draft original generic contracts and runnable-shape fixtures exist at `docs/lightning-azent/FUNCTIONAL_CONTRACTS_DRAFT.md` and `docs/lightning-azent/fixtures/`. The three plans are in **legacy `axflow.ir.v0` only**, not an Azent implementation or validated integration. Do not advance Gate N/L from JSON parsing.
+3. After permitted n8n behavior research and Gate R acceptance, review six contracts, test baseline legacy engine in a real checkout with source-preservation proof, then create standalone Azent engine branch/package only after architecture signoff.
+4. HAE branding final; `hibi89/AX_FLOW` is the legacy technical repo ID. No new customer-facing UI, OAuth, commercial deployment or paid CI in this task.
+
 ## NEXT — HAE product name supersedes legacy AX FLOW (owner decision, 2026-10-27)
 Use **HAE (Humanized Automation Ecosystem)** in all new customer-facing docs/UI and planning. Keep **Lightning Azent** for the independently developed workflow engine and **REA_APP** for technology analysis. Old AX_FLOW repository, axflow code/CLI/IR identifiers remain unchanged; do not silently rename any imported module, branch, package, endpoint or schema.
 Continue active REA_APP → Lightning Azent → HAE acceptance order; no release or completion score changes from brand update. The remainder below is retained history/task context.
