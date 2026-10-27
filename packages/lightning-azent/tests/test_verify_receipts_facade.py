@@ -7,6 +7,15 @@ from lightning_azent.runtime import LAExecutor
 
 
 class VerifyReceiptsFacadeTests(unittest.TestCase):
+    def test_receipts_validate_completed_literal_run(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            executor = LAExecutor(root / 'state.sqlite', root / 'business.sqlite')
+            plan = {'version': 'axflow.ir.v0', 'steps': [{'id': 'seed', 'op': 'literal', 'value': 1}]}
+            executor.execute(plan, 'completed_run')
+            result = executor.verify_receipts(plan, 'completed_run')
+            self.assertEqual(result, {'run_id': 'completed_run', 'verified': True})
+
     def test_missing_run_does_not_create_sqlite(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
