@@ -1,3 +1,9 @@
+## P38 complete — packaged normalization/import verified
+The current Windows zipapp was built outside the source tree and ran a synthetic normalization → filter → SQLite import from its packaged CLI. It reported 2 imported rows and duplicate source row 2, preserved source rows [1, 2], stored both duplicates, left the CSV hash/size/mtime unchanged, and kept row values out of the runtime DB and receipt. Package tests 4/4 PASS; full suite 67/67 PASS in 28.694 s; Node checks/UI regression PASS. No listener or site remains open. Progress remains **90% PARTIAL**.
+
+## Next atomic task — bounded type conversion in natural-language planning
+Add one explicit English/Korean phrase for converting a named CSV column to number/string using the existing safe `csv_normalize` transform. Keep one column per request and require SQLite import. Test successful numeric conversion in a filter/import flow, malformed numbers failing before business writes, unsupported or ambiguous conversions failing closed, source immutability, and packaged/API execution. Run full Python and Node regressions, update acceptance evidence, then commit.
+
 ## P37 complete — concurrent same-run test configured its bounded retry budget
 The cross-process regression intentionally starts two workers for one run ID. Its previous fixture used the default `max_attempts=1`, so one transient SQLite lock correctly exhausted the configured budget. The test now explicitly requests the supported bounded budget of three attempts and 5000 ms; production defaults and executor behavior are unchanged.
 

@@ -1,3 +1,11 @@
+## P38 — packaged normalization/filter/import path verified (2026-10-27 11:45 KST)
+- **Package:** the test suite built the current Windows standard-library zipapp outside the source tree and ran the normalization workflow using the packaged CLI with no `PYTHONPATH`.
+- **Flow:** synthetic CSV → trim `name` → filter `active=yes` → SQLite import. The packaged result reported 2 imported rows and duplicate row 2. Both duplicate records remained stored with original row numbers [1, 2].
+- **Integrity/privacy:** source SHA-256, size and mtime stayed unchanged; runtime/business databases remained separate; the synthetic row marker appeared only in business SQLite, not the CLI receipt or runtime database. Package temp folder was cleaned by test teardown.
+- **Tests:** package-only regression **4/4 PASS**. Full Windows Python 3.11.9 suite `python -m unittest discover -s tests -v` — **67/67 PASS** in 28.694 s with authorized synthetic loopback. Node syntax/UI checks and `git diff --check` PASS. `netstat` shows no active TCP listener.
+- **Scope:** this verifies the packaged CLI workflow, not a signed installer, live customer installation or real browser UI. No customer data, site, external login or deployment.
+- **Progress remains 90% PARTIAL** (A100/B95/C95/D95/E65). P38 strengthens packaged evidence; Windows DBVORA restore, OAuth, independent security and customer/commercial release gates remain open.
+
 ## P37 — cross-process replay test now opts into bounded retries (2026-10-27 11:45 KST)
 - **Change:** corrected only the existing synthetic concurrency test setup. It deliberately overlaps two processes using the same run ID, so its plan now explicitly sets `max_attempts=3` and `timeout_ms=5000` on SQLite write/read steps. The production default remains one attempt; no executor policy changed.
 - **Stress verification:** repeated `test_cross_process_same_run_replay_is_idempotent` 20 times — **20/20 PASS** in 10.351 s.

@@ -1,3 +1,14 @@
+## Latest checkpoint — P38 packaged normalization workflow verified
+1. **Branch/base:** `hibi89/AX_FLOW` `feature/axflow-mvp`; P37 parent `90e083d04f68f4f7eb068db2aeba82c6103179e8`. P38 adds a packaged workflow regression and current status documentation.
+2. **Packaged flow:** current stdlib Windows zipapp built outside the source tree; its CLI ran synthetic CSV → trim name → filter active=yes → SQLite import, with no source-tree `PYTHONPATH`.
+3. **Receipt/result:** 2 rows imported; duplicate row 2 reported; original row numbers [1, 2] preserved and both duplicate records retained.
+4. **Integrity/privacy:** source SHA/size/mtime unchanged; runtime and business DB separate; row marker absent from receipt/runtime DB. Zipapp temp artifact removed by test teardown.
+5. **Tests:** package-only 4/4 PASS; complete Python suite **67/67 PASS** in 28.694 s with authorized synthetic loopback; Node checks/UI regression and diff check PASS. No active TCP listener.
+6. **Progress:** 90% PARTIAL (A100/B95/C95/D95/E65), heuristic.
+7. **Remaining:** P36 DBVORA Windows synthetic snapshot returned safe `PUBLISH_FAILED` before publish; D2 restore remains NOT_STARTED. OAuth, independent security review, signed installer and customer/commercial proof remain open. No website needs to be open.
+8. **Next:** add one explicit safe numeric/string column conversion phrase to the bounded planner and verify it through packaged and API paths. Reject malformed numbers before writes; preserve lineages and source hash. Keep unsupported conversion requests fail-closed.
+9. **Time/scope:** 2026-10-27 11:45 KST; package smoke does not establish a signed/customer release.
+
 ## Latest checkpoint — P37 cross-process replay stress is stable
 1. **Branch/base:** `hibi89/AX_FLOW` `feature/axflow-mvp`; P36 parent `65cbd08f26e2905a83258ff5561fc00f84e62126`. P37 changes one test only; no production runtime policy changed.
 2. **Fix:** the two-process same-run test now explicitly configures the supported bounded SQLite retry budget (3 attempts, 5000 ms) on write/read steps. The engine's default of one attempt remains intentional.

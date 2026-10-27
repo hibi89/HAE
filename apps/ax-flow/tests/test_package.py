@@ -67,6 +67,54 @@ class ZipappSmokeTests(unittest.TestCase):
                 "SELECT COUNT(*) FROM records WHERE run_id='PackagedDemo' AND step_id='save'"
             ).fetchone()[0], 1)
 
+    def test_zipapp_cli_runs_normalize_filter_import_with_duplicate_receipt(self):
+        inputs = self.outside / "normalized-input"
+        inputs.mkdir()
+        csv_path = inputs / "contacts.csv"
+        source_bytes = (
+            "id,name,active\n"
+            "7, PACKAGED-SYNTHETIC-MARKER ,yes\n"
+            "7,PACKAGED-SYNTHETIC-MARKER,yes\n"
+            "8,Other,no\n"
+        ).encode("utf-8")
+        csv_path.write_bytes(source_bytes)
+        source_hash = hashlib.sha256(source_bytes).hexdigest()
+        source_size = csv_path.stat().st_size
+        source_mtime = csv_path.stat().st_mtime_ns
+        plan_path = self.outside / "normalized-plan.json"
+        plan_path.write_text(json.dumps({"version": "axflow.ir.v0", "steps": [
+            {"id": "input", "op": "csv_read", "path": "contacts.csv"},
+            {"id": "normalized", "op": "csv_normalize", "from": "input",
+             "transforms": {"name": "trim"}},
+            {"id": "filtered", "op": "csv_filter", "from": "normalized", "field": "active",
+             "operator": "eq", "value": "yes"},
+            {"id": "imported", "op": "sqlite_import_csv", "from": "filtered"},
+        ]}), encoding="utf-8")
+        state, business = self.outside / "normalized-runtime.db", self.outside / "normalized-business.db"
+        executed = self._run_packaged(
+            "run", plan_path, "--input-root", inputs, "--synthetic", "--state", state,
+            "--data", business, "--run-id", "PackagedNormalize", "--approve-writes",
+        )
+        self.assertEqual(executed.returncode, 0, executed.stderr)
+        result = json.loads(executed.stdout)["result"]
+        self.assertEqual(result["imported_rows"], 2)
+        self.assertEqual(result["duplicate_count"], 1)
+        self.assertEqual(result["duplicate_row_numbers"], [2])
+        self.assertEqual(result["source_sha256"], source_hash)
+        self.assertNotIn("PACKAGED-SYNTHETIC-MARKER", executed.stdout)
+        self.assertEqual((csv_path.stat().st_size, csv_path.stat().st_mtime_ns), (source_size, source_mtime))
+        self.assertEqual(hashlib.sha256(csv_path.read_bytes()).hexdigest(), source_hash)
+        self.assertNotEqual(state.resolve(), business.resolve())
+        self.assertNotIn("PACKAGED-SYNTHETIC-MARKER", state.read_bytes().decode("latin1"))
+        with closing(sqlite3.connect(business)) as con:
+            rows = con.execute(
+                "SELECT row_number,payload_json FROM csv_records WHERE run_id=? ORDER BY row_number",
+                ("PackagedNormalize",),
+            ).fetchall()
+        self.assertEqual([row[0] for row in rows], [1, 2])
+        self.assertEqual(json.loads(rows[0][1])["name"], "PACKAGED-SYNTHETIC-MARKER")
+        self.assertEqual(rows[0][1], rows[1][1])
+
     def test_package_builder_refuses_to_overwrite_an_existing_artifact(self):
         before = hashlib.sha256(self.package.read_bytes()).hexdigest()
         repo = Path(__file__).resolve().parents[3]
