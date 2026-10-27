@@ -1,4 +1,6 @@
-# Architecture Decision: AX FLOW deterministic engine + separated DBVORA
+# Architecture Decision: HAE platform, independent Lightning Azent runtime + separate DBVORA
+
+**Name and architecture clarification (2026-10-27):** HAE is the final customer product name (formerly AX FLOW). The original Python `axflow` runtime is a reference implementation to be progressively extracted into independent **Lightning Azent**, while the HAE UI/AI layer consumes it. Historical decisions and test obligations remain valid; no migration has happened yet.
 
 ## Alternatives
 | Criterion | A. Merge DBVORA code and automation into one executable | B. Separate local DBVORA process + versioned API (SELECTED) | C. Embed modified n8n as execution service |
@@ -10,9 +12,9 @@
 | Data safety | mixed write and backup privileges | allowlist/read-only boundary | modified engine security review |
 | Product independence | weak | strong | weak / sales risk |
 
-**Decision:** B for final product: AX FLOW owns workflow state and actual data adapters; DBVORA owns observation, catalog, verified backups and restores. AX FLOW can operate on a single local SQLite data destination without a running DBVORA **during early MVP**; release claiming the **full AX FLOW + DB suite** requires passing DBVORA integration acceptance.
+**Decision:** B for final product: HAE owns workflow state and actual data adapters; DBVORA owns observation, catalog, verified backups and restores. HAE can operate on a single local SQLite data destination without a running DBVORA **during early MVP**; release claiming the **full HAE + DB suite** requires passing DBVORA integration acceptance.
 
-## AX FLOW layers
+## HAE layers
 ```
 Customer (natural language, template, files) → planner / typed JSON IR
    → validator + risk policy + approval
@@ -25,7 +27,7 @@ Customer (natural language, template, files) → planner / typed JSON IR
 REA_APP is external R&D source analysis and cannot execute customer jobs.
 
 ## Data protection and execution
-- Runtime SQLite and business SQLite have **different paths, schemas and privileges**. Never make DBVORA's own metadata catalog the only state store for AX FLOW.
+- Runtime SQLite and business SQLite have **different paths, schemas and privileges**. Never make DBVORA's own metadata catalog the only state store for HAE.
 - The registry stores stable source IDs, type, provider, scope, time/provenance, latest available inventory status; credentials remain in the OS secret store.
 - DBVORA's currently available `dbvora/api.py` exposes one user-selected SQLite file read-only (`/api/inventory` and `/health`); a generic multi-asset / versioned service contract and trusted enrollment mechanism are **not implemented**.
 - First adapter can use a pre-approved selected local SQLite database; report DBVORA unavailable explicitly. Do not silently fall back to fabricated metrics.
