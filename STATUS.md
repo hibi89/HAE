@@ -1,3 +1,11 @@
+## P28 — UI exposes unavailable CPU provenance and clears stale data (2026-10-27 KST)
+- Added the fixed Korean label `CPU 사용량: 제공되지 않음` for the adapter's allowlisted `cpu_usage: unavailable` provenance.
+- Added `tests/test_ui_provenance.cjs`, which runs the actual `app.js` in an isolated Node VM with a minimal DOM and synthetic API. It checks the CPU label, opaque ID, suppression of path/HTML metadata, no injected DOM nodes, and clearing the old provenance after an offline refresh.
+- **Tests:** from `apps/ax-flow`, `node --check axflow\\static\\app.js` PASS; `node --check tests\\test_ui_provenance.cjs` PASS; `node tests\\test_ui_provenance.cjs` PASS. Python suite was not rerun for this JS-only slice; P27's full 61/61 result remains the latest complete Python regression.
+- **Failure/cause:** no application failure. A DOM-only harness avoids a browser server and real DBVORA connection for this presentation-state regression; P27 already has visible browser/API verification of provenance.
+- **Commit:** `99058617d8b35806b02be41a84fcd7ec5bee1c66`. P5 at `http://127.0.0.1:8767/` remains open; no additional website is needed.
+- **Progress remains 87% PARTIAL** (A100/B95/C95/D95/E50): this improves disclosure and stale-state handling but does not verify customer/package, restore, OAuth, independent security, installer or commercial gates.
+
 ## P27 — DBVORA provenance is allowlisted and visible in the UI (2026-10-27 KST)
 - Fixed a D1 boundary gap: the API had normalized known schema fields but passed arbitrary raw `provenance` keys and values through to clients.
 - `dbvora_client.normalize_inventory` now keeps only four fixed provenance labels (CPU availability, declared SQLite foreign keys, measured filesystem size, and measured SQLite catalog). Unknown keys and unapproved values are dropped. The UI shows an opaque DB ID and these fixed descriptions using `textContent`.

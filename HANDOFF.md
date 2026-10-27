@@ -1,3 +1,12 @@
+## Latest checkpoint — P28 UI provenance completeness
+1. **Code/test commit:** `99058617d8b35806b02be41a84fcd7ec5bee1c66` on `feature/axflow-mvp`.
+2. **Change:** display the allowlisted CPU metric state as “CPU 사용량: 제공되지 않음”; refresh to offline clears previously displayed provenance.
+3. **Test:** `node --check axflow\\static\\app.js`, `node --check tests\\test_ui_provenance.cjs`, and `node tests\\test_ui_provenance.cjs` all PASS. The Node VM harness executes actual `app.js` against a synthetic API and minimal DOM, checking safe provenance rendering and stale-state removal. Latest complete Python suite is still P27's **61/61 PASS**; it was not rerun for this JS-only slice.
+4. **Failure/cause:** no app failure. The isolated DOM harness covers this state without opening another site; P27's visible browser test already checked provenance rendering.
+5. **Progress:** **87% PARTIAL**; no customer/packaged, restore, OAuth, independent security, signed installer or commercial evidence has been added.
+6. **Site:** existing P5 `http://127.0.0.1:8767/` remains open; nothing new needs to remain open.
+7. **Next:** select a remaining permission-free synthetic acceptance gap. Maintain approval holds and the independent-engine scope hold.
+
 ## Latest checkpoint — P27 DBVORA provenance boundary/UI
 1. **Code/test commit:** `e4cf683ce061645ee5400b7eb0e6f7f8fd45888e` on `feature/axflow-mvp`.
 2. **Change:** the DBVORA API adapter now allowlists provenance keys and fixed source labels; unknown paths, HTML, and unapproved values are dropped. The UI renders only fixed descriptions and an opaque DB ID through `textContent`.

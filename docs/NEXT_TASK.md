@@ -1,3 +1,9 @@
+## P28 complete — UI provenance disclosure and offline clearing
+Commit `99058617d8b35806b02be41a84fcd7ec5bee1c66` shows the allowlisted “CPU 사용량: 제공되지 않음” state and clears previous provenance after an offline refresh. The actual `app.js` passed an isolated Node VM DOM regression for safe rendering, path/markup suppression, and offline clearing; both JS syntax checks passed. Python full suite remains at P27's 61/61 PASS. Progress remains **87% PARTIAL**.
+
+## Next atomic task
+Continue by selecting one remaining permission-free, synthetic Blueprint acceptance gap and actually verifying it. Keep DB restore, OAuth, customer data, independent review, signing/release, and independent engine expansion on hold unless the required approval is provided. No new design document or website is needed.
+
 ## P27 complete — provenance API/UI boundary verified
 Code/test commit `e4cf683ce061645ee5400b7eb0e6f7f8fd45888e` allowlists DBVORA provenance at the adapter and renders fixed safe descriptions in the browser. Windows Python suite **61/61 PASS**; JS syntax PASS. An isolated synthetic API/UI check confirmed customer-like paths and hostile markup are omitted, with no injected DOM node. Failure causes and recovery are recorded in STATUS/HANDOFF. Progress remains **87% PARTIAL**.
 
