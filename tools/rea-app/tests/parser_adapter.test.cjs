@@ -18,6 +18,11 @@ const input = {
         + '  return [known, templated, computed];\n}\n',
     },
     {
+      path: 'src/commonjs.ts',
+      content: 'function createUser(id: string): User { return buildUser(id); }\n'
+        + 'module.exports = createUser;\n',
+    },
+    {
       path: 'src/contracts.ts',
       content: 'export async function load(id: string, options?: { cache: boolean }): Promise<Result> { return await source("body-only"); }\n'
         + 'export const transform = (value: string, count = 9137): string => value;\n'
@@ -49,6 +54,10 @@ const dynamicEdges = parsed.files.find((file) => file.path === 'src/dynamic.ts')
   .filter((edge) => edge.kind === 'dynamic_import');
 assert.deepEqual(dynamicEdges.map((edge) => [edge.specifier, edge.line]), [
   ['./parts/known', 2], ['./parts/known', 3], [null, 4],
+]);
+const commonjs = parsed.files.find((file) => file.path === 'src/commonjs.ts');
+assert.deepEqual(commonjs.function_contracts.map((item) => [item.symbol, item.exported_as]), [
+  ['createUser', 'default'],
 ]);
 const value = parsed.files.find((file) => file.path === 'src/value.ts');
 assert.equal(value.exports[0].name, 'value');

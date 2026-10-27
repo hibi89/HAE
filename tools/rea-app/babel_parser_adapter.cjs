@@ -471,14 +471,14 @@ function parseSource(file) {
         const objectName = nodeName(left.object);
         const member = left.computed ? nodeName(left.property) : nodeName(left.property);
         if (objectName === 'exports' && member) {
-          exports.push({ name: member, source_name: member, kind: 'commonjs_export', line: lineOf(node) });
+          exports.push({ name: member, source_name: nodeName(node.right) || member, kind: 'commonjs_export', line: lineOf(node) });
         } else if (objectName === 'module' && member === 'exports') {
-          exports.push({ name: 'default', source_name: 'default', kind: 'commonjs_export', line: lineOf(node) });
+          exports.push({ name: 'default', source_name: nodeName(node.right) || 'default', kind: 'commonjs_export', line: lineOf(node) });
         } else if (
           left.object && left.object.type === 'MemberExpression' &&
           nodeName(left.object.object) === 'module' && nodeName(left.object.property) === 'exports' && member
         ) {
-          exports.push({ name: member, source_name: member, kind: 'commonjs_export', line: lineOf(node) });
+          exports.push({ name: member, source_name: nodeName(node.right) || member, kind: 'commonjs_export', line: lineOf(node) });
         }
       }
     }
