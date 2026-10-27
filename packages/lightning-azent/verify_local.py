@@ -146,7 +146,23 @@ def main() -> int:
         require(first == again and count == 2, "CSV import or resume mismatch")
         require(hashlib.sha256(source.read_bytes()).hexdigest() == digest,
                 "Synthetic input source changed")
-        return {"business_rows": count, "input_unchanged": True}
+        # Completed business rows must not silently disappear on manual resume.
+        with sqlite3.connect(data) as db:
+            db.execute("DELETE FROM csv_records WHERE rowid = (SELECT MIN(rowid) FROM csv_records)")
+        tampered = subprocess.run(
+            [python, "-B", "-m", "lightning_azent", "resume", plan, *arguments],
+            cwd=ROOT, env=env, text=True, encoding="utf-8", errors="replace",
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=opts.timeout,
+        )
+        (work / "csv_missing_receipt_denial.log").write_text(
+            tampered.stdout + "\n" + tampered.stderr, encoding="utf-8")
+        require(tampered.returncode != 0 and "PlanError" in tampered.stderr,
+                "Resume accepted missing completed CSV business receipt")
+        with sqlite3.connect(data) as db:
+            require(db.execute("SELECT COUNT(*) FROM csv_records").fetchone()[0] == count - 1,
+                    "Resume unexpectedly rewrote tampered business receipts")
+        return {"business_rows_before_tamper": count, "input_unchanged": True,
+                "missing_receipt_resume_denied": True}
 
     def interval():
         folder = work / "interval"; folder.mkdir()
