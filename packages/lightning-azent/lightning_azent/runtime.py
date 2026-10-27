@@ -117,7 +117,8 @@ class LAExecutor:
 
         return scheduled_runs()
 
-    def validate(self, plan: object, *, allow_legacy: bool = True) -> dict[str, object]:
+    @staticmethod
+    def validate(plan: object, *, allow_legacy: bool = True) -> dict[str, object]:
         """Validate an IR plan without creating runtime or business state."""
         prepared = prepare_plan(plan, allow_legacy=allow_legacy)
         return {
