@@ -1,3 +1,11 @@
+## P33 — Windows zipapp reads actual DBVORA API (2026-10-27 11:18 KST)
+- **AX FLOW baseline:** `feature/axflow-mvp` at docs parent `a06651e9feafc3fc746f25c7138bacf498c960c4`; package helper `tools/package_axflow.py` matched remote blob SHA `f2ccde2770b093d76780e82a913369f1b4a6e664`. All 12 files in `apps/ax-flow/axflow/` matched current remote blob SHAs.
+- **Artifact:** built a new Windows standard-library zipapp; SHA-256 `7b29c766c26a331cf0bef88c20120be950a00f72712653d8a20ac0cfcea1b6df`, 32,191 bytes.
+- **Integration:** ran the packaged AX FLOW `serve` process on 127.0.0.1 against the actual DBVORA `feature/p0-db-map@31b8257468d28743fb2d3767d1caa56938df756c` API, reconstructed temporarily from ten source/UI files whose local Git blob hashes matched the remote. A synthetic SQLite fixture returned both tables and the declared FK through packaged `/api/dbvora`; packaged page and `/app.js` served. Row markers and the source path were absent; DBVORA rejected POST with 405.
+- **Integrity/cleanup:** source SHA-256, size and mtime were unchanged; no WAL/SHM or AX FLOW runtime/business DB files were created. Packaged process, DBVORA server, zipapp, source copy and synthetic fixture were stopped/removed. `netstat` showed no active TCP connections.
+- **Failures:** the initial helper-path lookup assumed `apps/ax-flow/tools`; the remote tree showed it is repository-root `tools/package_axflow.py`. Corrected before build; no product/test failure.
+- **Progress:** **89% PARTIAL** (A100/B95/C95/D95/E60). P33 adds packaged actual-service evidence; it does not close customer/multi-asset, D2 restore, OAuth, independent security, signed installer, customer release or commercial gates. No product source code changed.
+
 ## P32 — full regression and actual DBVORA API integration (2026-10-27 KST)
 - **Source baseline:** AX FLOW `feature/axflow-mvp` code at `99058617d8b35806b02be41a84fcd7ec5bee1c66`; documentation parent `9a93923071776da634aa7f02c036ef8b5f18c523`. Local hashes for engine, web API, UI app and corresponding tests matched the remote branch.
 - **AX FLOW regression:** Windows Python 3.11.9, `python -m unittest discover -s tests -v` from `apps/ax-flow` — **61/61 PASS** in 26.721 s with synthetic loopback enabled. `node --check axflow/static/app.js`, `node --check tests/test_ui_provenance.cjs`, and `node tests/test_ui_provenance.cjs` PASS.

@@ -1,3 +1,11 @@
+## P33 complete — packaged AX FLOW connected to actual DBVORA
+Built a 32,191-byte Windows zipapp (SHA-256 `7b29c766c26a331cf0bef88c20120be950a00f72712653d8a20ac0cfcea1b6df`) from the current remote AX FLOW source. Its packaged local server read a synthetic database through the exact DBVORA `feature/p0-db-map@31b8257468d28743fb2d3767d1caa56938df756c` API. Table/FK metadata arrived; row markers and paths did not; POST was rejected; source hash/size/mtime stayed fixed. Packaged UI assets served. All test services, package, source copy and fixture were removed; no TCP connection remains.
+
+**Progress: 89% PARTIAL** (A100/B95/C95/D95/E60). No product source changed. The full Python suite remains P32's 61/61 PASS.
+
+## Next
+D2 archive/restore remains the clearest safe acceptance gap, but it was not run: WSL returned `E_ACCESSDENIED`, and the DBVORA HTTP service exposes read-only operations. Do not test on customer data or pretend the API offers restore. Continue other permission-free code/verification gaps; OAuth, independent review, signed/customer release and commercial proof retain their gates. No site needs to remain open.
+
 ## P32 complete — actual DBVORA source/API integration
 On AX FLOW `feature/axflow-mvp`, the current 61-test Python suite and Node provenance regression passed. A temporary synthetic SQLite fixture with a declared FK was served by the exact DBVORA `feature/p0-db-map@31b8257468d28743fb2d3767d1caa56938df756c` API, then read through AX FLOW's `/api/dbvora`. FK metadata arrived; row markers and source paths did not; DBVORA rejected POST; the source file hash/size/mtime were unchanged and no WAL/SHM appeared. Local browser/API test resources were removed. **Progress remains 88% PARTIAL.**
 

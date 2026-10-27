@@ -1,3 +1,15 @@
+## Latest checkpoint — P33 packaged AX FLOW + actual DBVORA API
+1. **Goal:** continue AX FLOW toward the complete Blueprint using current code and test evidence.
+2. **Completed:** built a Windows zipapp from the exact current remote AX FLOW application files and connected its real `serve` process to the exact read-only DBVORA API on `feature/p0-db-map`, using only a temporary synthetic database.
+3. **Tests:** package build PASS; packaged `/` and `/app.js` returned 200; packaged `/api/dbvora` returned tables and declared FK; DBVORA POST returned 405; no row marker or local DB path leaked. Source hash/size/mtime unchanged; no WAL/SHM or runtime/business DB created. P32's full Python suite remains 61/61 PASS, Node syntax/UI regression PASS.
+4. **Current state:** AX FLOW `feature/axflow-mvp`, **89% PARTIAL** (A100/B95/C95/D95/E60). D1 actual-source integration is verified in source and packaged app; customer/multi-asset and all release gates remain incomplete.
+5. **Failures/recovery:** no product/test failure. The first packager-path lookup used the wrong directory; remote tree inspection identified repository-root `tools/package_axflow.py`, then exact-file SHA checks, build and integration passed. Earlier P32 loopback denial and harness cleanup causes are recorded there.
+6. **Repository/SHA:** `hibi89/AX_FLOW`, branch `feature/axflow-mvp`; source files unchanged from product code `99058617d8b35806b02be41a84fcd7ec5bee1c66`; docs parent `a06651e9feafc3fc746f25c7138bacf498c960c4`. DBVORA source `hibi89/DBVORA feature/p0-db-map@31b8257468d28743fb2d3767d1caa56938df756c`. P33 is an evidence-only commit.
+7. **Execution/environment:** Windows Python 3.11.9; zipapp SHA-256 `7b29c766c26a331cf0bef88c20120be950a00f72712653d8a20ac0cfcea1b6df`, size 32,191 bytes. Both servers stopped; temp artifact/source/fixture removed; `netstat` has no active TCP connection. No site needs to stay open.
+8. **Originals/credentials:** synthetic SQLite only; no customer data, OAuth, DBVORA writes, external DB, deployment or paid services. Source database hash and timestamps remained unchanged.
+9. **Next/approval:** D2 archive/restore remains unverified because DBVORA's service API is read-only and WSL returned `E_ACCESSDENIED`; only a supported synthetic-only environment should be used. OAuth, independent security review, signed/customer release and commercial evidence keep their explicit gates. No standalone engine expansion pending chief review.
+10. **Time/scope:** 2026-10-27 2026-10-27 11:18 KST. This is a bounded Windows package/service integration result, not a customer deployment or release acceptance.
+
 ## Latest checkpoint — P32 actual DBVORA source/API integration
 1. **Goal:** continue evidence-based AX FLOW implementation toward the full Blueprint without overstating customer readiness.
 2. **Completed:** revalidated the current AX FLOW source and tests, then connected its DBVORA adapter to the actual read-only DBVORA FastAPI source on `feature/p0-db-map`, using a synthetic SQLite fixture. No product source changed.
