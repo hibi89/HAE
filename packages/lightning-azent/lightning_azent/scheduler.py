@@ -1,16 +1,58 @@
 """Durable, local interval trigger for bounded synthetic workflows."""
 from __future__ import annotations
 
+import errno
 import hashlib
+import os
 import sqlite3
 import time
-from contextlib import closing
+from contextlib import closing, contextmanager
 from pathlib import Path
 from typing import Iterator
 
 from .engine import Engine, IDENTIFIER, PlanError, canonical_json, validate
 
 MAX_SCHEDULE_RUNS = 1000
+
+
+@contextmanager
+def _schedule_lock(engine: Engine, schedule_id: str):
+    """Single active local scheduler per ID, released by the OS after process death.
+
+    The persistent lock file is never deleted: deleting it would let a second
+    process acquire a distinct inode and bypass the original process's lock.
+    """
+    lock_name = f"{engine.state_path.name}.la-{hashlib.sha256(schedule_id.encode('utf-8')).hexdigest()[:16]}.lock"
+    lock_path = engine.state_path.with_name(lock_name)
+    if lock_path.is_symlink():
+        raise PlanError("schedule lock path must not be a symbolic link")
+    flags = os.O_CREAT | os.O_RDWR
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    fd = os.open(lock_path, flags, 0o600)
+    with os.fdopen(fd, "r+b", buffering=0) as handle:
+        if handle.seek(0, os.SEEK_END) == 0:
+            handle.write(b"\0")
+        handle.seek(0)
+        try:
+            if os.name == "nt":
+                import msvcrt
+                msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError as exc:
+            if exc.errno in {errno.EACCES, errno.EAGAIN}:
+                raise PlanError("schedule is already active") from exc
+            raise
+        try:
+            yield
+        finally:
+            handle.seek(0)
+            if os.name == "nt":
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
 def _open_state(path: Path) -> sqlite3.Connection:
@@ -80,19 +122,22 @@ def interval_ticks(
     plan = validate(plan)
     if isinstance(max_runs, bool) or not isinstance(max_runs, int) or not 1 <= max_runs <= MAX_SCHEDULE_RUNS:
         raise PlanError(f"max_runs must be from 1 to {MAX_SCHEDULE_RUNS}")
-    tick, anchor = _ensure_schedule(engine, plan, schedule_id, clock())
-    interval = plan["trigger"]["every_seconds"]
-    emitted = 0
-    while emitted < max_runs:
-        due = anchor + tick * interval
-        remaining = due - clock()
-        if remaining > 0:
-            sleeper(min(remaining, 0.25))
-            continue
-        run_id = _run_id(schedule_id, tick)
-        result = engine.execute(plan, run_id, approve_writes=approve_writes, interval_tick=True)
-        advanced = _advance_tick(engine, schedule_id, tick)
-        yield {"tick": tick, "run_id": run_id, "result": result, "advanced": advanced}
-        emitted += 1
+    if not isinstance(schedule_id, str) or not IDENTIFIER.fullmatch(schedule_id):
+        raise PlanError("schedule_id must be a safe identifier")
+    with _schedule_lock(engine, schedule_id):
         tick, anchor = _ensure_schedule(engine, plan, schedule_id, clock())
+        interval = plan["trigger"]["every_seconds"]
+        emitted = 0
+        while emitted < max_runs:
+            due = anchor + tick * interval
+            remaining = due - clock()
+            if remaining > 0:
+                sleeper(min(remaining, 0.25))
+                continue
+            run_id = _run_id(schedule_id, tick)
+            result = engine.execute(plan, run_id, approve_writes=approve_writes, interval_tick=True)
+            advanced = _advance_tick(engine, schedule_id, tick)
+            yield {"tick": tick, "run_id": run_id, "result": result, "advanced": advanced}
+            emitted += 1
+            tick, anchor = _ensure_schedule(engine, plan, schedule_id, clock())
 
