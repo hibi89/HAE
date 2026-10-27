@@ -1,3 +1,10 @@
+## Lightning Azent P7 — cross-process scheduler lock test (2026-10-28 KST)
+
+- **IMPLEMENTED:** Added `test_separate_process_crash_releases_schedule_lock` to `packages/lightning-azent/tests/test_scheduler_lock.py`. It launches a separate Python interpreter, asserts same-ID lock contention fails closed, validates an independent schedule ID, simulates unclean exit with `os._exit(0)`, and reacquires original lock afterwards. No application code was altered.
+- **SOURCE-PINNED EXECUTED EVIDENCE:** On Linux/Python 3.13, reconstructed exact GitHub blobs `scheduler.py@358624dad5d12311333d40154fe4351c236f63f0` and `test_scheduler_lock.py@898ccfb0abe99aa40be09186ff6e0be49986e0de`, checked via `git hash-object`, then executed `PYTHONPATH=/mnt/data/la_scheduler_check python -m unittest discover -s /mnt/data/la_scheduler_check/tests -p test_scheduler_lock.py -v`: **2 PASS, 0 FAIL** in 0.867s. Isolated package stub `engine.py` is not the real source; tested scheduler/SQLite and OS lock with mock Engine, not end-to-end LA behavior.
+- **GATE STATUS:** 30 test definitions total (7 MVP + 6 CLI + 9 native + 6 resume + 2 lock). Entire authorized checkout suite **NOT RUN (0/30)**; native Windows multi-process test, original HAE regressions and wheel installation remain **UNVERIFIED**. No GitHub Actions, paid tools, customer data or external connectors used.
+- **NEXT:** Run full 30 tests on authenticated source checkout; verify Windows `msvcrt.locking`; execute actual 3 synthetic flows and original HAE parity; build wheel; only then HAE adapter. Preserve branch-only changes and source data.
+
 ## Lightning Azent P6 — same-schedule concurrency guard (2026-10-28 KST)
 
 - **CONFIRMED DEFECT:** Source-pinned `scheduler.py` blob `f50eeba9dd2c9ef1d473d8121329345a7cb1b3b5` was run with an isolated fake Engine and real SQLite scheduling ledger on Python 3.13/Linux. Two concurrent workers entered the **same** tick and same run ID, both returned result records (`advanced: true` and `advanced: false`). This proves a schedule-level overlap in the actual scheduler file, not that the whole LA engine has passed tests.
