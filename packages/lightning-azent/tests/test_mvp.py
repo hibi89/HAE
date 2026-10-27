@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import sqlite3
+from sqlite_test_utils import sqlite_connection
 import subprocess
 import sys
 import tempfile
@@ -42,12 +43,12 @@ class IndependentEngineMvpTests(unittest.TestCase):
         self.assertIs(validate(plan), plan)
         with self.assertRaises(ApprovalRequired):
             self.engine.execute(plan, "Blocked")
-        with sqlite3.connect(self.root / "business.sqlite") as conn:
+        with sqlite_connection(self.root / "business.sqlite") as conn:
             self.assertEqual(conn.execute("SELECT COUNT(*) FROM csv_records").fetchone()[0], 0)
         first = self.engine.execute(plan, "Approved", approve_writes=True)
         again = self.engine.execute(plan, "Approved", approve_writes=True)
         self.assertEqual(first, again)
-        with sqlite3.connect(self.root / "business.sqlite") as conn:
+        with sqlite_connection(self.root / "business.sqlite") as conn:
             self.assertEqual(conn.execute("SELECT COUNT(*) FROM csv_records").fetchone()[0], 2)
         self.assertEqual(before, hashlib.sha256(source.read_bytes()).hexdigest())
         status = inspect_run(self.root / "runtime.sqlite", "Approved")
@@ -57,7 +58,7 @@ class IndependentEngineMvpTests(unittest.TestCase):
     def test_guarded_branch_readonly(self):
         result = self.engine.execute(fixture("conditional-route.json"), "BranchTrue")
         self.assertEqual(result, {"route": "accepted"})
-        with sqlite3.connect(self.root / "business.sqlite") as conn:
+        with sqlite_connection(self.root / "business.sqlite") as conn:
             self.assertEqual(conn.execute("SELECT COUNT(*) FROM records").fetchone()[0], 0)
 
     def test_interval_two_ticks_are_durable(self):
@@ -71,7 +72,7 @@ class IndependentEngineMvpTests(unittest.TestCase):
                                     sleeper=lambda _: None))
         self.assertEqual([item["tick"] for item in ticks], [0, 1])
         self.assertNotEqual(ticks[0]["run_id"], ticks[1]["run_id"])
-        with sqlite3.connect(self.root / "business.sqlite") as conn:
+        with sqlite_connection(self.root / "business.sqlite") as conn:
             self.assertEqual(conn.execute("SELECT COUNT(*) FROM records").fetchone()[0], 2)
 
     def test_bad_schema_and_unsupported_network_fail_closed(self):

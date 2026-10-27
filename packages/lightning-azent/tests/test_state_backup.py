@@ -6,6 +6,7 @@ import hashlib
 import os
 from pathlib import Path
 import sqlite3
+from sqlite_test_utils import sqlite_connection
 import tempfile
 import unittest
 
@@ -22,7 +23,7 @@ class StateBackupAcceptanceTests(unittest.TestCase):
         self.addCleanup(t.cleanup)
         self.root = Path(t.name)
         self.state = self.root / 'state.sqlite'
-        with sqlite3.connect(self.state) as conn:
+        with sqlite_connection(self.state) as conn:
             conn.execute('CREATE TABLE runs(run_id TEXT PRIMARY KEY, plan_hash TEXT, status TEXT)')
             conn.execute('CREATE TABLE steps(run_id TEXT, step_id TEXT, output_json TEXT)')
             conn.execute("INSERT INTO runs VALUES('Synthetic1', 'digest', 'completed')")
@@ -38,7 +39,7 @@ class StateBackupAcceptanceTests(unittest.TestCase):
         self.assertEqual(_sha(self.state), old)
         result2 = restore_runtime_state(backup, restored)
         self.assertEqual(result2['sqlite_integrity'], 'ok')
-        with sqlite3.connect(restored) as c:
+        with sqlite_connection(restored) as c:
             self.assertEqual(c.execute('SELECT run_id, status FROM runs').fetchall(), [('Synthetic1','completed')])
             self.assertEqual(c.execute('SELECT COUNT(*) FROM steps').fetchone()[0], 1)
 
@@ -57,7 +58,7 @@ class StateBackupAcceptanceTests(unittest.TestCase):
 
     def test_nonledger_sqlite_rejected_and_no_orphan_temp_file(self):
         other=self.root/'nonledger.sqlite'
-        with sqlite3.connect(other) as c:
+        with sqlite_connection(other) as c:
             c.execute('CREATE TABLE arbitrary(x INTEGER)')
         with self.assertRaises(StateBackupError):
             backup_runtime_state(other,self.root/'should-not-exist.sqlite')
@@ -81,7 +82,7 @@ class StateBackupAcceptanceTests(unittest.TestCase):
             backed=self.root/'wal-backup.sqlite'
             result=backup_runtime_state(self.state,backed)
             self.assertEqual(result['sqlite_integrity'],'ok')
-            with sqlite3.connect(backed) as copy:
+            with sqlite_connection(backed) as copy:
                 self.assertEqual(copy.execute('SELECT COUNT(*) FROM runs').fetchone()[0],2)
         finally:
             connection.close()
@@ -97,7 +98,7 @@ class StateBackupAcceptanceTests(unittest.TestCase):
         with ThreadPoolExecutor(max_workers=2) as pool:
             f1=pool.submit(go);f2=pool.submit(go)
             self.assertEqual(sorted([f1.result(timeout=10),f2.result(timeout=10)]),['rejected','success'])
-        with sqlite3.connect(target) as c:
+        with sqlite_connection(target) as c:
             self.assertEqual(c.execute('PRAGMA integrity_check').fetchone()[0],'ok')
         self.assertEqual(list(self.root.glob('.axflow-state-*.part')),[])
 

@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import sqlite3
+from sqlite_test_utils import sqlite_connection
 import subprocess
 import sys
 import tempfile
@@ -64,7 +65,7 @@ class ResumeAcceptanceTests(unittest.TestCase):
         self.assertEqual(resumed.returncode, 0, resumed.stderr)
         self.assertEqual(json.loads(first.stdout), {"route": "accepted"})
         self.assertEqual(json.loads(resumed.stdout), json.loads(first.stdout))
-        with sqlite3.connect(self.state) as conn:
+        with sqlite_connection(self.state) as conn:
             self.assertEqual(conn.execute("SELECT COUNT(*) FROM runs").fetchone()[0], 1)
         self.assertEqual(self.executor.status("Repeated")["status"], "completed")
 
@@ -92,7 +93,7 @@ class ResumeAcceptanceTests(unittest.TestCase):
         self.assertEqual(self.executor.status("CrashAfterBusiness")["status"], "failed")
         result = self.executor.resume(native, "CrashAfterBusiness", approve_writes=True)
         self.assertEqual(result, {"source": "synthetic"})
-        with sqlite3.connect(self.business) as conn:
+        with sqlite_connection(self.business) as conn:
             self.assertEqual(conn.execute("SELECT COUNT(*) FROM records").fetchone()[0], 1)
         self.assertEqual(self.executor.status("CrashAfterBusiness")["status"], "completed")
 
@@ -124,11 +125,11 @@ class ResumeAcceptanceTests(unittest.TestCase):
         plan = self.fixture("conditional-route.json")
         self.assertEqual(self.executor.execute(plan, "ReplacedDB"), {"route": "accepted"})
         self.business.unlink()
-        with sqlite3.connect(self.business):
+        with sqlite_connection(self.business):
             pass  # Replacement exists but is not the original initialized schema.
         with self.assertRaisesRegex(PlanError, "schema is missing"):
             self.executor.resume(plan, "ReplacedDB")
-        with sqlite3.connect(self.business) as conn:
+        with sqlite_connection(self.business) as conn:
             self.assertEqual(
                 conn.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table'").fetchone()[0], 0
             )
@@ -137,11 +138,11 @@ class ResumeAcceptanceTests(unittest.TestCase):
     def test_resume_rejects_dropped_business_receipt_table(self):
         plan = self.fixture("conditional-route.json")
         self.assertEqual(self.executor.execute(plan, "DroppedReceipt"), {"route": "accepted"})
-        with sqlite3.connect(self.business) as conn:
+        with sqlite_connection(self.business) as conn:
             conn.execute("DROP TABLE records")
         with self.assertRaisesRegex(PlanError, "schema is missing"):
             self.executor.resume(plan, "DroppedReceipt")
-        with sqlite3.connect(self.business) as conn:
+        with sqlite_connection(self.business) as conn:
             self.assertEqual(
                 conn.execute("SELECT COUNT(*) FROM sqlite_master WHERE name='records'").fetchone()[0], 0
             )
@@ -155,11 +156,11 @@ class ResumeAcceptanceTests(unittest.TestCase):
             self.executor.execute(plan, "LostWrite", approve_writes=True),
             {"source": "synthetic"},
         )
-        with sqlite3.connect(self.business) as conn:
+        with sqlite_connection(self.business) as conn:
             conn.execute("DELETE FROM records WHERE run_id=?", ("LostWrite",))
         with self.assertRaisesRegex(PlanError, "write receipt is missing"):
             self.executor.resume(plan, "LostWrite", approve_writes=True)
-        with sqlite3.connect(self.business) as conn:
+        with sqlite_connection(self.business) as conn:
             self.assertEqual(conn.execute(
                 "SELECT COUNT(*) FROM records WHERE run_id=?", ("LostWrite",)
             ).fetchone()[0], 0)
@@ -173,14 +174,14 @@ class ResumeAcceptanceTests(unittest.TestCase):
         self.assertEqual(
             self.executor.execute(plan, "LostCsvRow", approve_writes=True)["imported_rows"], 2
         )
-        with sqlite3.connect(self.business) as conn:
+        with sqlite_connection(self.business) as conn:
             conn.execute(
                 "DELETE FROM csv_records WHERE run_id=? AND row_number=?",
                 ("LostCsvRow", 2),
             )
         with self.assertRaisesRegex(PlanError, "import row receipts are missing"):
             self.executor.resume(plan, "LostCsvRow", approve_writes=True)
-        with sqlite3.connect(self.business) as conn:
+        with sqlite_connection(self.business) as conn:
             self.assertEqual(conn.execute(
                 "SELECT COUNT(*) FROM csv_records WHERE run_id=?", ("LostCsvRow",)
             ).fetchone()[0], 1)

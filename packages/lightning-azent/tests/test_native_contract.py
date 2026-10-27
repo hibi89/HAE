@@ -5,6 +5,7 @@ from copy import deepcopy
 import json
 import os
 import sqlite3
+from sqlite_test_utils import sqlite_connection
 import subprocess
 import sys
 import tempfile
@@ -45,7 +46,7 @@ class NativeInterfaceTests(unittest.TestCase):
         self.assertEqual(native, before)
         self.assertEqual(self.executor.execute(native, "Native"), {"route": "accepted"})
         self.assertEqual(self.executor.execute(original, "Legacy"), {"route": "accepted"})
-        with sqlite3.connect(self.business) as conn:
+        with sqlite_connection(self.business) as conn:
             self.assertEqual(conn.execute("SELECT COUNT(*) FROM records").fetchone()[0], 0)
         self.assertEqual(native, before)
 
@@ -78,7 +79,7 @@ class NativeInterfaceTests(unittest.TestCase):
         one = self.executor.execute(plan, "CsvNative", approve_writes=True)
         two = self.executor.execute(plan, "CsvNative", approve_writes=True)
         self.assertEqual(one, two)
-        with sqlite3.connect(self.business) as conn:
+        with sqlite_connection(self.business) as conn:
             self.assertEqual(conn.execute("SELECT COUNT(*) FROM csv_records").fetchone()[0], 2)
         status = self.executor.status("CsvNative")
         self.assertEqual(status["status"], "completed")
@@ -96,7 +97,7 @@ class NativeInterfaceTests(unittest.TestCase):
             clock=clock, sleeper=lambda _: None))
         self.assertEqual([tick["tick"] for tick in seen], [0, 1])
         self.assertNotEqual(seen[0]["run_id"], seen[1]["run_id"])
-        with sqlite3.connect(self.business) as conn:
+        with sqlite_connection(self.business) as conn:
             self.assertEqual(conn.execute("SELECT COUNT(*) FROM records").fetchone()[0], 2)
         # A fresh LAExecutor resumes the persisted schedule at the next tick.
         reopened = LAExecutor(self.state, self.business, self.root)
@@ -105,7 +106,7 @@ class NativeInterfaceTests(unittest.TestCase):
             clock=clock, sleeper=lambda _: None))
         self.assertEqual(third[0]["tick"], 2)
         self.assertEqual(self.executor.status(third[0]["run_id"])["status"], "completed")
-        with sqlite3.connect(self.business) as conn:
+        with sqlite_connection(self.business) as conn:
             self.assertEqual(conn.execute("SELECT COUNT(*) FROM records").fetchone()[0], 3)
 
     def test_cli_native_workflow_executes_with_local_synthetic_opt_in(self):
