@@ -1,3 +1,16 @@
+## Latest checkpoint — REA_APP P35 scanned-file mutation exclusion (2026-10-27 KST)
+
+1. **Goal/stack:** Gate R verification of authorized read-only REA_APP Python scanner and JS/TS Babel graph before standalone Lightning Azent then HAE.
+2. **Delivered/design:** `rea_app/scanner.py` now fstats the source descriptor after reading; `_snapshot_stable` requires exact read length, stable inode/device, size, ctime_ns, mtime_ns. Changed files skipped with `file_changed_during_read`. Considered ignoring changes (unreliable), retrying (unbounded), selected fail-closed skip (bounded/no dependencies).
+3. **Actual tests:** Linux Python 3.13.5 isolated helper **5/5 PASS** (stable, same-size edit, truncation, growth, partial read). Exact new helper and regression test bytes correspond to remote test Git blob `a309e31b5b6c015d993fe39da90fcf93088261f0`. Updated local evidence-runner QA on real disposable Git repositories **11/11 PASS**. Full scanner integration and genuine installed Babel suite **NOT RUN**.
+4. **State:** Focused scanner protection completed. Remote Git tree `16/16` manifest blobs match. Gate R **PARTIAL**; not a released product. No Lightning Azent or HAE source progress in P35.
+5. **Risk/recovery:** Metadata-based change detection cannot defeat adversarial simultaneous writes with restored metadata; scanner integration, real Windows junction, Node 7.29.9 remain unverified. Git history for rollback, no force-push. Existing isolated runtime lacks authenticated full checkout and pinned Babel; do not falsely pass Gate R.
+6. **Repo and paths:** `hibi89/AX_FLOW` private `REA_APP`; main code commit `71e75e5698e5b81755c85e889e658efadc0d0501`. Scanner blob `09bf5df2ade638be69ea1dc26d6383af8c23a20d`; test `tests/test_scan_snapshot_integrity.py` blob `a309e31b5b6c015d993fe39da90fcf93088261f0`; verifier blob `65f9534fd0669e545aa3acf0b78781ccb324f2d8`, runner `506bb97d4fded55f7ddcfce540510a6de729de69`, runner QA `d001e3c5023c9e1b7a49d32bd0cdebb9b6e3c6b5`.
+7. **Runtime/production:** Linux Python 3.13.5 synthetic fixtures, real Babel 7.29.9 absent, Vercel production N/A (local CLI). No customer files, n8n source, OAuth, or paid resources.
+8. **Originals/security:** User-owned Git repository source; original commits intact. No generated customer report uploads or unapproved automated execution in private CI.
+9. **Next / acceptance:** On authorized **clean full** REA_APP checkout with installed Babel 7.29.9 run `cd tools/rea-app && python run_gate_r_evidence.py`. Capture 16/16 Git sources, full Python + Node PASS/FAIL/SKIP/exit, SHA and platform/Windows outcomes, then sign Gate R or fix failures.
+10. **Checkpoint:** 2026-10-27 KST; evidence is targeted Python tests and remote static Git SHA audit, not current full regression PASS.
+
 ## Latest checkpoint — REA_APP P34 trusted Gate R provenance (2026-10-27 KST)
 
 1. **Purpose / stack:** Complete REA_APP authorized, read-only JS/TS analyzer Gate R before independent Lightning Azent → HAE. Offline Python 3.11+, Node pinned Babel 7.29.9; zero new infrastructure costs.
