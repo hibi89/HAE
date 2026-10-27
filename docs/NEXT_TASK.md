@@ -1,3 +1,11 @@
+## Lightning Azent P3 verification first — 2026-10-28 KST
+
+- **SOURCE:** `feature/lightning-azent`; newest P3 code is `f9ba24b9ad6cb13a958696f97af769f53f112ddb` before this next-task update. CLI now supports `resume` through the read-only-ledger-pinned `LAExecutor.resume`. The normalized plan hash is checked before Engine DB setup, then checked again in the engine transaction.
+- **GATE 1:** Authorized Python 3.11+ checkout and actual `python -m compileall -q packages/lightning-azent`, then `PYTHONPATH=packages/lightning-azent python -m unittest discover -s packages/lightning-azent/tests -v`. Now **26 tests written in four files, 0 run** on current head. Include manual CLI `resume` for an existing synthetic run. Check no SQLite file creation on unknown run, mismatched plan, denied write.
+- **GATE 2:** Confirm original HAE suite remains functional and repeat 3 synthetic workflows; validate SQLite counts and file hashes, crash/recovery receipts, native/legacy version compatibility. Then build wheel in clean venv and run installed CLI smoke.
+- **GATE 3:** Only after tests pass, introduce minimum HAE consumer adapter with version handshake and fallback to original engine; no original source deletion or premature UI work.
+- **BLOCKERS:** GitHub connector cannot execute private repository code in this environment; no paid CI or external deploy authorized. Static GitHub reread/commit checks do not count as Python PASS. Record exact SHA, Python/OS, passing/failing/skipped counts and authentic receipts on the next executable checkout.
+
 ## Lightning Azent P2 execution gate — 2026-10-28 KST
 
 - `feature/lightning-azent` now includes versioned `azent.ir.v0` adapter, typed LAExecutor API, lazy SQLite initialization after approved/validated request, local-only CLI, stand-alone wheel metadata, native conditional fixture and **21 unexecuted** Python unittest definitions across 3 files. No feature work on frozen REA_APP P54.
