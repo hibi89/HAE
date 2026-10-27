@@ -90,7 +90,7 @@ class LAExecutor:
 
     def schedule(self, plan: object, schedule_id: str, *, max_runs: int = 1,
                  approve_writes: bool = False, clock=None, sleeper=None) -> Iterator[dict[str, object]]:
-        """Return an interval iterator after validating input and initializing local state."""
+        """Validate immediately; initialize SQLite only when the iterator is consumed."""
         prepared = prepare_plan(plan)
         normalized = prepared.runtime_plan
         if not isinstance(schedule_id, str) or not IDENTIFIER.fullmatch(schedule_id):
@@ -108,6 +108,7 @@ class LAExecutor:
             options["clock"] = clock
         if sleeper is not None:
             options["sleeper"] = sleeper
+        # Iterator creation is side-effect-free; actual iteration opens the ledgers.
         def scheduled_runs() -> Iterator[dict[str, object]]:
             yield from interval_ticks(
                 normalized, self._new_engine(), schedule_id,
