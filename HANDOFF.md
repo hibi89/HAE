@@ -1,3 +1,7 @@
+## Latest checkpoint — REA_APP P28 (2026-10-27 KST)
+
+GitHub SHA-verified source reconstruction on Linux/Python 3.13.5 passed **11/11 actual tests**: P23 open-race protection, P24 sensitive-file exclusion, and P27 verifier self-tests. Source baseline `9359f7a8631667934bb33415adc240f928f9cb3e`, detailed evidence `tools/rea-app/P28_FOCUSED_REGRESSION.md`. Each of the five executed source/test files was byte-identical to its GitHub blob. The full REA_APP graph/CLI/impact tests, genuine Node/Babel parser suite, and Windows junction verification remain **unrun**, so Gate R is PARTIAL, not ready for sign-off. Container GitHub DNS and missing Babel 7.29.9 remain blockers. Next atomic action: reconstruct or access all 14 reviewed source files, run `python verify_gate_r.py`, capture source/Python/Node results and skips. No third-party source, customer data, paid CI, or HAE/Lightning Azent code was touched.
+
 ## Latest checkpoint — REA_APP P27 pin installed Babel version (2026-10-27 KST)
 
 1. **Goal:** REA_APP Gate R honest, reproducible exact-source verification before Lightning Azent independent engine and HAE customer platform. Correct a dependency-version hole in P25/P26 offline verifier.
