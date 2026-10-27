@@ -3,7 +3,7 @@
 ## P15 — synthetic localhost UI prepared for review (2026-10-27 KST)
 - The earlier detached hidden process did not remain available after its shell exited. It was replaced with a managed long-running session `32804`; app output reports ready at `http://127.0.0.1:8765/`.
 - Verified live listener `127.0.0.1:8765` and HTTP GET **200** (`text/html; charset=utf-8`). Listener PID observed: `22416`.
-- Data is synthetic and temporary only: `C:\Users\haein\AppData\Local\Temp\axflow-review-cada4201409a49208b052e25b014152c`; input contains two fixture contacts. No run/write was initiated.
+- Data is synthetic and temporary only: `C:\Users\haein\AppData\Local\Temp\axflow-review-cada4201409a49208b052e25b014152c`; input contains two fixture contacts. Live `POST /api/preview` returned 200 for `csv_to_sqlite`, 2 steps, `requires_approval=true`; runtime/business DB files remained absent. No run/write was initiated.
 - The Codex browser open request returned `queued`; no visual rendering or click is claimed. Previous shell setup attempt failed on a PowerShell parenthesis parse error before execution; corrected invocation succeeded.
 - No product source changed; this operational smoke adds no acceptance percentage. Product remains **77% / PARTIAL**.
 
