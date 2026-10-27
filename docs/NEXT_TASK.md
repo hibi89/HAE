@@ -1,3 +1,10 @@
+## REA_APP P29 — confirmed current GitHub tree, full Gate R still pending (2026-10-27 KST)
+
+- Audited `REA_APP@d53b2bbe9e2f4202a4353834034deecc5a1c8c55` against all 14 expected hashes in `tools/rea-app/verify_gate_r.py`: **14/14 exact Git blob IDs match**; no additional executable modules in analyzer/tests. This is connector-side static Git tree evidence; not an executed Python or Node regression.
+- Current portable Linux runtime lacks an authenticated private checkout, local `@babel/parser@7.29.9`, and github.com DNS. GitHub Actions runs/status checks not present; no new workflow authorized or launched. Stop and pivot from repeating failed clone attempts.
+- **Next atomic gate:** obtain exact authorized checkout on an execution host with reviewed Babel parser already installed. Run `cd tools/rea-app && python verify_gate_r.py`; capture all stdout/stderr, exit code, test PASS/FAIL/SKIP, Node/Babel versions, Windows-specific SKIPs, before Gate R sign-off. Do not promote P28 focused 11/11 into full-suite PASS.
+- Product order remains **REA_APP → permission-cleared independent behavior contracts → Lightning Azent → HAE**. No source/UI code changes or n8n code use in P29.
+
 ## P28 next action
 
 Actual Python scanner and verifier tests passed 11/11 on five exact GitHub blob-matched files. Full REA_APP test suite and genuine Babel parser tests remain pending. See `tools/rea-app/P28_FOCUSED_REGRESSION.md`. Next: obtain all 14 source files and installed Babel parser, then run `python verify_gate_r.py` before beginning Lightning Azent implementation.

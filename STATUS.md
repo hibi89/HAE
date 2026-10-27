@@ -1,3 +1,12 @@
+## P29 — current remote-tree manifest audit (2026-10-27 KST)
+
+- Direct GitHub connector read: `hibi89/AX_FLOW` private, `REA_APP@d53b2bbe9e2f4202a4353834034deecc5a1c8c55`. Compared the actual recursive Git tree against all **14** expected source blob IDs embedded in `tools/rea-app/verify_gate_r.py`: **14/14 matched, 0 mismatches**. No unreviewed executable extensions under `tools/rea-app/rea_app/` or `tools/rea-app/tests/` found in that tree.
+- Verified source continuity: compared reviewed baseline `3a1a023533a7c070c35be5abbf06bc185a87471b` to the audited branch HEAD; later commits changed docs plus `verify_gate_r.py` only, not the pinned analyzer/test/package files. GitHub recent commit metadata identifies `hibi89` as author and committer. No GitHub Actions runs were present for REA_APP and the audited HEAD had no combined status entries.
+- **This is Git object metadata integrity checking only, NOT a run of `verify_gate_r.py` or the full Python/Babel suite.** Historical P28 11/11 focused actual Python PASS is preserved; exact-HEAD full graph/CLI/impact Python and genuine pinned Babel parser remain UNVERIFIED. Gate R stays **PARTIAL**.
+- Local runner verified Python 3.13.5 and Node 22.16.0 but had DNS timeout resolving github.com, lacked authenticated private checkout, and could not resolve installed `@babel/parser`. Avoid rerunning that unchanged failed acquisition path; do not start private paid/limited CI without approval.
+- Next: obtain an authorized byte-identical full REA_APP checkout in an executable host with already approved/installed Babel 7.29.9; run `cd tools/rea-app && python verify_gate_r.py`. Require 14/14 SOURCE, Python PASS/SKIP tally, DEPENDENCY VERIFIED, NODE_PARSER PASS and exit 0 before chief Gate R sign-off. Windows junction remains separately unverified.
+- No application code, third-party source, database, customer input, secrets, Vercel settings or any other branch modified in P29.
+
 ## P28 focused regression, 2026-10-27
 
 Python 3.13.5 on Linux executed 11 tests against five GitHub-byte-matched source and test files: 11 passed, 0 failed, 0 skipped. Covers scanner race safety, sensitive-file exclusions, and verifier self-tests. See `tools/rea-app/P28_FOCUSED_REGRESSION.md` for exact blob SHAs and commands. Full REA_APP graph/CLI and genuine Babel parser tests remain unrun; Gate R stays PARTIAL.
