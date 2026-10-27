@@ -1,5 +1,12 @@
 # HANDOFF — AX FLOW + REA_APP (bootstrap, 2026-10-27 KST)
 
+## Latest checkpoint — P16 REA_APP reproducible dependency install
+1. Added `tools/rea-app/package-lock.json` for the pinned `@babel/parser@7.29.9`; README now uses `npm ci`.
+2. **Verification:** `npm ci --ignore-scripts --no-audit --no-fund` PASS; Python **11/11 PASS**; `npm run test:parser` PASS; `npm ls --all` confirms the pinned package tree.
+3. **Failure and resolution:** offline `npm ci` failed `ENOTCACHED` for `@babel/types@7.29.11` because its tarball was not cached. Online public package fetch with lifecycle scripts and audit disabled succeeded; no external credential was needed.
+4. **State:** REA_APP remains verified for bounded synthetic JS/TS only; full AX FLOW remains **77% / PARTIAL**. A real junction fixture is still unverified after Windows returned Access denied.
+5. **Next:** select one permission-free Blueprint gap and verify it. Do not implement the independent AX FLOW engine before chief review. Keep customer data, OAuth, DBVORA writes/restore, security sign-off and release gates on hold.
+
 ## Latest REA_APP verification — 2026-10-27
 1. **Branch/change:** `REA_APP`; test-only fix in `tools/rea-app/tests/test_cli.py`, commit `b815e72f3f0c9e0e1aad117b7db7b6cad9f84bc1`.
 2. **Tests:** Python 10/10 PASS; Node parser adapter PASS with the pinned `@babel/parser@7.29.9`. Core analyzer/parser files match the remote REA_APP blobs. The project sources were not changed.
