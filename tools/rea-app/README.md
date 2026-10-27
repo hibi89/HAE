@@ -1,6 +1,10 @@
+### Gate R verifier self-tests (2026-10-27 KST)
+
+The byte-exact `tests/test_verify_gate_r.py` file was executed against a byte-exact local reconstruction of `verify_gate_r.py` (both files matched their GitHub blob IDs). Result on Python 3.13.5 / Linux: **5 tests, 5 PASS**, covering known Git blob fingerprint, accepted reviewed fixture, tampered source rejection, unreviewed test rejection and symlink rejection. Windows symlink permissions require separate handling. The verification manifest now includes **14** reviewed modules/tests. This **does not** constitute a full REA_APP Python/Node suite run on an authenticated repository checkout; those remain pending.
+
 ## Reproducible Gate R P24 verifier
 
-The `verify_gate_r.py` helper is a **local/offline verification entrypoint** for the reviewed REA_APP P24 sources. It checks the Git blob IDs of 13 source, adapter, package and test files against the previously observed `REA_APP@33f6d345f8d4577194248eed4543d602819d3192` tree **before** running the Python and Node parser tests. It also refuses unreviewed executable modules/tests inside `rea_app/` or `tests/`. It uses an already installed Python, Node and pinned Babel dependency; **it does not run npm ci or install anything**.
+The `verify_gate_r.py` helper is a **local/offline verification entrypoint** for the reviewed REA_APP P24 sources. It checks the Git blob IDs of 14 source, adapter, package and test files against the reviewed `REA_APP@e6775a5b3bc17c2049238e0d505ec31e384d53ff` tree **before** running the Python and Node parser tests. It also refuses unreviewed executable modules/tests inside `rea_app/` or `tests/`. It uses an already installed Python, Node and pinned Babel dependency; **it does not run npm ci or install anything**.
 
 From an existing authorized local checkout or reconstructed exact source tree, with `@babel/parser@7.29.9` already installed:
 
@@ -9,7 +13,7 @@ cd tools/rea-app
 python verify_gate_r.py
 ```
 
-A passing result requires `SOURCE VERIFIED: 13/13`, `PYTHON_ALL: PASS`, `NODE_PARSER: PASS`, and exit status zero. Exact Python test counts and platform-specific skips remain visible in `unittest` output; do not convert a skipped Windows symlink test into PASS. A missing/mismatched source file, unexpected Python/JS test module, unavailable npm, or any failed suite causes a nonzero result. If any of the 13 reviewed source files change, verify the new exact GitHub SHA, review the diff and update the pinned manifest intentionally; **do not bypass the gate**.
+A passing result requires `SOURCE VERIFIED: 14/14`, `PYTHON_ALL: PASS`, `NODE_PARSER: PASS`, and exit status zero. Exact Python test counts and platform-specific skips remain visible in `unittest` output; do not convert a skipped Windows symlink test into PASS. A missing/mismatched source file, unexpected Python/JS test module, unavailable npm, or any failed suite causes a nonzero result. If any of the 13 reviewed source files change, verify the new exact GitHub SHA, review the diff and update the pinned manifest intentionally; **do not bypass the gate**.
 
 **Evidence limitation:** The verifier's script and GitHub commits are published; the actual current REA_APP full test suite has **not yet run in this conversation's container** because a private authenticated checkout is unavailable. The script itself does not create CI, run background work, deploy, or claim Gate R readiness.
 
