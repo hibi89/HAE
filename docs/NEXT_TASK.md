@@ -1,3 +1,10 @@
+## Lightning Azent P8 — next executable verification (2026-10-28 KST)
+
+- **Feature/test source:** `scheduler.py@649fda8831210aaf8137d227d949dda56c2896ee` and `test_scheduler_lock.py@7ffd8c0792457694021dc6803f175d605887b7d4`. Source-pinned isolated Linux/Python 3.13 scheduler test: **3/3 PASS** (thread, second process exit, denial/no-file). Engine module in fixture is a stub.
+- **Total test inventory:** 31 Python test definitions (MVP 7, CLI 6, native 9, resume 6, scheduler 3). Full suite from authorized repository source **not run, 0/31**. Windows, actual Engine SQLite receipts, original HAE tests, wheel unverified.
+- **Immediate next:** On authorized clean `feature/lightning-azent` checkout verify `git rev-parse HEAD`, Python/OS and input fixture SHA, then `python -m compileall -q packages/lightning-azent` and `PYTHONPATH=packages/lightning-azent python -m unittest discover -s packages/lightning-azent/tests -v`. For Windows set `$env:PYTHONPATH='packages/lightning-azent'` first. Investigate first observed failure; do not claim pass from source-only check.
+- **After green:** Repeat native/legacy 3 local fixtures, injected crash/SQLite idempotence, original `apps/ax-flow/tests` regression, isolated installable wheel smoke. Only then build HAE consumer integration. No paid CI, real user data, external connector or public hosting without approval.
+
 ## Lightning Azent P7 — next full-code validation gate (2026-10-28 KST)
 
 - **Current code:** P6 scheduler implementation source blob `358624dad5d12311333d40154fe4351c236f63f0`; P7 test `898ccfb0abe99aa40be09186ff6e0be49986e0de` is exact-hash matched to isolated local execution. Source-pinned scheduler lock tests **2/2 PASS** Linux/Python 3.13 with stub Engine, including a second OS process and abrupt exit.
