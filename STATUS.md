@@ -1,6 +1,12 @@
 # STATUS — 2026-10-27 KST
 
-## Latest checkpoint — P20 static file-path evidence (2026-10-27 13:04 KST)
+## Latest checkpoint — P21 filesystem API false-positive guard (2026-10-27 13:07 KST)
+- Branch: REA_APP; code/test commit 21be05d3b4294d8feabe757b6f0f226ca39c606c, parent c4fb5588882fac40af4d499900635caa8a9601ac.
+- Tightened static path classification: fs/promises calls now exclude unsupported synchronous/stream APIs, and similarly named calls imported from non-fs modules are not reported.
+- Regression now covers both false-positive cases. Windows verification: python -m unittest discover -s tests -v — 15/15 PASS; npm run test:parser — PASS; no trailing whitespace.
+- This is an accuracy refinement to P20's bounded Node fs path evidence; no runtime operation or target file execution occurs. Overall chief review remains the next gate before any standalone engine work.
+
+## Prior checkpoint — P20 static file-path evidence (2026-10-27 13:04 KST)
 - Branch: REA_APP; implementation/test/README commit a528c9d7d38f41be3fd347f32dee85054044e518, parent ce0da26a7b5c083589586741210d4e945a57552f.
 - Added evidence-linked path observations for a bounded set of Node fs read/write/append/delete/directory APIs. Supports ESM named/namespace imports and CommonJS require forms; does not execute file operations or resolve relative paths against a runtime working directory.
 - Absolute, parent-relative, sensitive, unusual and dynamic path values are redacted or marked without the value. Shadowed/reassigned bindings are omitted to avoid claiming an imported fs API when the binding is ambiguous.

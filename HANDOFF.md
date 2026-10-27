@@ -1,6 +1,18 @@
 # HANDOFF — AX FLOW + REA_APP (bootstrap, 2026-10-27 KST)
 
-## Latest checkpoint — P20 static file-path evidence (2026-10-27 13:04 KST)
+## Latest checkpoint — P21 filesystem API false-positive guard (2026-10-27 13:07 KST)
+1. Goal: keep maximizing verified REA_APP R-A1 progress while preserving the explicit hold on the standalone AX FLOW engine.
+2. Change: commit 21be05d3b4294d8feabe757b6f0f226ca39c606c restricts fs/promises observations to supported asynchronous APIs and rejects file-like method names imported from unrelated modules. Added regression assertions for both false-positive cases.
+3. Tests: from tools/rea-app, python -m unittest discover -s tests -v — 15/15 PASS; npm run test:parser — PASS; whitespace scan found no trailing whitespace. Windows Python 3.11.9, Node 24.21.0, npm 11.19.0, @babel/parser 7.29.9.
+4. State/progress: P20 static Node file path evidence remains supported for bounded synthetic JS/TS input with redaction and source-line evidence; P21 improves module/API precision. Python remains inventory-only.
+5. Failure/pivot: no P21 test failure. The regression was added before changing behavior; both unsupported fs/promises sync methods and non-fs imports are correctly omitted.
+6. Repository/branch/SHA/paths: hibi89/AX_FLOW, REA_APP, code SHA 21be05d3b4294d8feabe757b6f0f226ca39c606c, parent c4fb5588882fac40af4d499900635caa8a9601ac. Changed tools/rea-app/babel_parser_adapter.cjs and tools/rea-app/tests/test_cli.py.
+7. Production/execution/site: local static analyzer only; no site is needed or running. No browser E2E or deployment claim.
+8. Originals/approvals/credentials: synthetic fixtures only, no source execution, source mutation, customer data, credentials or external service use.
+9. Next priority/approvals: present verified R-A1 and n8n documentation evidence to overall chief review. Do not implement the standalone engine before that review; OAuth, DBVORA restore, commercial review, signed distribution and customer release remain gated.
+10. KST checkpoint/evidence baseline: 2026-10-27 13:07 KST. Cross-track matrix remains unchanged at 91% PARTIAL on feature/axflow-mvp@62d712053470518376bdab59d4eec53191c46c88.
+
+## Prior checkpoint — P20 static file-path evidence (2026-10-27 13:04 KST)
 1. Goal: maximize verified REA_APP progress against R-A1, then hand the evidence to overall review; do not cross the standalone-engine hold.
 2. Change: commit a528c9d7d38f41be3fd347f32dee85054044e518 adds static path observations for a bounded Node fs API set, ESM and CommonJS bindings, source line/argument evidence, and redaction for absolute, parent-relative, sensitive, unusual and dynamic paths. Conflicting/shadowed/reassigned bindings are omitted. README updated.
 3. Tests: from tools/rea-app, python -m unittest discover -s tests -v — 15/15 PASS; npm run test:parser — PASS; whitespace scan found none. Environment: Windows, Python 3.11.9, Node 24.21.0, npm 11.19.0, @babel/parser 7.29.9.

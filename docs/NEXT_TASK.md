@@ -1,5 +1,10 @@
 # Next work unit — 2026-10-27 KST (verified checkpoint)
 
+## P21 — filesystem API false-positive guard — COMPLETE (2026-10-27 13:07 KST)
+- Code commit: 21be05d3b4294d8feabe757b6f0f226ca39c606c on REA_APP, parent c4fb5588882fac40af4d499900635caa8a9601ac.
+- Static path reports now ignore unsupported synchronous/stream APIs from fs/promises and file-like method names from unrelated modules. Synthetic regressions cover both exclusions.
+- Python suite 15/15 PASS; npm run test:parser PASS; whitespace scan clean. No P21 test failures.
+
 ## P20 — static Node file-path evidence — COMPLETE (2026-10-27 13:04 KST)
 - Code commit: a528c9d7d38f41be3fd347f32dee85054044e518 on REA_APP, parent ce0da26a7b5c083589586741210d4e945a57552f.
 - Source-map JSON/Markdown now report supported Node fs path arguments with exact source-line and argument evidence. Supports a bounded API list, ESM and CommonJS bindings; absolute, parent-relative, sensitive, unusual and dynamic paths are redacted or value-free. Ambiguous, shadowed or reassigned bindings are omitted; no filesystem operation is executed.
