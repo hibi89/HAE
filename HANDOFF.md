@@ -1,6 +1,18 @@
 # HANDOFF — AX FLOW + REA_APP (bootstrap, 2026-10-27 KST)
 
-## Latest checkpoint — P19 comparison-report privacy hardening (2026-10-27 12:53 KST)
+## Latest checkpoint — P20 static file-path evidence (2026-10-27 13:04 KST)
+1. Goal: maximize verified REA_APP progress against R-A1, then hand the evidence to overall review; do not cross the standalone-engine hold.
+2. Change: commit a528c9d7d38f41be3fd347f32dee85054044e518 adds static path observations for a bounded Node fs API set, ESM and CommonJS bindings, source line/argument evidence, and redaction for absolute, parent-relative, sensitive, unusual and dynamic paths. Conflicting/shadowed/reassigned bindings are omitted. README updated.
+3. Tests: from tools/rea-app, python -m unittest discover -s tests -v — 15/15 PASS; npm run test:parser — PASS; whitespace scan found none. Environment: Windows, Python 3.11.9, Node 24.21.0, npm 11.19.0, @babel/parser 7.29.9.
+4. State/progress: synthetic JS/TS inventory, imports, entrypoints, call/local-flow evidence, function signatures, static file paths and two-snapshot change impact are covered by CLI regression tests. Python remains inventory-only and runtime/dynamic file behavior is not inferred.
+5. Failure/pivot: first P20 test run was 14/15 because named-import alias resolution used the local alias; a second 14/15 run found destructured CommonJS bindings wrongly treated as namespace imports. Resolved via imported-symbol lookup and namespace distinction; targeted and full suites now pass.
+6. Repository/branch/SHA/paths: hibi89/AX_FLOW, branch REA_APP, implementation SHA a528c9d7d38f41be3fd347f32dee85054044e518, parent ce0da26a7b5c083589586741210d4e945a57552f. Changed tools/rea-app/babel_parser_adapter.cjs, tools/rea-app/rea_app/graph.py, tools/rea-app/tests/test_cli.py and tools/rea-app/README.md.
+7. Production/execution/site: local CLI/source analyzer; no website is needed or running. No browser E2E, deployment, customer operation or production readiness claim.
+8. Originals/approvals/credentials: synthetic fixtures only; the analyzer does not execute target file operations or mutate the scanned sources. No credential/customer data, external DB writes, OAuth or paid services.
+9. Next priority/approvals: overall chief review of the R-A1 synthetic scope and separate project acceptance matrix. Keep standalone AX FLOW engine on explicit hold; OAuth, DBVORA restore, commercial review, signed distribution and customer release remain gated.
+10. KST checkpoint/evidence baseline: 2026-10-27 13:04 KST. Separate matrix blob 4a1f223bfa0b73693972cecc11f4a5eda637c837 at feature/axflow-mvp@62d712053470518376bdab59d4eec53191c46c88 remains 91% PARTIAL and unchanged.
+
+## Prior checkpoint — P19 comparison-report privacy hardening (2026-10-27 12:53 KST)
 1. Goal: maximize verified REA_APP progress and hand it to overall review; remain within the local, bounded analysis scope and keep the standalone AX FLOW engine on hold.
 2. Change: commit fe8d9f533358fc6d62d97ccc38f645c8b1545eb9 changes the P18 comparison report to keep SHA-256 fingerprints internal. JSON/Markdown report change status, size/category metadata and evidence but do not emit file hashes or contents. README and regression assertion updated.
 3. Tests: from tools/rea-app, python -m unittest discover -s tests -v — 14/14 PASS; npm run test:parser — PASS. Environment: Windows, Python 3.11.9, Node 24.21.0, npm 11.19.0, @babel/parser 7.29.9.

@@ -1,6 +1,15 @@
 # STATUS — 2026-10-27 KST
 
-## Latest checkpoint — P19 comparison-report privacy hardening (2026-10-27 12:53 KST)
+## Latest checkpoint — P20 static file-path evidence (2026-10-27 13:04 KST)
+- Branch: REA_APP; implementation/test/README commit a528c9d7d38f41be3fd347f32dee85054044e518, parent ce0da26a7b5c083589586741210d4e945a57552f.
+- Added evidence-linked path observations for a bounded set of Node fs read/write/append/delete/directory APIs. Supports ESM named/namespace imports and CommonJS require forms; does not execute file operations or resolve relative paths against a runtime working directory.
+- Absolute, parent-relative, sensitive, unusual and dynamic path values are redacted or marked without the value. Shadowed/reassigned bindings are omitted to avoid claiming an imported fs API when the binding is ambiguous.
+- Verification on Windows (Python 3.11.9, Node 24.21.0, npm 11.19.0, Babel parser 7.29.9): python -m unittest discover -s tests -v — 15/15 PASS; npm run test:parser — PASS; no trailing whitespace found.
+- Failure record: first regression run was 14/15 because a named-import alias was matched by local alias instead of its exported API symbol. A second 14/15 run exposed CommonJS destructuring being treated as a namespace. Both resolution errors were corrected; targeted and full reruns passed.
+- REA_APP now reports bounded local value flow, static file path evidence and change impact for the supported synthetic JS/TS scope. Python remains inventory-only; runtime file paths and dynamic values are not inferred.
+- Latest project-wide estimate is still 91% PARTIAL (heuristic A100/B100/C95/D95/E65) from the separate feature/axflow-mvp matrix; this REA_APP commit is not integrated into that shared matrix. Standalone AX FLOW engine remains on hold for overall chief review.
+
+## Prior checkpoint — P19 comparison-report privacy hardening (2026-10-27 12:53 KST)
 - Branch: REA_APP; code/test/README commit fe8d9f533358fc6d62d97ccc38f645c8b1545eb9, parent dadda9793849130aaff1f4726faf18f54c2ac7f8.
 - Comparison still uses SHA-256 internally to detect same-size edits, but JSON/Markdown no longer expose fingerprints. Changed-file reports retain status, size/category metadata, import evidence and impacted entrypoints only.
 - Added a regression asserting neither the fixture source text nor its SHA-256 appears in the report. Verification on Windows: python -m unittest discover -s tests -v — 14/14 PASS; npm run test:parser — PASS. No P19 test failure.
