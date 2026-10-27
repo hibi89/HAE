@@ -1,5 +1,16 @@
 # Next work unit — 2026-10-27 KST (ACTIVE fast-track)
 
+## REA_APP parser verification checkpoint (2026-10-27 KST)
+- Re-ran the bounded analyzer against synthetic fixtures after installing the pinned public `@babel/parser@7.29.9` required by this branch's README. `python -m unittest discover -s tests -v`: **10/10 PASS**; `npm run test:parser`: PASS. Checked the analyzer/parser implementation files against `REA_APP`; local and remote source blobs matched exactly.
+- The regression now copies only the Python package and parser adapter to an isolated temporary tool root to prove missing-parser fail-closed behavior. It no longer assumes that clearing `NODE_PATH` hides a package installed beside the real adapter.
+- Failure causes/resolution: first run lacked `node_modules`, so five Python checks and the Node assertion reported parser unavailable; local npm cache was empty. Installed the exact public pinned package using `--ignore-scripts --no-audit --no-fund --package-lock=false` (four packages, no lockfile; `node_modules` is git-ignored). With it present, the missing-parser test exposed its incorrect isolation assumption; corrected and reran Python 10/10 plus Node successfully.
+- Test-only commit on `REA_APP`: `b815e72f3f0c9e0e1aad117b7db7b6cad9f84bc1`. No analyzer behavior changed.
+- Blueprint A remains **MVP_VERIFIED** for the supported synthetic JS/TS scope. Overall A–E estimate stays **77% / PARTIAL** due unrelated UI, restore, security, installer and customer/release gates.
+- n8n's allowed official-source structure review is recorded on `feature/axflow-mvp` at `8e8f89b5f797fdf77790a2fea57d6d7ad7b344a6`; no source/assets were copied.
+
+**Next:** REA_APP synthetic acceptance is reconfirmed. Do not expand source-analysis scope speculatively. Continue only with a concrete permission-free A–E gap; keep the standalone AX FLOW engine paused pending overall review. The P10 AX FLOW and n8n review evidence is on `feature/axflow-mvp`.
+
+
 **Owner decision supersedes 21-week plan:** first 2 weeks REA_APP + own n8n-like runner; next 3 weeks AX FLOW + parallel DBVORA integration. Read docs/FAST_TRACK_5_WEEK.md, docs/TARGET_BLUEPRINT_V1.md, docs/CODEX_EXTRA_HIGH_ORDER.md before any implementation.
 
 ## Codex first authorized implementation unit (MVP D1–D3, REA_APP branch)
