@@ -6,6 +6,7 @@
 5. **Scope:** F2 rejects a stale snapshot; no DBVORA restore, power-loss or customer-release claim. Synthetic local fixtures only.
 6. **Estimate:** **91% PARTIAL**; DBVORA D2, OAuth, independent security, signed/customer distribution and commercial gates remain open.
 7. **Next:** review the full design matrix and complete remaining safe, locally verifiable requirements; no standalone engine.
+8. **P45 implementation commit:** `137f898a5fdef8b6b789791c2f47f38ea0db9c4f`.
 
 
 
