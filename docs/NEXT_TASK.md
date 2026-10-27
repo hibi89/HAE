@@ -1,3 +1,10 @@
+## Lightning Azent P10 verification gate — 2026-10-28 KST
+
+- **Core hardlink fix:** `scheduler.py` Git blob `1b8d184240f049c2e9f500d24b37f0ea5875fb9a`; `tests/test_scheduler_lock.py` Git blob `186e3abcc300004fb8ff7d6193cd5ca4b5cf7220`. Existing P9 lock could modify a hardlinked third-party file; mitigated by regular-file/link-count preflight before lock writes. Local Linux/Python 3.13 exact-blob scoped test 4/4 PASS; full Engine stubbed.
+- **Total:** 34 defined tests (7 MVP +6 CLI +9 native +8 resume +4 scheduler), complete suite **0/34 run** from authenticated full private checkout. Windows, actual engine, original HAE regression and wheel UNVERIFIED.
+- **NEXT:** `git switch feature/lightning-azent; git pull --ff-only; python -m compileall -q packages/lightning-azent`; `$env:PYTHONPATH="packages/lightning-azent"; python -m unittest discover -s packages/lightning-azent/tests -v` in Windows Python 3.11+. Record SHA, OS, interpreter, PASS/FAIL/SKIP, lock hardlink/cross-process/abrupt-exit, 3 real synthetic fixture receipts, and old `apps/ax-flow/tests` baseline. Then wheel install CLI and HAE adapter version handshake.
+- **No paid runner, external transfer, customer DB, user secrets, frontend/production deployment until tests and separate authorizations.**
+
 ## Lightning Azent P9 — validation after read-only business-ledger preflight (2026-10-28 KST)
 
 - **New code gate:** `runlog.inspect_business_ledger` blocks missing/replaced/incompatible/corrupt SQLite receipts with read-only schema + quick integrity check. Called by `LAExecutor.resume` after verifying plan hash and before instantiating `Engine`. Git blob `runlog.py@9bfaaf968c28c4461170ebcd7dcb6f1747d844fd`.
