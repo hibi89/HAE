@@ -1,10 +1,10 @@
-## P42 complete — verified AX FLOW runtime-ledger backup/restore
-Added synthetic-only `backup` and `restore` CLI commands for the existing runtime SQLite ledger. Both require a new output path and refuse overwrite. The operation uses SQLite online backup, validates schema/integrity, checks source SHA-256/size/mtime before and after, and independently reads restored run status. The packaged zipapp executes the same workflow. Windows flushes the staged file before an atomic same-volume rename; directory metadata fsync is not claimed.
+## P43 complete — concurrent no-overwrite backup publication
+Two synthetic CLI processes were synchronized at native publication after both passed the target-missing check and created staged SQLite backups. Exactly one published; the other safely exited 2. Final ledger integrity/status passed, source SHA-256/size/mtime stayed unchanged, all stages were removed, and only the winning backup remained.
 
-**Verification:** Windows Python 3.11.9 full suite **74/74 PASS** in 39.330 s with synthetic loopback; Node syntax/UI regression and changed-file whitespace/conflict audit PASS. F2 is now PASS. The separate DBVORA source restore requirement D2 remains NOT_STARTED; no DBVORA source was changed. Progress is **91% PARTIAL**.
+**Verification:** race 1/1 PASS in 0.712 s; full Windows Python suite **75/75 PASS** in 39.978 s with synthetic local-loopback access; Node syntax/UI provenance and whitespace/conflict audit PASS. The first restricted-sandbox attempt had 9 failures and 12 errors from WinError 10013 on loopback sockets; the authorized local-only rerun passed. F2 stays PASS; estimate **91% PARTIAL**.
 
-## Next atomic task — concurrent no-overwrite backup publication
-Run two synthetic backup processes against one fresh target. Verify one publication succeeds, the other fails safely, the final ledger passes integrity/status reads, the source stays unchanged, and no staging file or second target remains. Keep all destinations in a fresh workspace temp folder and retain the synthetic guard.
+## Next atomic task — backup failure cleanup
+Inject one failure before native publication and one during post-publication verification. Verify both fail safely, source SHA/size/mtime stays unchanged, and no target or .part file remains. Use disposable synthetic runtime ledgers in the writable workspace. No DBVORA source, external credentials or standalone engine.
 
 ## P41 complete — Windows DBVORA snapshot flush boundary diagnosed
 Read the exact DBVORA archive source and reproduced its staged-file read-only `fsync` failure on this Windows host (`OSError errno 9)); read/write `fsync` passed. A separate synthetic SQLite online backup and independent restore passed integrity/foreign-key/row checks with unchanged source SHA, size and mtime. This is platform diagnosis only; no product archive/restore passed and no DBVORA code changed.

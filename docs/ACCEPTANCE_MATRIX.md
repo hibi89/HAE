@@ -1,8 +1,8 @@
 # AX FLOW Definition of Done — evidence matrix
 
-**Evidence status at 2026-10-27 KST.** All status is limited to recorded bounded synthetic tests. PASS does not imply customer, production, or cross-platform readiness. Blueprint estimate: A100/B100/C95/D95/E65 = **91% PARTIAL** (heuristic).
+**Evidence status at 2026-10-27 KST (P43).** All status is limited to recorded bounded synthetic tests. PASS does not imply customer, production, or cross-platform readiness. Blueprint estimate: A100/B100/C95/D95/E65 = **91% PARTIAL** (heuristic).
 
-**Latest full AX FLOW regression (P42):** Windows Python 3.11.9, `python -m unittest discover -s tests -v` from `apps/ax-flow` — **74/74 PASS** in 39.330 s with authorized synthetic loopback. Node UI regression and syntax checks PASS.
+**Latest full AX FLOW regression (P43):** Windows Python 3.11.9, python -m unittest discover -s tests -v from apps/ax-flow — **75/75 PASS** in 39.978 s with authorized synthetic loopback. Restricted-sandbox attempt first failed 9 tests and errored in 12 due WinError 10013 loopback denial; the local-only authorized rerun passed. Node UI regression and syntax checks PASS.
 
 **P33 package integration:** current-source Windows zipapp (32,191 bytes) served its bundled page/assets and read a synthetic SQLite catalog through exact DBVORA `feature/p0-db-map@31b8257468d28743fb2d3767d1caa56938df756c` source. FK metadata present, POST rejected, source unchanged, no data/path leakage. This improves D1/E evidence without claiming customer release.
 
@@ -20,7 +20,7 @@
 
 **P41 Windows diagnosis:** the exact DBVORA staged-file read-only-fsync operation was reproduced locally as errno 9; read/write-fsync passed. A separate disposable SQLite online backup/restore round trip passed with the source unchanged. This is diagnostic evidence only: no DBVORA restore passed and D2 remains NOT_STARTED.
 
-**P42 runtime-ledger backup evidence:** AX FLOW `backup` and fresh-path `restore` commands passed through both CLI and packaged zipapp. Schema/integrity/status verified, source SHA/size/mtime stayed unchanged, corrupt backup was rejected, and existing targets were left byte-identical. F2 is now PASS; this does not back up DBVORA data or make a power-loss guarantee.
+**P42–P43 runtime-ledger backup evidence:** AX FLOW backup and fresh-path restore passed through CLI and packaged zipapp. Schema/integrity/status verified; source SHA/size/mtime stayed unchanged; corrupt and existing targets were safely rejected. P43 synchronized two CLI processes at native publication: one won, one refused, the final ledger passed integrity/status and no stage residue remained. F2 is PASS; DBVORA data and power-loss durability are outside this proof.
 
 | ID | Component | Required proof | Current |
 |---|---|---|---|
@@ -34,8 +34,8 @@
 | D1 | DBVORA integration | supported SQLite read-only catalog → UI schema/relations/size/provenance; API offline handling; no raw data leakage | PARTIAL — P24 visible synthetic schema/PK/FK/size verified against exact source; P27–P28 provenance allowlist, unavailable state and offline clearing verified; P31 packaged stub online/offline verified; P32 source-app adapter and P33 current Windows zipapp both read exact DBVORA feature/p0-db-map API, showing FK metadata and omitting data/path; customer/multi-asset and customer-installed service remain unverified |
 | D2 | Data backup/restore | independently restored source, same content and source unchanged, corruption/restart safety on supported platform | NOT_STARTED — no successful independently verified restore. P36 Windows synthetic snapshot returned `PUBLISH_FAILED` before publication; P41 reproduced the staged-file read-only-fsync failure as errno 9 on Windows; no DBVORA restore was attempted. P42 covers the AX FLOW runtime ledger only and does not satisfy D2 |
 | F6 | Customer dashboard | local browser with authenticated controls, permissions, status, errors, no manual node selection | PARTIAL — synthetic local browser controls/receipts/errors verified; customer authentication absent |
-| F7 | Security/reliability | file/OAuth/token secrecy, prompt injection, outbound limits, idempotency, fault injection, least privilege, dependency audit | PARTIAL — local boundary/redaction/idempotency and fault paths tested; configured cross-process same-run replay passed a 20-run stress; no independent review, live OAuth validation or complete security gate |
-| F8 | Install/customer release | native Windows/NTFS + UI/CLI + network + repeatable packaged install, three real-world-shaped workflows | PARTIAL — stdlib zipapp API smoke, P30 packaged browser workflow, P31 packaged provenance stub, and P33 packaged actual DBVORA API integration and P38 packaged normalization/import and P39 packaged failure-exit, P40 numeric-boundary and P42 runtime-ledger backup/restore verification passed; signed installer, customer installation, three real-world-shaped workflows and release evidence remain open |
+| F7 | Security/reliability | file/OAuth/token secrecy, prompt injection, outbound limits, idempotency, fault injection, least privilege, dependency audit | PARTIAL — local boundary/redaction/idempotency and fault paths tested; configured cross-process same-run replay passed a 20-run stress, and concurrent no-overwrite backup publication passed; no independent review, live OAuth validation or complete security gate |
+| F8 | Install/customer release | native Windows/NTFS + UI/CLI + network + repeatable packaged install, three real-world-shaped workflows | PARTIAL — stdlib zipapp API smoke, P30 packaged browser workflow, P31 packaged provenance stub, and P33 packaged actual DBVORA API integration and P38 packaged normalization/import and P39 packaged failure-exit, P40 numeric-boundary and P42–P43 runtime-ledger backup/restore/concurrency verification passed; signed installer, customer installation, three real-world-shaped workflows and release evidence remain open |
 | B1 | Commercial model | scoped customer pilot feedback/support time, legal/license review; price is a hypothesis | NOT_STARTED — no scoped pilot or commercial validation |
 
 **Platform-specific unverified items:** an unprivileged Windows file-symlink fixture was skipped because Path.symlink_to returned OSError [WinError 1314]. A directory-junction fixture was also skipped because PowerShell New-Item -ItemType Junction returned Access is denied. Neither workflow ran and neither result is a pass. Do not elevate to claim either acceptance.
@@ -43,6 +43,6 @@
 **Full AX FLOW + DBVORA product completion requires F1–F8 and D1–D2, not merely R1 or F2.** External SaaS provider features only within granted API permissions. Each API/DB feature must declare tested supported versions; do not call a limited SQLite-only result universal multi-DB support.
 
 ## Release states
-- MVP_INTERNAL: **PARTIAL** because F2 backup/restore acceptance remains open.
+- MVP_INTERNAL: **PARTIAL** because the bounded synthetic-only scope, visible browser click-through and operational release evidence are incomplete; F2 runtime-ledger backup/restore is PASS.
 - PILOT_CANDIDATE: **NOT READY**; F4/F5/F6/F7 and remaining operational evidence are incomplete.
 - CUSTOMER_READY: **NOT READY**; D2, security, signed Windows distribution, customer evidence and commercial criteria remain open.

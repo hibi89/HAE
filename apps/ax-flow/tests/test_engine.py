@@ -95,6 +95,95 @@ class TestEngine(unittest.TestCase):
         self.assertFalse(corrupt_restore.exists())
         self.assertEqual(list(self.root.glob(".axflow-state-*.part")), [])
 
+    def test_concurrent_cli_backups_publish_once_without_overwrite_or_source_change(self):
+        self.engine.execute(self.plan, "BackupRaceRun", approve_writes=True)
+        source = self.root / "state.db"
+        workspace_temp = Path(__file__).resolve().parents[3] / ".verification-temp"
+        workspace_temp.mkdir(exist_ok=True)
+        destinations = tempfile.TemporaryDirectory(prefix="p43-racing-backups-", dir=workspace_temp)
+        self.addCleanup(destinations.cleanup)
+        output_root = Path(destinations.name)
+        target = output_root / "shared-backup.sqlite"
+        source_before = (hashlib.sha256(source.read_bytes()).hexdigest(), source.stat().st_size,
+                         source.stat().st_mtime_ns)
+
+        # Both real CLI processes wait at the no-overwrite publication call, after
+        # they have each passed the initial missing-target check and made a stage.
+        # The process-local wrapper only supplies a filesystem rendezvous; native
+        # os.rename/os.link still decides which publisher wins.
+        script = r'''import os, pathlib, sys, time
+from axflow import state_backup
+from axflow.__main__ import main
+
+source, target = map(pathlib.Path, sys.argv[1:3])
+publish = state_backup.os.rename if os.name == "nt" else state_backup.os.link
+
+def synchronized_publish(staged, destination):
+    marker = pathlib.Path(destination).parent / f".{pathlib.Path(destination).name}.ready-{os.getpid()}"
+    marker.write_text("ready", encoding="ascii")
+    deadline = time.monotonic() + 20
+    while len(list(marker.parent.glob(f".{pathlib.Path(destination).name}.ready-*"))) < 2:
+        if time.monotonic() >= deadline:
+            raise RuntimeError("peer backup did not reach publication")
+        time.sleep(0.01)
+    return publish(staged, destination)
+
+if os.name == "nt":
+    state_backup.os.rename = synchronized_publish
+else:
+    state_backup.os.link = synchronized_publish
+print("READY", flush=True)
+sys.stdin.readline()
+sys.argv = ["axflow", "backup", "--state", str(source), "--output", str(target), "--synthetic"]
+raise SystemExit(main())
+'''
+        cwd = Path(__file__).resolve().parents[1]
+        command = [sys.executable, "-c", script, str(source), str(target)]
+        processes = [
+            subprocess.Popen(command, cwd=cwd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, text=True),
+            subprocess.Popen(command, cwd=cwd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, text=True),
+        ]
+        try:
+            for process in processes:
+                self.assertEqual(process.stdout.readline().strip(), "READY")
+            for process in processes:
+                process.stdin.write("GO\n")
+                process.stdin.flush()
+                process.stdin.close()
+            outcomes = []
+            for process in processes:
+                stdout, stderr = process.communicate(timeout=30)
+                outcomes.append((process.returncode, stdout, stderr))
+        finally:
+            for process in processes:
+                if process.poll() is None:
+                    process.kill()
+                    process.communicate(timeout=5)
+
+        codes = sorted(item[0] for item in outcomes)
+        self.assertEqual(codes, [0, 2], outcomes)
+        winner = next(item for item in outcomes if item[0] == 0)
+        loser = next(item for item in outcomes if item[0] == 2)
+        result = json.loads(winner[1])
+        self.assertEqual(result["command"], "backup")
+        self.assertEqual(result["result"]["sqlite_integrity"], "ok")
+        self.assertTrue(result["result"]["source_unchanged"])
+        self.assertIn("stopped safely", loser[2])
+        self.assertEqual(inspect_run(target, "BackupRaceRun")["status"], "completed")
+        with closing(sqlite3.connect(target)) as con:
+            self.assertEqual(con.execute("PRAGMA integrity_check").fetchone()[0], "ok")
+        self.assertEqual(
+            (hashlib.sha256(source.read_bytes()).hexdigest(), source.stat().st_size,
+             source.stat().st_mtime_ns), source_before,
+        )
+        self.assertEqual(list(output_root.glob(".axflow-state-*.part")), [])
+        self.assertEqual(len(list(output_root.glob(".shared-backup.sqlite.ready-*"))), 2)
+        for marker in output_root.glob(".shared-backup.sqlite.ready-*"):
+            marker.unlink()
+        self.assertEqual([path.name for path in output_root.iterdir()], [target.name])
+
     def test_cli_runtime_backup_restore_requires_synthetic_and_preserves_state(self):
         self.engine.execute(self.plan, "CliBackupRun", approve_writes=True)
         source = self.root / "state.db"
