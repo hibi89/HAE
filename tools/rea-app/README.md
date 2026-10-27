@@ -1,3 +1,15 @@
+## P42 — real Babel-backed bundle acceptance test
+
+A new synthetic-project integration test runs the **actual** `python -m rea_app bundle` subprocess twice and checks six output files, resolved import path/line, changed dependency impact, affected package entrypoint, callable contract path/line, deterministic output and unchanged originals. It does not mock scanning or parsing.
+
+From an authorized complete checkout after installing pinned `@babel/parser@7.29.9` with `npm ci`:
+```powershell
+cd tools/rea-app
+python -m unittest discover -s tests -p "test_bundle_real_parser.py" -v
+```
+
+The test itself is Python-syntax-compiled in the isolated runner and matches its reviewed GitHub blob; **it has not been run successfully** because the current host does not have `@babel/parser@7.29.9` and DNS for npm endpoints is unavailable. This is a recorded integration gate, not a claimed MVP PASS. No mocked parser fallback, production deployment or paid CI has been introduced.
+
 ## P40 — One-command MVP report bundle
 
 Run against two different, non-overlapping **authorized local source snapshots** after `npm ci` installs the pinned `@babel/parser@7.29.9` in `tools/rea-app`:

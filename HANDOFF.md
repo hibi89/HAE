@@ -1,3 +1,16 @@
+## P42 handoff — executable real-Babel bundle MVP gate (2026-10-27 KST)
+
+1. **Goal/technology:** REA_APP read-only JS/TS source architecture CLI, Python 3.11+, Node and pinned Babel 7.29.9. Owner's priority MVP working → original blueprint gap closure → final security/reliability/compatibility.
+2. **Delivered/design:** New `tools/rea-app/tests/test_bundle_real_parser.py` runs real CLI `bundle` on two synthetic JS/TS snapshots, not mocked. Compared an actual end-to-end fixture (chosen: verifies integration truth) against another mocked unit test (already covered in P40/P41; insufficient). No new runtime dependencies beyond existing Babel lockfile.
+3. **Tests/evidence:** New fixture compiled with local Python 3.13.5 `py_compile` PASS, exact new test Git blob `48a10d179c609762ef2af8c22154752b18e28c44`. Asserts six reports, import path+line, changed dependency/entrypoint, exported function contract/line, repeated output equality and unchanged baseline/current inputs. Actual fixture **NOT RUN**, no full Babel or current HEAD Gate R PASS. Prior P41 local focused 14/14 PASS not reclassified as full E2E.
+4. **Status:** Actual supported-scope REA_APP MVP user path **PARTIAL**, source fixture and one-step acceptance gate ready; Gate R **PARTIAL**, HAE/Lightning Azent not advanced.
+5. **Blocked/alternatives:** Isolated Python 3.13.5+Node 22.16.0 has no @babel/parser, npm registry/CDN/raw GitHub DNS fails. Avoid repeated dead anonymous private git clones, fake AST as a real parser, or paid CI without approval. Use already-authorized full checkout with exact package installed; if legitimately unavailable, report blockage instead of implying PASS.
+6. **Repo/branch/SHA/paths:** Private `hibi89/AX_FLOW`, `REA_APP`, pre-P42 HEAD `d07268fa50853c0fa842883ef6f048b32b893866`; new `tests/test_bundle_real_parser.py` SHA above; changed `verify_gate_r.py`, `run_gate_r_evidence.py`, README, STATUS, docs/NEXT_TASK, HANDOFF. Verify final HEAD and author/committer after one atomic commit.
+7. **Deployment/env:** Local CLI only, Vercel production URL N/A, Linux Python 3.13.5 test file syntax compilation; no Windows behavior verified. No actual end-user hosted service.
+8. **Backups/data/safety:** Only synthetic local fixtures; original source preserved by test, no real users, source copying, credentials, external data transfer, paid service or force-push. Parent commit retained for normal revert.
+9. **Next priority/acceptance:** Execute `cd tools/rea-app && python -m unittest discover -s tests -p 'test_bundle_real_parser.py' -v` in authorized full checkout after `npm ci`; inspect each concrete failure and fix. Then full `python verify_gate_r.py` against reviewed 21 inputs. Mark MVP acceptance A PASS only with real outputs/evidence. Compare against frozen blueprint before final hardening.
+10. **Checkpoint/time:** 2026-10-27 KST; new exact source blob and static syntax proven; full fixture runtime and genuine parser not run. Report remote final SHA, author and CI status independently.
+
 ## P41 checkpoint — MVP bundle avoids duplicate current-source parsing (2026-10-27 KST)
 
 1. **Goal/requirements:** REA_APP local read-only JS/TS architecture analyzer, Python 3.11+, Node with pinned `@babel/parser@7.29.9`; user order MVP completion → original blueprint gap implementation → final security/stability/compatibility.

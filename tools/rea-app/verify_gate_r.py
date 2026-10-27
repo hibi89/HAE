@@ -31,6 +31,7 @@ SOURCE_BLOBS = {
     "tests/parser_adapter.test.cjs": "f55d15130ba19700be858c7e2a2b468c302e5033",
     "tests/test_cli.py": "6035ccc58fcfc8f2d8eceeba95b8d969ec257dc4",
     "tests/test_bundle.py": "5862a93762cce0370d1b47966c66ed940e507370",
+    "tests/test_bundle_real_parser.py": "48a10d179c609762ef2af8c22154752b18e28c44",
     "tests/test_report_write_safety.py": "f3dc3251e560f739325343b71039e628321e7446",
     "tests/test_contracts.py": "64ea0c82b787ce76cdeaba526fbe21355647dd83",
     "tests/test_contracts_cli.py": "a39b0139b64157a6d138dde01c833e18bc3fd771",

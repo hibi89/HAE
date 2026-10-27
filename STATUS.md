@@ -1,3 +1,10 @@
+## P42 — real-parser MVP acceptance fixture committed (2026-10-27 KST)
+
+- Added `tools/rea-app/tests/test_bundle_real_parser.py`, a single genuine end-to-end subprocess test: baseline/current synthetic JS/TS package with `main.ts` importing `lib.ts` and a changed exported function. Checks **all 6 bundle files**, import resolution and evidence path+line, direct dependent and entrypoint impact, independent callable contract, repeated identical outputs, and no original source change.
+- Exact source file Git blob `48a10d179c609762ef2af8c22154752b18e28c44`; local Python 3.13.5 `py_compile` **PASS**. The test itself is **NOT EXECUTED**, and end-to-end REA_APP + genuine Babel parser is **NOT VERIFIED** (Node 22.16 present; `@babel/parser` unavailable; npm/CDN/GitHub raw hosts cannot resolve DNS on isolated host). Full Gate R **PARTIAL**. Do not convert Python compilation to runtime PASS.
+- Reviewed Git manifest updated 20→21 protected source/test blobs; offline evidence runner source marker 21/21 and verifier pin updated. No additional scanner/graph functionality or hardening added, no external source/customer files, CI, deployments, force push, cost or third-party upload.
+- Next mandatory MVP milestone: authorized complete `REA_APP` checkout with already-pinned Babel@7.29.9, run `python -m unittest discover -s tests -p 'test_bundle_real_parser.py' -v`, then full `python verify_gate_r.py`, inspect any failing feature and fix only actual bugs. Then compare frozen first blueprint and fill missing functionality, final security/compatibility last.
+
 ## P41 — bundle current-parser reuse (2026-10-27 KST)
 
 - **Feature/latency change:** `bundle` now passes its already-built current source-map into `build_change_impact(..., current_report=...)`; impact recomputes the baseline but no longer reparses the same current snapshot. Existing 3 parser invocations per `bundle` reduce to **2 invocations** by code path; wall-clock throughput improvement is **unmeasured**. Standalone `compare` remains backwards-compatible because the new argument is keyword-only and optional.

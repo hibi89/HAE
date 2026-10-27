@@ -1,3 +1,9 @@
+## REA_APP P42 — next: run real JS/TS bundle acceptance (2026-10-27 KST)
+
+- Source-pinned `tests/test_bundle_real_parser.py` runs actual subprocess twice on small synthetic JS/TS baseline/current with no mocks; checks 6 output reports, resolved import/line evidence, changed dependent and entrypoint, exported callable contract, deterministic output, original tree unchanged. Python syntax compiled, **runtime not executed** due missing exact Babel parser 7.29.9.
+- Execute from an authorized complete clean checkout with `npm ci` already installed: `cd tools/rea-app && python -m unittest discover -s tests -p 'test_bundle_real_parser.py' -v`. A real PASS is required before claiming REA_APP's blueprint acceptance A. Follow with `python verify_gate_r.py` (21 protected source/test inputs, reviewed verifier pin), and fix first reproducible feature failure, not speculative hardening. Windows acceptance remains later.
+- No payment/CI or source transfer authorized; isolated host DNS for npm unavailable. Keep status **MVP E2E PARTIAL** and **Gate R PARTIAL** until an attributable run.
+
 ## REA_APP P41 next — actual MVP parser-backed acceptance (2026-10-27 KST)
 
 - P41 removes a redundant current-snapshot `build_report` call from `bundle`: source-map passed to impact as optional keyword argument. Expected 3→2 parser invocations per bundle; actual speed difference **not benchmarked**. Code-change test in isolated stubbed runner 14/14 PASS; exact GitHub full scanner/graph/impact and pinned Node parser **unexecuted**.
