@@ -1,3 +1,9 @@
+## REA_APP P27 — installed Babel dependency provenance gate added (2026-10-27 KST)
+1. Latest P27 verifier code `c60df0fc11f54f65e7b7da2e08590de7b5081737` (Git blob `309510bd01aa01dc8ee6b2defb5498aebc67b0e1`) and two new regression tests `3a1a023533a7c070c35be5abbf06bc185a87471b` (Git blob `c8db5c2957cc365d6e3c4c6cfcc70d5f1351d7fc`). The verifier now checks real installed Node package metadata for exact `@babel/parser@7.29.9` before parser test. Reviewed source manifest is 14 files; local source/test SHA match GitHub.
+2. **Execution evidence:** verifier-focused Python **7/7 PASS**; isolated Node 22.16 with synthetic local package metadata **2/2 PASS**. No full REA_APP exact-source Python/Node suite run. Gate R remains PARTIAL.
+3. Highest-priority next action: obtain authorized full REA_APP source checkout or true source-export mechanism, execute `cd tools/rea-app && python verify_gate_r.py`, log 14/14 blobs, actual Python total/skip and real parser test. Do not create paid CI, invent PASS, or divert to HAE/Lightning Azent features until Gate R is reviewed.
+4. No customer data, n8n source, real OAuth, new services, or source migration in P27.
+
 ## REA_APP P26 — next gate after real verifier self-test (2026-10-27 KST)
 - New reviewed `tests/test_verify_gate_r.py` **5/5 PASS** on exact GitHub-matching source bytes in local Linux/Python 3.13.5. Verifier now expects 14 tracked Git blobs, so `SOURCE VERIFIED: 14/14` is required. See Gate R review for evidence.
 - **Do not confuse this narrow verified success with full REA_APP acceptance.** Next highest priority remains source-complete connected Python+Node integration: run `python verify_gate_r.py` with existing pinned Babel 7.29.9, record OS, current HEAD, Python total/pass/fail/skip and parser result.
