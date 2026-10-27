@@ -1,3 +1,11 @@
+## Lightning Azent P12 — next executable gate after completed receipt check (2026-10-28 KST)
+
+- **What changed:** `runlog.py` new `inspect_completed_business_receipts` checks read-only state `steps` vs business `records` / `csv_records`; `LAExecutor.resume` invokes before `Engine` initialization. Two new real-Engine acceptance definitions and six focused SQLite checks added; total **49 test definitions**. Source blobs `runlog.py@13928ce9b6d3224cafb8f715908b42faea6c62d1`, `test_runlog_receipts.py@ee9f7fef45b4776d320ee844b0c1dc461c27d8d9`.
+- **What passed:** Local Linux/Python 3.13.5 focused `unittest` 6/6 PASS on exact runlog module source + real synthetic SQLite and stub IDENTIFIER. No whole Engine loaded. **0/49 whole-suite cases executed** in authorized full repository; Windows and HAE baseline still pending.
+- **Next run:** Authorized Windows checkout latest `feature/lightning-azent` SHA, `python -m compileall -q packages/lightning-azent`; `$env:PYTHONPATH='packages/lightning-azent'`; `python -m unittest discover -s packages/lightning-azent/tests -v`. Fix the first genuine failure and rerun; assert lost `sqlite_put` and CSV import records are rejected before any SQLite recreation or cached success.
+- **Further gates:** 3 synthetic CLI/Engine fixtures, original `apps/ax-flow/tests` parity, clean wheel install and console smoke, native Windows OS process locking. No paid runner, user data, third-party source transfer, OAuth or premature HAE migration.
+- **Known limitation:** Counts do not attest payload integrity or database identity; zero-row imports remain ambiguous. Enforce authorization and idempotent semantics, do not claim global exactly-once.
+
 ## Lightning Azent P11 — full package gate after verified backup tests (2026-10-28 KST)
 
 - **Executed scoped component:** `state_backup.py@b0d5e55db810a066b7e30c7a7756700084bbef6e` and `test_state_backup.py@c24b0cb7c62b2a9e326499487e9e72cef21c5bf5` byte-for-byte verified. Linux/Python 3.13.5 real SQLite module **7/7 PASS**, including WAL, restore, original hash, failed/no-overwrite, invalid DB cleanup and concurrent publish. This is not a full LA checkout.
