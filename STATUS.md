@@ -1,3 +1,9 @@
+## P35 — scanner snapshot consistency gate (2026-10-27 KST)
+
+- GitHub `REA_APP@71e75e5698e5b81755c85e889e658efadc0d0501`: source reader now rejects changed or partial snapshots (`file_changed_during_read`) using post-read fstat, sizes and timestamps. Previous scanner lacked post-read consistency checks.
+- Actual isolated Python 3.13.5 regression **5/5 PASS** on same-size mutation/truncation/growth/short read/unchanged cases. Offline evidence-runner QA **11/11 PASS** after pin update. Remote reviewed manifest **16/16 matched** with zero unexpected analyzer/test executables. These are focused tests, NOT the full analyzer/Node regression.
+- Remaining: complete Python graph/CLI/impact and genuine installed Babel parser, Windows junction, concurrency integration tests. **Gate R PARTIAL**. No customer data, n8n source, paid CI, release or other branches changed.
+
 ## P34 — Gate R evidence provenance fail-closed (2026-10-27 KST)
 
 - Closed an actual P33 evidence false-positive: synthetic `verify_gate_r.py` printing status markers from a dirty checkout previously yielded PASS. New runner pins reviewed verifier blob `396654c47b25cfbc0279b4dcdc2f8872c7e20891`, checks the `tools/rea-app` Git working tree is clean, and strictly matches full 15/15/Python/Node and exit-0 output lines.
