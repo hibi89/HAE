@@ -8,6 +8,13 @@ definition and façade export path:line evidence. Re-export chains, wildcard,
 external, unresolved and ambiguous same-line exports are omitted. This bounded
 rule also feeds baseline/current contract comparison without reparsing.
 
+The P53 wheel was installed offline into a fresh Python 3.11.9 environment;
+`npm ci` then installed the exact packaged Babel lock without lifecycle scripts.
+The installed CLI produced all eight diagram-enabled bundle reports, including
+the direct façade contract, with byte-identical rerun output and unchanged
+synthetic sources. The wheel was not published; details and its hash are in
+`STATUS.md` P53.
+
 ## P50 — installable Python wheel
 
 REA_APP now builds a pure-Python wheel with a `rea-app` console command. The
