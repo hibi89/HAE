@@ -1,3 +1,9 @@
+## REA_APP P24 — test credential exclusions on actual source (2026-10-27 KST)
+1. Current work on `REA_APP` only: code `019e022d1404cbdfc600a0d40cd0ef521c7d9191`, regression `67155aa73445ca4ed33dd97d02a0adbc1fa4aa86`. The report `tools/rea-app/CHIEF_GATE_R_REVIEW.md` documents rationale and residual risks. Existing old Gate R evidence must not be promoted.
+2. Re-run current complete Python tests and Babel parser tests in an **authorized verified checkout**, particularly `python -m unittest discover -s tests -p test_scan_sensitive_exclusions.py -v` and `test_scan_open_races.py`. Validate source hash preservation, secret filenames excluded prior to any open, and platform-specific SKIPs.
+3. Conformance: new HAE (Humanized Automation Ecosystem) end-user brand replaces AX FLOW. REA_APP remains analysis tool and Lightning Azent independently implemented engine; no product code in either was edited by P24.
+4. No n8n source scanning, paid CI, customer data, production deployment or live provider keys. Review license/access and the Gate R suite before Gate N research and feature contracts.
+
 ## REA_APP P23 — next verified action (2026-10-27 KST)
 1. **Prioritize REA_APP current-HEAD verification, not AX FLOW feature expansion**: repo `hibi89/AX_FLOW`, `REA_APP`; new scanner + two unrun tests at `f39bc315...` / `f6b868d...`. Chief review `tools/rea-app/CHIEF_GATE_R_REVIEW.md`.
 2. In a connected local authorized checkout: `cd tools/rea-app && python -m unittest discover -s tests -v` then `npm run test:parser` using already provisioned pinned Babel 7.29.9; if dependency missing, describe blocker rather than silently installing a new service. Specifically run `python -m unittest discover -s tests -p 'test_scan_open_races.py' -v`. Verify OS/Python/Node/SHAs, PASS/FAIL/SKIP and source preservation; treat Windows POSIX-only test as skipped, not passed.
