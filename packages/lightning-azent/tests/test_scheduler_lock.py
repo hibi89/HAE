@@ -3,12 +3,17 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+import os
+import subprocess
+import sys
 import tempfile
+import time
+from types import SimpleNamespace
 import threading
 import unittest
 
 from lightning_azent.engine import PlanError
-from lightning_azent.scheduler import interval_ticks
+from lightning_azent.scheduler import _schedule_lock, interval_ticks
 
 
 class SchedulerLockTests(unittest.TestCase):
@@ -60,6 +65,64 @@ class SchedulerLockTests(unittest.TestCase):
             self.assertTrue(next_tick[0]["advanced"])
             self.assertEqual(len(seen), 2)
             self.assertNotEqual(seen[0], seen[1])
+
+
+    def test_separate_process_crash_releases_schedule_lock(self):
+        """Prove a second process is excluded and an unclean exit frees the lock."""
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp) / "runtime.sqlite"
+            ready = Path(tmp) / "worker-ready"
+            worker_code = """
+import os
+import sys
+from pathlib import Path
+from types import SimpleNamespace
+from lightning_azent.scheduler import _schedule_lock
+
+state = Path(sys.argv[1])
+ready = Path(sys.argv[2])
+with _schedule_lock(SimpleNamespace(state_path=state), "SharedSchedule"):
+    ready.write_text("locked", encoding="ascii")
+    sys.stdin.buffer.read(1)
+    os._exit(0)  # Simulates process death: no context-manager unlock call.
+"""
+            package = Path(__file__).resolve().parents[1]
+            env = dict(os.environ)
+            env["PYTHONPATH"] = str(package)
+            child = subprocess.Popen(
+                [sys.executable, "-c", worker_code, str(state), str(ready)],
+                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                cwd=tmp, env=env,
+            )
+            try:
+                deadline = time.monotonic() + 5
+                while not ready.is_file() and child.poll() is None and time.monotonic() < deadline:
+                    time.sleep(0.02)
+                self.assertTrue(ready.is_file(), "worker did not acquire schedule lock")
+                self.assertIsNone(child.poll(), "worker exited before lock contention")
+                engine = SimpleNamespace(state_path=state)
+                with self.assertRaisesRegex(PlanError, "already active"):
+                    with _schedule_lock(engine, "SharedSchedule"):
+                        self.fail("second process acquired existing schedule lock")
+                # Locks are scoped by schedule ID even when sharing the same SQLite.
+                with _schedule_lock(engine, "OtherSchedule"):
+                    pass
+            finally:
+                if child.poll() is None:
+                    try:
+                        child.stdin.write(b"x")
+                        child.stdin.flush()
+                        child.wait(timeout=5)
+                    except (OSError, subprocess.TimeoutExpired):
+                        child.kill()
+                        child.wait(timeout=5)
+                child.stdin.close()
+                child.stdout.close()
+                child.stderr.close()
+            self.assertEqual(child.returncode, 0)
+            # Kernel must release the lock even though the child called os._exit.
+            with _schedule_lock(SimpleNamespace(state_path=state), "SharedSchedule"):
+                pass
 
 
 if __name__ == "__main__":
