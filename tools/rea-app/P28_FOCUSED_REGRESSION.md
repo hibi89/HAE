@@ -6,7 +6,7 @@
 Source repository: private `hibi89/AX_FLOW`, branch `REA_APP` observed before testing at `9359f7a8631667934bb33415adc240f928f9cb3e`.
 Source manually reconstructed inside isolated `/mnt/data/rea_validation/` from the GitHub connector because the container has no working DNS route to `github.com` and no mounted authenticated full private clone. Nothing was fetched from or copied from n8n.
 
-Before executing, confirmed Git's blob framing `SHA1(b"blob " + decimal_length + b"\\0" + raw_bytes)` for every file:
+Before executing, confirmed Git's blob framing `SHA1(b"blob " + decimal_length + b"\0" + raw_bytes)` for every file:
 
 | Exact source / test file | Verified Git blob SHA |
 |---|---|
