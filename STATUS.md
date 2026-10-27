@@ -8,6 +8,12 @@
 - Blueprint A remains **MVP_VERIFIED** for the supported synthetic JS/TS scope. Overall A–E estimate stays **77% / PARTIAL** due unrelated UI, restore, security, installer and customer/release gates.
 - n8n's allowed official-source structure review is recorded on `feature/axflow-mvp` at `8e8f89b5f797fdf77790a2fea57d6d7ad7b344a6`; no source/assets were copied.
 
+## P13 — Windows reparse-point gate tightened (2026-10-27 KST)
+- Added `test_windows_reparse_attribute_is_treated_as_link`, which exercises the actual scanner predicate with FILE_ATTRIBUTE_REPARSE_POINT set and clear. REA_APP Python suite: **11/11 PASS**; `npm run test:parser`: PASS.
+- An actual filesystem fixture was attempted in an isolated temp directory. PowerShell parsed the corrected command and attempted `New-Item -ItemType Junction`, but Windows returned **Access denied**. No privilege escalation was attempted. An earlier probe had a PowerShell parenthesis syntax error before executing any operation; it was corrected before the denied attempt. Temporary fixture cleanup completed.
+- Test commit `98c6d6b399804b9041862caeb3124a0faa1146a0`; README limitation disclosure `f2b09c0827d7fb86666fa3d8fd4684cbebd39b96`.
+- The actual filesystem junction remains unverified; attribute-level behavior is tested. Blueprint A remains verified for supported synthetic scope, overall tracker stays **77% / PARTIAL**.
+
 
 ## Verified by GitHub at start of bootstrap
 - Repository `hibi89/AX_FLOW`: **Private** (renamed from user-created REA_APP), default branch `main`, read/write admin available.
