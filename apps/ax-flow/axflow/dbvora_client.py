@@ -6,7 +6,7 @@ import re
 from http.client import HTTPException
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
-from urllib.request import HTTPRedirectHandler, Request, build_opener
+from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 MAX_TABLES = 1_000
@@ -205,7 +205,7 @@ class DbvoraClient:
         if not 0 < timeout_seconds <= 5:
             raise ValueError("DBVORA timeout must be in the range (0, 5] seconds.")
         self.timeout_seconds = timeout_seconds
-        self._opener = build_opener(_NoRedirect)
+        self._opener = build_opener(ProxyHandler({}), _NoRedirect)
 
     def _get(self, path: str) -> object:
         assert self.base_url is not None
