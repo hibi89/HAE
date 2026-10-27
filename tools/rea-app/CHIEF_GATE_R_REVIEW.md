@@ -1,3 +1,11 @@
+## P26 — executable source-pinned verifier self-tests (2026-10-27 KST)
+
+- **Direct execution evidence:** Recreated `tools/rea-app/verify_gate_r.py` from private GitHub source in an isolated local container, confirmed `git hash-object` matched exact remote blob `c5f06d59e11f93d6f7af7068c7fd6bf13c51b8ad`. Created `tests/test_verify_gate_r.py` independently and ran 5 stdlib unittest cases with Python 3.13.5/Linux: **5/5 PASS** (known Git SHA, accept matching manifest, reject tamper, reject unreviewed test, reject manifest symlink).
+- GitHub test file first write had an accidental escaping discrepancy, and was corrected before being accepted: final Git blob `745e1b5486c9d98dbcfcb1bf5d7ec5ca940f5ca3` matches the actual locally executed source byte-for-byte. Corresponding reviewed test commit `e6775a5b3bc17c2049238e0d505ec31e384d53ff`.
+- Updated `verify_gate_r.py` to pin **14** reviewed files, including the new test, to that reviewed Git commit. Final verifier Git blob `75a760810b0a369f5e2a870f20af38fbc0b6fe38` matches the locally re-run copy. Following the pin, the new test was **5/5 PASS** again, actual local execution.
+- **Scope:** This verifies exact Python self-test + verifier behavior, **not all 14 private source files in a local checkout**; scanner/P23/P24/graph/Node suite still NOT run from current exact GitHub tree. REA_APP Gate R remains **PARTIAL**. No OAuth, n8n source, customer data, paid CI, or external app work. Windows symlink behavior is not proven by Linux self-test.
+- Next: materialize or use authorized full GitHub repo checkout and run `python verify_gate_r.py` with installed pinned `@babel/parser`. If its source gate and entire Python/Node test pass (including declared skips), record exact SHA/OS/test counts and approve Gate R. Do not advance Lightning Azent package as if this self-test were full R-A1 acceptance.
+
 ## P24 — scanner credential-file exclusion hardening (2026-10-27 KST)
 
 - Chief confirmed `REA_APP` HEAD `6b7f78ee93eccbf7f7afb457dbfd37cc025713ca` before changes. Original scanner excluded `.env` and names containing "secret"/"credential" but could open `.npmrc`, `.pypirc`, `.netrc`, `.git-credentials`, shell history, and `.docker/config.json` in normal file inventory. It hashed accepted file bytes rather than returning them, but the read itself was unnecessary for a code graph.
