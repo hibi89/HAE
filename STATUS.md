@@ -1,5 +1,15 @@
 # STATUS — 2026-10-27 KST
 
+## P22 — REA_APP branch source and bounded analyzer MVP reverified (2026-10-27 KST)
+- Remote `REA_APP` branch HEAD: `1409d9d383e1515a1c19350252a1c7a6f534d04d`. The local workspace Git directory is unborn (`No commits yet on REA_APP`), so remote HEAD remains authoritative. All 11 analyzer/parser/test/readme/notices source files match remote Git blob SHAs; local `package-lock.json` parses to the same JSON as remote but has a final blank-line/line-ending difference.
+- **Tests:** from `tools/rea-app`, `python -m unittest discover -s tests -v` — **11/11 PASS**; `npm run test:parser` — **PASS**.
+- **CLI smoke:** two independent synthetic JS/TS fixture scans each indexed 3 files, produced 1 dependency edge and 0 syntax errors. JSON and Markdown reports were byte-identical across output folders (SHA-256 `d9249111ffa3151a3bd2c0946a1e2f73e1f465fe272b3828bedc605478764c55` and `1c11ad14dc6b33012302f82e23bc9fc4151dca81afd3e138d881c8ac60655e43`).
+- Existing unit test `test_deterministic_graph_evidence_and_source_unchanged` passed; the CLI smoke selected output folders outside the inspected synthetic root.
+- **Failure/cause:** an initial raw blob comparison flagged only `package-lock.json`; the normalized JSON object was identical and all analyzer code/test blobs matched. This is a trailing whitespace/line-ending artifact in the local uncommitted snapshot, not a source or dependency change. Local `__pycache__` files are generated and excluded from the remote comparison.
+- No code changed. Overall A–E tracking remains **86% PARTIAL** (AX FLOW progress only).
+- **Next:** scan the bounded REA_APP project itself, with reports outside its source root, and verify deterministic output plus unchanged input files.
+
+
 ## P21 — configured-but-offline DBVORA state verified in the UI (2026-10-27 KST)
 - Launched a separate synthetic AX FLOW UI with `--dbvora-url http://127.0.0.1:18767`; the port was confirmed closed before startup. The visible panel reported **“DBVORA local service is unavailable.”** and instructed the user to check the API and refresh.
 - The page showed no table/column data, database path, CSV row content or run receipt; runtime and business DB files remained absent. The P5 connected preview at `:8767` was not changed.

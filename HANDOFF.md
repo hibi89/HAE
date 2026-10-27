@@ -1,5 +1,17 @@
 # HANDOFF — AX FLOW + REA_APP (bootstrap, 2026-10-27 KST)
 
+## Latest checkpoint — P22 REA_APP branch re-verification
+1. **Task:** verify the authorized REA_APP analyzer source, tests and deterministic CLI output.
+2. **Remote branch:** `REA_APP@1409d9d383e1515a1c19350252a1c7a6f534d04d`.
+3. **Local checkout:** no local commit exists; the connected GitHub branch was used as source of truth.
+4. **Source comparison:** all analyzer/parser/test/readme/notices blobs match remote; the local package lock differs only in trailing blank-line/line-ending bytes and parses to the identical JSON object.
+5. **Python tests:** `python -m unittest discover -s tests -v` — **11/11 PASS**.
+6. **Node parser tests:** `npm run test:parser` — **PASS**.
+7. **Synthetic CLI:** two separate scans each indexed 3 files, made one import edge, and reported zero syntax errors.
+8. **Determinism:** JSON and Markdown outputs were byte-identical across both output directories; their SHA-256 values are recorded in STATUS.
+9. **Failure record:** raw package-lock blob comparison initially mismatched due local trailing blank-line/line-ending representation; normalized parsed content matched. No product defect.
+10. **Progress/next:** product remains **86% PARTIAL**; next scan the analyzer's own source tree with output outside it and compare input hashes before/after. No site needs opening; keep P5 at `http://127.0.0.1:8767/` available.
+
 ## Latest checkpoint — P21 DBVORA offline-state UI acceptance (2026-10-27 KST)
 1. **Task:** check the configured-but-unavailable DBVORA path without touching the active connected P5 review.
 2. **Test setup:** AX FLOW UI on a separate synthetic fixture server, configured to `http://127.0.0.1:18767`; a loopback probe confirmed the port was closed before startup.

@@ -1,3 +1,9 @@
+## P22 complete — REA_APP branch and bounded analyzer checks passed
+Remote `REA_APP@1409d9d383e1515a1c19350252a1c7a6f534d04d`: Python tests **11/11 PASS**, Node parser assertions PASS. Two independent synthetic CLI scans emitted the same JSON and Markdown, indexing 3 files with 1 import edge and 0 syntax errors. All code/test blobs match remote; the local package-lock JSON is semantically identical despite a trailing newline difference. The local checkout has no Git commit; do not claim local HEAD.
+
+## Next atomic task — analyze REA_APP source with itself
+Run the bounded scanner on `tools/rea-app` itself, placing reports outside that selected source root. Capture file hashes before and after, confirm no source mutation, and verify deterministic JSON/Markdown across separate output directories. The project is user-authorized and the scanner is read-only; do not upload its report. No new website is needed; keep the connected P5 view open at `http://127.0.0.1:8767/`.
+
 ## P21 complete — configured DBVORA offline state is clear and bounded (2026-10-27 KST)
 A separate synthetic UI pointed at a confirmed-closed loopback DBVORA port. It reported the service unavailable and how to retry; no table metadata, database/CSV content, path, run receipt or local database file appeared. The connected P5 preview was left untouched. Test server and synthetic fixtures were removed. Progress advances to **86% / PARTIAL** (A100/B95/C95/D90/E50).
 
