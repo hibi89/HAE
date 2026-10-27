@@ -753,8 +753,14 @@ class TestEngine(unittest.TestCase):
         self.assertEqual([json.loads(row[1])["id"] for row in rows], ["1", "2"])
 
     def test_cross_process_same_run_replay_is_idempotent(self):
+        # This test deliberately creates same-run overlap, so opt into the bounded
+        # busy/locked retry budget instead of relying on the one-attempt default.
+        concurrent_plan = json.loads(json.dumps(self.plan))
+        for step in concurrent_plan["steps"]:
+            if step["op"] in {"sqlite_put", "sqlite_get"}:
+                step.update(max_attempts=3, timeout_ms=5000)
         plan_file = self.root / "process-plan.json"
-        plan_file.write_text(json.dumps(self.plan), encoding="utf-8")
+        plan_file.write_text(json.dumps(concurrent_plan), encoding="utf-8")
         command = [
             sys.executable, "-m", "axflow", "run", str(plan_file),
             "--state", str(self.root / "state.db"), "--data", str(self.root / "business.db"),

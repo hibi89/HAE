@@ -1,3 +1,10 @@
+## P37 — cross-process replay test now opts into bounded retries (2026-10-27 11:45 KST)
+- **Change:** corrected only the existing synthetic concurrency test setup. It deliberately overlaps two processes using the same run ID, so its plan now explicitly sets `max_attempts=3` and `timeout_ms=5000` on SQLite write/read steps. The production default remains one attempt; no executor policy changed.
+- **Stress verification:** repeated `test_cross_process_same_run_replay_is_idempotent` 20 times — **20/20 PASS** in 10.351 s.
+- **Full verification:** Windows Python 3.11.9, `python -m unittest discover -s tests -v` from `apps/ax-flow` — **66/66 PASS** in 28.296 s with authorized synthetic loopback. Node syntax checks, UI provenance regression and `git diff --check` PASS.
+- **Failure cause:** the prior one-off `StepRetryExhausted` was caused by the test forcing a same-run overlap while relying on the IR's one-attempt default. The test contract is now explicit; no repeat failed under the 20-run stress or final suite. Default one-attempt behavior remains intentional and unchanged.
+- **Progress remains 90% PARTIAL** (A100/B95/C95/D95/E65). P37 improves reliability evidence but does not close backup/restore, customer, OAuth, independent security or release gates.
+
 ## P36 — DBVORA synthetic archive gate safely stopped on Windows (2026-10-27 11:39 KST)
 - **Source:** read-only DBVORA `feature/p0-db-map@31b8257468d28743fb2d3767d1caa56938df756c`; all ten locally reconstructed archive/CLI/SQLite-reader modules matched their remote Git blob SHAs.
 - **Synthetic test:** created a disposable SQLite fixture with departments/employees and a declared FK. Ran the exact `dbvora.archive_cli snapshot` CLI with `--synthetic-only --accept-plaintext`, using separate source and output directories.

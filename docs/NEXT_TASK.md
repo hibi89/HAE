@@ -1,3 +1,11 @@
+## P37 complete — concurrent same-run test configured its bounded retry budget
+The cross-process regression intentionally starts two workers for one run ID. Its previous fixture used the default `max_attempts=1`, so one transient SQLite lock correctly exhausted the configured budget. The test now explicitly requests the supported bounded budget of three attempts and 5000 ms; production defaults and executor behavior are unchanged.
+
+**Verification:** repeated the test **20 times, 20/20 PASS**; full Windows Python suite **66/66 PASS** in 28.296 s with synthetic loopback; Node syntax/UI checks and `git diff --check` PASS. Progress remains **90% PARTIAL**.
+
+## Next atomic task — packaged CSV normalization workflow
+Build the current stdlib Windows zipapp into a new temporary folder, run a synthetic CSV normalization → filter → SQLite workflow using the packaged CLI, and verify the duplicate receipt, preserved source hash/row numbers, separate DBs, runtime redaction, and cleanup. No browser site, signing, external login, customer data or deployment is needed. Do not overwrite existing artifacts.
+
 ## P36 complete — DBVORA Windows synthetic archive capability check
 Read and hash-verified the pinned DBVORA archive CLI/source, then invoked its snapshot command on a disposable synthetic SQLite source in separate output directories. The source SHA-256, size and mtime were unchanged; no snapshot was published. The CLI returned exit 2, `PUBLISH_FAILED`, “Staged artifact could not be flushed safely.” Since the snapshot stage could not publish, no archive/restore command was run and D2 remains NOT_STARTED. The CLI did not reveal a lower-level OS error; do not guess one. Windows/NTFS is not covered by DBVORA's recorded Linux synthetic pass.
 

@@ -1,3 +1,15 @@
+## Latest checkpoint — P37 cross-process replay stress is stable
+1. **Branch/base:** `hibi89/AX_FLOW` `feature/axflow-mvp`; P36 parent `65cbd08f26e2905a83258ff5561fc00f84e62126`. P37 changes one test only; no production runtime policy changed.
+2. **Fix:** the two-process same-run test now explicitly configures the supported bounded SQLite retry budget (3 attempts, 5000 ms) on write/read steps. The engine's default of one attempt remains intentional.
+3. **Stress:** the test was repeated 20 times — **20/20 PASS** in 10.351 s.
+4. **Full suite:** Python 3.11.9 `python -m unittest discover -s tests -v` — **66/66 PASS** in 28.296 s with authorized synthetic loopback. Node syntax/UI regression and diff checks PASS.
+5. **Failure cause:** one earlier targeted run exhausted its one-attempt plan budget under the deliberately forced process overlap. Isolated and final full reruns passed; explicit test configuration resolved the misleading assumption. No failure recurred in stress.
+6. **Current estimate:** 90% PARTIAL (A100/B95/C95/D95/E65), heuristic.
+7. **Other open gap:** P36 actual DBVORA synthetic snapshot CLI failed safely on this Windows host before artifact publication (`PUBLISH_FAILED`); source SHA/size/mtime unchanged, no restore was attempted. D2 remains NOT_STARTED.
+8. **Environment:** no site or external authentication is needed. P36 source copy/fixture removed. Six stale old test logs are still locked; no listener/Python process was visible, CIM details denied, and no process was force-killed.
+9. **Next:** package smoke for P35 normalization: build the updated standard-library zipapp in a clean temporary output folder, run a synthetic normalize → filter → SQLite import through the packaged CLI, verify duplicate receipt, source immutability and runtime redaction, then clean artifacts. No signed/customer install.
+10. **Time/scope:** 2026-10-27 11:45 KST; P37 does not claim overall completion.
+
 ## Latest checkpoint — P36 DBVORA synthetic Windows archive capability check
 1. **Goal/branch:** continue AX FLOW against the 100% Blueprint target on `hibi89/AX_FLOW` `feature/axflow-mvp`. Current code/evidence parent is P35 `e7d98efb91fff7c0045ae1c8d47a1a4af7c52e63`; P36 adds docs only.
 2. **P35 code:** validated single-column `csv_normalize`, bounded English/Korean intent, transform/filter/import lineage, duplicate reporting without dropping duplicate rows, and redacted receipts. Full AX FLOW Python suite 66/66 PASS; Node checks/UI regression PASS.
