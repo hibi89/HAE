@@ -1,8 +1,8 @@
 # AX FLOW Definition of Done — evidence matrix
 
-**Evidence status at 2026-10-27 KST.** Status reflects tests actually run on the recorded bounded synthetic environment. “PASS” does not imply customer, production, or cross-platform readiness.
+**Evidence status at 2026-10-27 KST.** Status reflects tests actually run on the recorded bounded synthetic environment. “PASS” does not imply customer, production, or cross-platform readiness. Blueprint estimate: A100/B95/C95/D95/E50 = **87% PARTIAL**; P29 reconfirmed the bounded browser flow without closing a new category.
 
-**Latest complete AX FLOW regression:** Windows Python 3.11.9, from apps/ax-flow, python -m unittest discover -s tests -v — 61/61 PASS with loopback permission, including P27 provenance allowlisting. P28's Node VM UI provenance regression also passes. Restricted-sandbox attempt had 9 failures / 10 errors from WinError 10013 plus one transient SQLite busy-cap failure that did not recur; see P25 in STATUS/HANDOFF.
+**Latest complete AX FLOW regression:** Windows Python 3.11.9, from apps/ax-flow, python -m unittest discover -s tests -v — 61/61 PASS with loopback permission, including P27 provenance allowlisting. P28's Node VM UI regression and P29's current-source visible browser-to-SQLite replay also pass. Restricted-sandbox attempt had 9 failures / 10 errors from WinError 10013 plus one transient SQLite busy-cap failure that did not recur; see P25 in STATUS/HANDOFF.
 
 | ID | Component | Required proof | Current |
 |---|---|---|---|
@@ -11,13 +11,13 @@
 | F1 | Typed workflow IR | independently validated versioned schema, invalid/injection inputs fail closed | PASS — bounded synthetic IR validation/rejection and CLI workflows exercised |
 | F2 | Runtime SQLite + executor | deterministic CLI, durable journal, restart recovery, migrations/backup tests | PARTIAL — deterministic ledger, migrations, retries and crash/replay tested; backup/restore acceptance absent |
 | F3 | Business-data handling | user-selected SQLite read/write with integrity, no conflation with runtime DB | PASS — synthetic CSV→business SQLite flow, separate runtime DB, explicit write approval, integrity/idempotency checks |
-| F4 | AI & attachments | natural language → runnable plan, files parsed locally, bounded repair/dry-run, no manual nodes/JSON | PARTIAL — four bounded CSV intents and fail-closed UI tested; no general AI, arbitrary attachments or bounded AI repair |
+| F4 | AI & attachments | natural language → runnable plan, files parsed locally, bounded repair/dry-run, no manual nodes/JSON | PARTIAL — four bounded CSV intents and fail-closed UI tested; P16/P19 and P29 verify a supported visible browser flow; no general AI, arbitrary attachments or bounded AI repair |
 | F5 | Connectors/auth | real user OAuth consent (no bypass), scoped Gmail send / Sheets calls with explicit approval | NOT_STARTED — requires owner consent and real credentials |
 | D1 | DBVORA integration | supported SQLite read-only catalog → UI schema/relations/size/provenance; API offline handling; no raw data leakage | PARTIAL — P24 selected synthetic SQLite verified visible schema/PK/FK/size and redaction; P27 API/UI allowlist verified provenance display and hostile path/markup suppression; P28 verified CPU-unavailable disclosure and offline clearing; customer/multi-asset/packaged provenance not verified |
 | D2 | Data backup/restore | independently restored source, same content and source unchanged, corruption/restart safety on supported platform | NOT_STARTED — separately owner-approval gated; no restore was performed |
 | F6 | Customer dashboard | local browser with authenticated controls, permissions, status, errors, no manual node selection | PARTIAL — synthetic local browser controls/receipts/errors verified; customer authentication absent |
 | F7 | Security/reliability | file/OAuth/token secrecy, prompt injection, outbound limits, idempotency, fault injection, least privilege, dependency audit | PARTIAL — local boundary/redaction/idempotency and fault paths tested; no independent review, live OAuth validation or complete security gate |
-| F8 | Install/customer release | native Windows/NTFS + UI/CLI + network + repeatable packaged install, three real-world-shaped workflows | PARTIAL — stdlib zipapp and synthetic local CLI/UI smoke; no signed installer or customer installation/release evidence |
+| F8 | Install/customer release | native Windows/NTFS + UI/CLI + network + repeatable packaged install, three real-world-shaped workflows | PARTIAL — stdlib zipapp CLI/UI/API smoke and source-app browser flow; packaged visible-browser run, signed installer and customer installation/release evidence remain open |
 | B1 | Commercial model | scoped customer pilot feedback/support time, legal/license review; price is a hypothesis | NOT_STARTED — no scoped pilot or commercial validation |
 
 **Platform-specific unverified items:** an unprivileged Windows file-symlink fixture was skipped because Path.symlink_to returned OSError [WinError 1314]. A directory-junction fixture was also skipped because PowerShell New-Item -ItemType Junction returned Access is denied. Neither workflow ran and neither result is a pass. Do not elevate to claim either acceptance.

@@ -1,3 +1,13 @@
+## Latest checkpoint — P29 current-source browser workflow replay
+1. **Source under test:** `feature/axflow-mvp@99058617d8b35806b02be41a84fcd7ec5bee1c66`; no source changed. Documentation branch head before P29: `c2f4dcd462eb5828e49b456439c4b189c79313cc`.
+2. **Flow:** Windows app on isolated loopback port 8773, synthetic two-row CSV. Browser entered Korean task → generated `csv_read → sqlite_import_csv` plan → run remained disabled until explicit synthetic-write approval → completed.
+3. **Evidence:** visible receipt `COMPLETED`, 2/2 steps, 2 rows, run `Guif2e2236163d1`. Read-only SQLite check found exactly rows 1–2 in business DB and no synthetic input strings in runtime DB bytes. Receipt showed no source values.
+4. **Tests:** real browser interaction and DB integrity assertions PASS; the P27 full Windows Python suite remains latest at **61/61 PASS** (not rerun for this browser-only check).
+5. **Failure/cause:** no application/test failure. Unsupported screenshot wrapper method was replaced by `getScreenshot()`; receipt was captured.
+6. **Cleanup/site:** server stopped, tab closed, fixture removed, port 8773 closed. Existing P5 `http://127.0.0.1:8767/` remains open.
+7. **Progress:** **87% PARTIAL**, unchanged A100/B95/C95/D95/E50. P16/P19 already satisfied the bounded Blueprint C visible-workflow proof; this replay confirms current code rather than closing a new category.
+8. **Next:** verify the same bounded flow from the generated Windows zipapp in an isolated synthetic fixture. This does not certify a signed installer or customer deployment.
+
 ## Latest checkpoint — P28 UI provenance completeness
 1. **Code/test commit:** `99058617d8b35806b02be41a84fcd7ec5bee1c66` on `feature/axflow-mvp`.
 2. **Change:** display the allowlisted CPU metric state as “CPU 사용량: 제공되지 않음”; refresh to offline clears previously displayed provenance.

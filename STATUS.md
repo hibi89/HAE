@@ -1,3 +1,12 @@
+## P29 — current source UI workflow reverified in a real browser (2026-10-27 KST)
+- Ran the current `feature/axflow-mvp` app from code commit `99058617d8b35806b02be41a84fcd7ec5bee1c66` on isolated loopback port 8773 with only a two-row synthetic `contacts.csv`.
+- In the browser, entered a supported Korean task, inspected the generated `csv_read → sqlite_import_csv` plan, confirmed run stayed disabled before the explicit synthetic-write approval, then ran it.
+- **Visible result:** `COMPLETED`, 2/2 steps, two rows, run `Guif2e2236163d1`. The receipt omitted row values.
+- **Integrity/privacy:** separate runtime and business DB files; business DB contains exactly source rows 1–2; runtime DB bytes contain neither synthetic marker value. No DBVORA endpoint was configured. This verifies only one synthetic import path.
+- **Cleanup:** server stopped, temporary browser tab closed, exact synthetic fixture folder removed, port 8773 confirmed closed. P5 at `http://127.0.0.1:8767/` remained open and unchanged.
+- **Failure/cause:** no app/test failure. The first screenshot method name was unavailable on the CUA wrapper; the supported `getScreenshot()` captured the completed receipt. Python full suite was not rerun in this browser-only task; P27's latest complete Python result remains **61/61 PASS**.
+- **Progress remains 87% PARTIAL** (A100/B95/C95/D95/E50). P16/P19 had already verified the Blueprint C browser flow, so P29 is current-version regression evidence, not a newly closed category. D1 customer/package, D2 restore, OAuth, independent security, installer and release gates remain open.
+
 ## P28 — UI exposes unavailable CPU provenance and clears stale data (2026-10-27 KST)
 - Added the fixed Korean label `CPU 사용량: 제공되지 않음` for the adapter's allowlisted `cpu_usage: unavailable` provenance.
 - Added `tests/test_ui_provenance.cjs`, which runs the actual `app.js` in an isolated Node VM with a minimal DOM and synthetic API. It checks the CPU label, opaque ID, suppression of path/HTML metadata, no injected DOM nodes, and clearing the old provenance after an offline refresh.

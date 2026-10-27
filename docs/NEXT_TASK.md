@@ -1,3 +1,9 @@
+## P29 complete — current-source browser workflow replay
+The visible browser ran a Korean natural-language CSV request through preview and explicit write approval to a completed 2-row SQLite receipt. Separate DB integrity check confirmed exact business rows and no input values in runtime storage. The temporary loopback server, tab, fixture and port were cleaned up. P27 remains the latest full Python suite at 61/61. A–E progress remains **87% PARTIAL**; P16/P19 already verified this bounded Blueprint C requirement.
+
+## Next atomic task — packaged Windows browser flow
+Build the existing stdlib zipapp outside the source tree, launch it on a fresh loopback port using a disposable synthetic CSV, and verify the same preview → approval → completed receipt in a temporary browser tab. Check DB separation and clean up the tab/server/fixture. Do not sign or install it as a customer package.
+
 ## P28 complete — UI provenance disclosure and offline clearing
 Commit `99058617d8b35806b02be41a84fcd7ec5bee1c66` shows the allowlisted “CPU 사용량: 제공되지 않음” state and clears previous provenance after an offline refresh. The actual `app.js` passed an isolated Node VM DOM regression for safe rendering, path/markup suppression, and offline clearing; both JS syntax checks passed. Python full suite remains at P27's 61/61 PASS. Progress remains **87% PARTIAL**.
 
