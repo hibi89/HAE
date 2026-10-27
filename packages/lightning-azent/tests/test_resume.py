@@ -148,5 +148,44 @@ class ResumeAcceptanceTests(unittest.TestCase):
         self.assertEqual(self.executor.status("DroppedReceipt")["status"], "completed")
 
 
+    def test_completed_sqlite_write_missing_record_is_not_silently_resumed(self):
+        plan = self.fixture("interval-replay.json")
+        plan.pop("trigger")
+        self.assertEqual(
+            self.executor.execute(plan, "LostWrite", approve_writes=True),
+            {"source": "synthetic"},
+        )
+        with sqlite3.connect(self.business) as conn:
+            conn.execute("DELETE FROM records WHERE run_id=?", ("LostWrite",))
+        with self.assertRaisesRegex(PlanError, "write receipt is missing"):
+            self.executor.resume(plan, "LostWrite", approve_writes=True)
+        with sqlite3.connect(self.business) as conn:
+            self.assertEqual(conn.execute(
+                "SELECT COUNT(*) FROM records WHERE run_id=?", ("LostWrite",)
+            ).fetchone()[0], 0)
+        self.assertEqual(self.executor.status("LostWrite")["status"], "completed")
+
+    def test_completed_csv_import_missing_row_is_not_silently_resumed(self):
+        (self.root / "orders.csv").write_bytes(
+            b"id,amount,label\\n1,99,low\\n2,100,edge\\n3,150,high\\n"
+        )
+        plan = self.fixture("csv-filter-import.json")
+        self.assertEqual(
+            self.executor.execute(plan, "LostCsvRow", approve_writes=True)["imported_rows"], 2
+        )
+        with sqlite3.connect(self.business) as conn:
+            conn.execute(
+                "DELETE FROM csv_records WHERE run_id=? AND row_number=?",
+                ("LostCsvRow", 2),
+            )
+        with self.assertRaisesRegex(PlanError, "import row receipts are missing"):
+            self.executor.resume(plan, "LostCsvRow", approve_writes=True)
+        with sqlite3.connect(self.business) as conn:
+            self.assertEqual(conn.execute(
+                "SELECT COUNT(*) FROM csv_records WHERE run_id=?", ("LostCsvRow",)
+            ).fetchone()[0], 1)
+        self.assertEqual(self.executor.status("LostCsvRow")["status"], "completed")
+
+
 if __name__ == "__main__":
     unittest.main()
