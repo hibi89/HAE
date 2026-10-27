@@ -93,6 +93,8 @@ def main() -> int:
                         raise PlanError("schedule requires an interval trigger")
                     if not 1 <= args.max_runs <= MAX_SCHEDULE_RUNS:
                         raise PlanError(f"--max-runs must be 1..{MAX_SCHEDULE_RUNS}")
+                if args.input_root is None and any(step["op"] == "csv_read" for step in plan["steps"]):
+                    raise PlanError("CSV workflows require an explicit --input-root")
                 if not args.approve_writes and any(step["op"] in {"sqlite_put", "sqlite_import_csv"} for step in plan["steps"]):
                     raise ApprovalRequired("explicit --approve-writes required for local SQLite writes")
                 if args.command == "resume":
