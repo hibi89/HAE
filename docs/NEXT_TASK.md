@@ -1,3 +1,10 @@
+## Lightning Azent P11 — full package gate after verified backup tests (2026-10-28 KST)
+
+- **Executed scoped component:** `state_backup.py@b0d5e55db810a066b7e30c7a7756700084bbef6e` and `test_state_backup.py@c24b0cb7c62b2a9e326499487e9e72cef21c5bf5` byte-for-byte verified. Linux/Python 3.13.5 real SQLite module **7/7 PASS**, including WAL, restore, original hash, failed/no-overwrite, invalid DB cleanup and concurrent publish. This is not a full LA checkout.
+- **Current count:** 41 authored Python test definitions (7 MVP, 6 CLI, 9 native, 8 resume, 4 scheduler, 7 backup). Full authentic checkout suite **UNVERIFIED**. Avoid equating focused 7/7 with overall project completeness.
+- **Next execution:** Authorized checkout of `feature/lightning-azent`; record exact SHA and OS/Python; `python -m compileall -q packages/lightning-azent`; `PYTHONPATH=packages/lightning-azent python -m unittest discover -s packages/lightning-azent/tests -v` or Windows `$env:PYTHONPATH='packages/lightning-azent'` then same command. On failure, fix the first reproduced issue and rerun.
+- **Then:** Three actual synthetic Engine workflows with SQLite/CSV receipts and interrupted-write replay; old HAE regression, source parity and wheel CLI smoke on Windows; only then HAE consumer integration. Keep repo/code access private and no paid CI/hosting or real customer data.
+
 ## Lightning Azent P10 verification gate — 2026-10-28 KST
 
 - **Core hardlink fix:** `scheduler.py` Git blob `1b8d184240f049c2e9f500d24b37f0ea5875fb9a`; `tests/test_scheduler_lock.py` Git blob `186e3abcc300004fb8ff7d6193cd5ca4b5cf7220`. Existing P9 lock could modify a hardlinked third-party file; mitigated by regular-file/link-count preflight before lock writes. Local Linux/Python 3.13 exact-blob scoped test 4/4 PASS; full Engine stubbed.
