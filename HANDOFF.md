@@ -5,6 +5,7 @@
 4. **Scope:** F2 cleanup verified; no DBVORA restore, power-loss or customer-release claim. Synthetic local fixtures only; no site/auth or external service.
 5. **Estimate:** **91% PARTIAL**; DBVORA D2, OAuth, independent security, signed/customer distribution and commercial gates remain open.
 6. **Next:** detect a source database changing during backup and ensure the attempted snapshot is discarded.
+7. **P44 implementation commit:** `7a51e933a133abf57254d4e7b216f4eae2bf0f9a`.
 
 
 
