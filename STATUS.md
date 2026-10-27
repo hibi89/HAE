@@ -1,3 +1,10 @@
+## Architecture reset — Lightning Azent name and sequential implementation (2026-10-27 KST)
+- Owner selected **Lightning Azent**: Azent conveys "A to Z"; it is the new separately versioned **independently written engine**, not AX FLOW's GUI or REA_APP's analyzer. No brand/trademark availability review completed.
+- Adopted strict sequence **REA_APP reproducible evidence → lawful n8n functional contract review → Lightning Azent independent engine with migrated/proven current runner code → AX FLOW UI/AI/DBVORA consumer integration**, detailed in `docs/LIGHTNING_AZENT_MASTER_PLAN.md`; architectural decisions ADR-010..012.
+- Work performed for this checkpoint: design/documentation only. **No new standalone Azent code/package/branch/repository built**, no tests claimed, no existing AX FLOW code renamed, no third-party source copied.
+- Existing `feature/axflow-mvp` P49 local synthetic engine/GUI remains a reference; P48/P49 full regression is still unverified. The historical 91% heuristic does not measure complete Lightning Azent or AX FLOW product readiness. Old 7-day hackathon target is not a new completion promise.
+- Next: REA_APP branch SHA/full test evidence, license/behavior research, independent first-engine contracts and synthetic fixtures. No paid service or customer data.
+
 ## P49 — chief blueprint-to-code audit and DBVORA loopback proxy isolation (2026-10-27 KST)
 - Audit: `docs/BLUEPRINT_CODE_AUDIT_2026-10-27.md` commit `96990b98f16b7e425166d5df0135b3b145405a6e` maps frozen `TARGET_BLUEPRINT_V1` A–E / acceptance gates to actual feature source and unimplemented customer/full-release requirements. Existing 91% remains a **heuristic LIMITED synthetic scope**, not full-product completion. No original blueprint or shared acceptance matrix modified.
 - P49 code: `apps/ax-flow/axflow/dbvora_client.py` commit `9fe52ceea79d2251c953b0c17dcb33ce5cab0010`: existing loopback-only urllib opener now explicitly disables environment/OS proxies via `ProxyHandler({})`, retains existing redirect denial and DBVORA read-only contract.
