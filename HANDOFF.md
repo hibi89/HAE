@@ -1,5 +1,5 @@
 ## Latest checkpoint — P40 precision-safe numeric CSV normalization
-1. **Branch/base:** `hibi89/AX_FLOW` `feature/axflow-mvp`; P39 parent `c6d272cc3ab798df0736d9159a756309f80b81cd`. P40 source commit SHA is recorded in the current branch history after the atomic update.
+1. **Branch/base:** `hibi89/AX_FLOW` `feature/axflow-mvp`; P39 parent `c6d272cc3ab798df0736d9159a756309f80b81cd`. P40 implementation commit: `d0e7a5a45f132b8a3cc7c9c4f5fd46e2a8e23bc8`.
 2. **Engine behavior:** CSV number normalization now uses an explicit decimal syntax, Decimal comparison and finite-float conversion; unsupported syntax and any demonstrated value loss fail before business writes.
 3. **Supported cases:** integers within the interoperable safe-integer range, exactly round-trippable finite decimals, exponent notation and surrounding whitespace. Unsafe integer magnitude, underflow, overflow, non-finite and precision-losing decimals reject.
 4. **Evidence:** engine, local API and Windows packaged zipapp all exercised successful and invalid boundary tables. Source bytes/hash/size/mtime remain stable; each invalid run adds zero business rows; runtime receipts omit source values and packaged failures exit 2.

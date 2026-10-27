@@ -14,7 +14,9 @@
 
 **P38 package evidence:** the Windows zipapp CLI completed normalized filtering/import, duplicate reporting and source-row preservation. Source SHA/size/mtime were unchanged, runtime receipts were redacted, and the full 67-test suite passed.
 
-**P39 typed conversion evidence:** bounded English/Korean number/string normalization was tested via API and zipapp; invalid numeric input fails before writes. The zipapp now propagates exit status 2 on failure; full suite 70/70 PASS.\n\n**P40 numeric boundary evidence:** engine, API and packaged CLI accept exact safe integer/decimal/exponent values and reject blank, malformed, non-finite, overflow, underflow, unsafe integers and precision-losing decimals. Invalid inputs preserve source files and produce no business rows; full suite 71/71 PASS.
+**P39 typed conversion evidence:** bounded English/Korean number/string normalization was tested via API and zipapp; invalid numeric input fails before writes. The zipapp now propagates exit status 2 on failure; full suite 70/70 PASS.
+
+**P40 numeric boundary evidence:** engine, API and packaged CLI accept exact safe integer/decimal/exponent values and reject blank, malformed, non-finite, overflow, underflow, unsafe integers and precision-losing decimals. Invalid inputs preserve source files and produce no business rows; full suite 71/71 PASS.
 
 | ID | Component | Required proof | Current |
 |---|---|---|---|
