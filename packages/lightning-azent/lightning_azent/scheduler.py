@@ -5,6 +5,7 @@ import errno
 import hashlib
 import os
 import sqlite3
+import stat
 import time
 from contextlib import closing, contextmanager
 from pathlib import Path
@@ -29,8 +30,13 @@ def _schedule_lock(engine: Engine, schedule_id: str):
     flags = os.O_CREAT | os.O_RDWR
     if hasattr(os, "O_NOFOLLOW"):
         flags |= os.O_NOFOLLOW
+    if hasattr(os, "O_NONBLOCK"):
+        flags |= os.O_NONBLOCK  # Do not hang on a preexisting FIFO lock path.
     fd = os.open(lock_path, flags, 0o600)
     with os.fdopen(fd, "r+b", buffering=0) as handle:
+        metadata = os.fstat(handle.fileno())
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1:
+            raise PlanError("schedule lock path must be a regular unlinked file")
         if handle.seek(0, os.SEEK_END) == 0:
             handle.write(b"\0")
         handle.seek(0)
