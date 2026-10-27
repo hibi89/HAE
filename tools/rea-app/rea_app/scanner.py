@@ -106,6 +106,16 @@ def _is_link_or_reparse_point(path: Path) -> bool:
     return False
 
 
+def _snapshot_stable(before: os.stat_result, after: os.stat_result, read_len: int) -> bool:
+    """Reject a source that changed while it was being read."""
+    return (
+        read_len == before.st_size == after.st_size
+        and (before.st_dev, before.st_ino) == (after.st_dev, after.st_ino)
+        and before.st_mtime_ns == after.st_mtime_ns
+        and before.st_ctime_ns == after.st_ctime_ns
+    )
+
+
 def walk_source(root_path: Path, limits: ScanLimits) -> ScanResult:
     try:
         root = root_path.expanduser().resolve(strict=True)
@@ -196,8 +206,12 @@ def walk_source(root_path: Path, limits: ScanLimits) -> ScanResult:
                     # Hash every accepted file so compare mode can detect changes
                     # in inventory-only files without retaining their contents.
                     data = handle.read(limits.max_file_bytes + 1)
+                    after_read_stat = os.fstat(handle.fileno())
                 if len(data) > limits.max_file_bytes or len(data) > file_stat.st_size:
                     skipped.append({"path": relative, "reason": "file_grew_past_limit"})
+                    continue
+                if not _snapshot_stable(file_stat, after_read_stat, len(data)):
+                    skipped.append({"path": relative, "reason": "file_changed_during_read"})
                     continue
                 if b"\x00" in data:
                     skipped.append({"path": relative, "reason": "binary"})
