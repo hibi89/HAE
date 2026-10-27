@@ -12,7 +12,7 @@ from types import SimpleNamespace
 import threading
 import unittest
 
-from lightning_azent.engine import PlanError
+from lightning_azent.engine import ApprovalRequired, PlanError
 from lightning_azent.scheduler import _schedule_lock, interval_ticks
 
 
@@ -123,6 +123,38 @@ with _schedule_lock(SimpleNamespace(state_path=state), "SharedSchedule"):
             # Kernel must release the lock even though the child called os._exit.
             with _schedule_lock(SimpleNamespace(state_path=state), "SharedSchedule"):
                 pass
+
+
+    def test_invalid_interval_requests_do_not_create_schedule_state_or_lock(self):
+        """Low-level iterator must reject unsafe requests before claiming a schedule."""
+        bad_plans = (
+            (
+                "manual-trigger",
+                {"version": "axflow.ir.v0", "trigger": {"type": "manual"},
+                 "steps": [{"id": "value", "op": "literal", "value": 1}]},
+                PlanError,
+            ),
+            (
+                "no-write-approval",
+                {"version": "axflow.ir.v0", "trigger": {"type": "interval", "every_seconds": 1},
+                 "steps": [{"id": "value", "op": "literal", "value": 1},
+                           {"id": "save", "op": "sqlite_put", "from": "value"}]},
+                ApprovalRequired,
+            ),
+            (
+                "missing-csv-root",
+                {"version": "axflow.ir.v0", "trigger": {"type": "interval", "every_seconds": 1},
+                 "steps": [{"id": "read", "op": "csv_read", "path": "orders.csv"}]},
+                PlanError,
+            ),
+        )
+        for name, plan, expected in bad_plans:
+            with self.subTest(case=name), tempfile.TemporaryDirectory() as tmp:
+                engine = SimpleNamespace(state_path=Path(tmp) / "runtime.sqlite", input_root=None)
+                with self.assertRaises(expected):
+                    list(interval_ticks(plan, engine, "DeniedSchedule", max_runs=1,
+                                        clock=lambda: 0.0, sleeper=lambda _: None))
+                self.assertEqual(list(Path(tmp).iterdir()), [], "denied request left schedule files")
 
 
 if __name__ == "__main__":
