@@ -1,4 +1,4 @@
-"""Real Babel-backed CLI acceptance: bundle all six reports from synthetic JS/TS snapshots.
+"""Real Babel-backed CLI acceptance for six- and eight-report JS/TS bundles.
 
 Run in an authorized tools/rea-app checkout after `npm ci`. This test never
 falls back to a mock parser, and modifies only its private tempfile fixture.
@@ -19,6 +19,7 @@ ARTIFACTS = (
     "change-impact.json", "change-impact.md",
     "functional-contracts.json", "functional-contracts.md",
 )
+DIAGRAM_ARTIFACTS = ARTIFACTS + ("architecture.mmd", "architecture.md")
 
 
 class RealBundleMvpAcceptanceTests(unittest.TestCase):
@@ -69,6 +70,15 @@ class RealBundleMvpAcceptanceTests(unittest.TestCase):
             source = json.loads((output / "source-map.json").read_text(encoding="utf-8"))
             impact = json.loads((output / "change-impact.json").read_text(encoding="utf-8"))
             contracts = json.loads((output / "functional-contracts.json").read_text(encoding="utf-8"))
+            self.assertIn(
+                f"Analysis scope: {source['summary']['files_indexed']} files indexed, "
+                f"{source['summary']['source_files']} JavaScript/TypeScript source files, "
+                f"{source['summary']['dependency_edges']} dependency edges; "
+                f"{len(impact['changed_files'])} changed files.",
+                first.stdout,
+            )
+            for name in ARTIFACTS:
+                self.assertIn(str(output / name), first.stdout)
 
             self.assertEqual(source["schema_version"], "rea-app-source-map/v1")
             edges = [edge for edge in source["dependency_edges"]
@@ -92,6 +102,67 @@ class RealBundleMvpAcceptanceTests(unittest.TestCase):
             again = run()
             self.assertEqual(again.returncode, 0, again.stderr + again.stdout)
             self.assertEqual(first_files, {name: (output / name).read_bytes() for name in ARTIFACTS})
+            self.assertEqual(before_bytes, snapshot(before))
+            self.assertEqual(after_bytes, snapshot(after))
+
+    def test_bundle_with_diagram_emits_eight_reports_deterministically(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="rea-bundle-real-diagram-") as temporary:
+            root = Path(temporary)
+            before, after, output = root / "baseline", root / "current", root / "reports"
+            for directory in (before, after):
+                (directory / "src").mkdir(parents=True)
+                (directory / "package.json").write_bytes(
+                    b'{"name":"synthetic-example","main":"./src/main.ts"}\n'
+                )
+                (directory / "src/main.ts").write_bytes(
+                    b'import { load } from "./lib";\n'
+                    b'export function run(id: string): number { return load(id); }\n'
+                )
+            (before / "src/lib.ts").write_bytes(
+                b'export function load(id: string): number { return id.length; }\n'
+            )
+            (after / "src/lib.ts").write_bytes(
+                b'export function load(id: string): number { return id.length + 1; }\n'
+            )
+
+            def snapshot(directory: Path) -> dict[str, bytes]:
+                return {path.relative_to(directory).as_posix(): path.read_bytes()
+                        for path in sorted(directory.rglob("*")) if path.is_file()}
+
+            before_bytes, after_bytes = snapshot(before), snapshot(after)
+            environment = os.environ.copy()
+            environment["PYTHONPATH"] = str(TOOL_ROOT)
+            command = [sys.executable, "-m", "rea_app", "bundle", str(before),
+                       str(after), "--output-dir", str(output), "--with-diagram"]
+
+            def run() -> subprocess.CompletedProcess[str]:
+                return subprocess.run(
+                    command, cwd=TOOL_ROOT, env=environment, text=True,
+                    encoding="utf-8", errors="replace", capture_output=True,
+                    check=False, timeout=90,
+                )
+
+            first = run()
+            self.assertEqual(first.returncode, 0, first.stderr + first.stdout)
+            self.assertIn("8 reports", first.stdout)
+            self.assertEqual(set(path.name for path in output.iterdir()), set(DIAGRAM_ARTIFACTS))
+            source = json.loads((output / "source-map.json").read_text(encoding="utf-8"))
+            self.assertIn("Analysis scope:", first.stdout)
+            for name in DIAGRAM_ARTIFACTS:
+                self.assertIn(str(output / name), first.stdout)
+            edge = next(item for item in source["dependency_edges"]
+                        if item["from_path"] == "src/main.ts" and item["to_path"] == "src/lib.ts")
+            self.assertEqual(edge["evidence"], {"path": "src/main.ts", "line": 1})
+            diagram = (output / "architecture.mmd").read_text(encoding="utf-8")
+            self.assertIn('"src/main.ts"', diagram)
+            self.assertIn('"src/lib.ts"', diagram)
+            self.assertIn('"import @ 1"', diagram)
+            first_files = {name: (output / name).read_bytes() for name in DIAGRAM_ARTIFACTS}
+
+            again = run()
+            self.assertEqual(again.returncode, 0, again.stderr + again.stdout)
+            self.assertEqual(first_files,
+                             {name: (output / name).read_bytes() for name in DIAGRAM_ARTIFACTS})
             self.assertEqual(before_bytes, snapshot(before))
             self.assertEqual(after_bytes, snapshot(after))
 

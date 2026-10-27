@@ -121,7 +121,7 @@ class ScannerOpenRaceTests(unittest.TestCase):
     def test_nonblocking_flag_keeps_regular_source_readable(self) -> None:
         with tempfile.TemporaryDirectory(prefix="rea-normal-source-") as directory:
             root = Path(directory)
-            (root / "entry.ts").write_text("export const intact = 42;\n", encoding="utf-8")
+            (root / "entry.ts").write_bytes(b"export const intact = 42;\n")
             result = walk_source(root, ScanLimits())
             self.assertEqual(len(result.files), 1)
             self.assertEqual(result.files[0].path, "entry.ts")

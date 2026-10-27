@@ -31,7 +31,10 @@ class BundleCommandTests(unittest.TestCase):
         )
         self.source_report = {
             "schema_version": "rea-app-source-map/v1",
-            "summary": {"syntax_errors": 0},
+            "summary": {
+                "files_indexed": 1, "source_files": 1, "dependency_edges": 1,
+                "syntax_errors": 0,
+            },
             "packages": [{"root": ".", "name": "example"}],
             "dependency_edges": [
                 {"from_path": "src/main.ts", "to_path": "src/lib.ts",

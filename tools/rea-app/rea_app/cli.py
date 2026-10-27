@@ -201,7 +201,17 @@ def _bundle(args: argparse.Namespace) -> int:
         return 3 if isinstance(exc, ParserError) else 2
     print(f"REA_APP bundle produced {len(artifacts)} reports; "
           f"{len(contracts['contracts'])} callable interfaces.")
+    summary = source_map["summary"]
+    print(
+        f"Analysis scope: {summary['files_indexed']} files indexed, "
+        f"{summary['source_files']} JavaScript/TypeScript source files, "
+        f"{summary['dependency_edges']} dependency edges; "
+        f"{len(impact['changed_files'])} changed files."
+    )
     print(f"Reports: {output}")
+    print("Generated files:")
+    for filename, _ in artifacts:
+        print(f"  {output / filename}")
     return 1 if source_map["summary"]["syntax_errors"] or impact["summary"]["syntax_errors"] else 0
 
 
