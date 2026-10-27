@@ -140,7 +140,7 @@ def create_server(
                 value = json.loads(
                     raw.decode("utf-8"), object_pairs_hook=_unique_object, parse_constant=_reject_constant
                 )
-            except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+            except (UnicodeDecodeError, json.JSONDecodeError, RecursionError, ValueError) as exc:
                 raise RequestError(400, "invalid JSON request") from exc
             if not isinstance(value, dict):
                 raise RequestError(400, "JSON body must be an object")

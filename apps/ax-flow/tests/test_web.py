@@ -447,6 +447,21 @@ class WebUITests(unittest.TestCase):
         self.assertEqual(code, 200)
         self.assertEqual(json.loads(raw.decode("utf-8"))["status"], "failed")
 
+    def test_deeply_nested_json_is_rejected_without_internal_error(self):
+        nested = b"[" * 1200 + b"null" + b"]" * 1200
+        raw = b'{"filename":' + nested + b',"content_base64":"aWQKMQo="}'
+        status, _, response = self.request(
+            "/api/upload",
+            raw=raw,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        self.assertEqual(status, 400, response)
+        body = json.loads(response.decode("utf-8"))
+        self.assertEqual(body["error"], "invalid JSON request")
+        self.assertNotIn("RecursionError", json.dumps(body))
+        self.assertEqual(list(self.inputs.glob("axflow-upload-*")), [])
+
     def test_request_origin_host_body_shape_and_content_type_are_checked(self):
         status, _, body = self.post_json(
             "/api/preview", {"task": "Import CSV into SQLite", "csv_path": "contacts.csv"},
