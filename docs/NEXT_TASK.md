@@ -1,3 +1,10 @@
+## REA_APP P25 — use source-pinned offline verifier before Gate R sign-off (2026-10-27 KST)
+
+1. Verified current branch source baseline `REA_APP@33f6d345f8d4577194248eed4543d602819d3192`; P25 added `tools/rea-app/verify_gate_r.py` with 13 Git blob IDs and fail-closed Python/JS executable-file allowlist. Verifier guard commit `3cc5b0783142cc387d9f68265e5fdd5d8c96d6b3`.
+2. At a previously authorized Windows/local checkout with Python 3.11+, Node and existing `@babel/parser@7.29.9`, use `cd tools/rea-app && python verify_gate_r.py`. It checks remote-reviewed source fidelity first and runs `python -m unittest discover -s tests -v` and `npm run test:parser`. No dependency install, GitHub network, cloud bill, secrets or real files needed. Record outputs + exact SHA/Python/Node/npm and current-HEAD status.
+3. Local **Git-object framing** demonstration tested on the exact 77-byte remote `rea_app/__init__.py` and known SHA: hash comparison PASS, altered input rejection PASS. These checks are **NOT P25 verifier execution or the private-repository suites**.
+4. Only after actual source-pinned Python+Node PASS (and Windows-specific SKIPs documented) consider REA_APP Gate R accepted; next permitted research contracts → Lightning Azent → HAE. Do not imply Gate R PASS from creating helper or from old 15/15 result.
+
 ## REA_APP P24 — test credential exclusions on actual source (2026-10-27 KST)
 1. Current work on `REA_APP` only: code `019e022d1404cbdfc600a0d40cd0ef521c7d9191`, regression `67155aa73445ca4ed33dd97d02a0adbc1fa4aa86`. The report `tools/rea-app/CHIEF_GATE_R_REVIEW.md` documents rationale and residual risks. Existing old Gate R evidence must not be promoted.
 2. Re-run current complete Python tests and Babel parser tests in an **authorized verified checkout**, particularly `python -m unittest discover -s tests -p test_scan_sensitive_exclusions.py -v` and `test_scan_open_races.py`. Validate source hash preservation, secret filenames excluded prior to any open, and platform-specific SKIPs.
