@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-BASELINE_COMMIT = "33f6d345f8d4577194248eed4543d602819d3192"
+BASELINE_COMMIT = "e6775a5b3bc17c2049238e0d505ec31e384d53ff"
 
 # Git blob IDs observed directly on the private REA_APP branch at BASELINE_COMMIT.
 # This guards against stale/untracked workspace copies, not against malicious code.
@@ -30,6 +30,7 @@ SOURCE_BLOBS = {
     "tests/test_cli.py": "6035ccc58fcfc8f2d8eceeba95b8d969ec257dc4",
     "tests/test_scan_open_races.py": "0601539e0a57807441fa31373339c689b2aa7439",
     "tests/test_scan_sensitive_exclusions.py": "3f40479907fe923137f9c018a57b2d3df08ba023",
+    "tests/test_verify_gate_r.py": "745e1b5486c9d98dbcfcb1bf5d7ec5ca940f5ca3",
 }
 
 
