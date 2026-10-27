@@ -1,3 +1,10 @@
+## P30 — Gate R parent-directory symlink bypass closed (2026-10-27 KST)
+
+- Directly reproduced a Gate R provenance flaw: protected `rea_app/` or `tests/` directory can be replaced with symlink while all child file SHA checks pass. Local synthetic 8-test run with new regression against old code: **2 failed subcases**. After adding `lstat` directory/Windows reparse guards: verifier-focused Python **8/8 PASS, 0 skipped** on Linux/Python 3.13.5.
+- Both prepatch and edited verifier/self-test files were recreated locally with Git blob-byte fidelity; GitHub-created edited blobs matched local actual-tested bytes exactly: `91e81f6bf31820f7d690e0837ac7170403c212d4` verifier, `d6b7bc8d56ff0ddd8f4d74958d62ac666ca6058a` test. Reviewed test pin updated in `verify_gate_r.py`. Detailed evidence: `tools/rea-app/P30_PARENT_DIR_GUARD.md`.
+- **No full current-HEAD analyzer/CLI/graph Python suite or genuine Babel Node parser executed**. Windows junction proof is pending; initial directory precheck does not guarantee safety under concurrent parent swaps. Gate R **PARTIAL**, Lightning Azent/HAE untouched.
+- Design: (A) retain previous final-file-only guard (rejected), (B) standard-library directory `lstat` before any source open (selected, zero new dependency), (C) snapshot isolated worktree (deferred, higher I/O). No customer data, paid CI, OAuth, deployment or source scanner behavior modified.
+
 ## P29 — current remote-tree manifest audit (2026-10-27 KST)
 
 - Direct GitHub connector read: `hibi89/AX_FLOW` private, `REA_APP@d53b2bbe9e2f4202a4353834034deecc5a1c8c55`. Compared the actual recursive Git tree against all **14** expected source blob IDs embedded in `tools/rea-app/verify_gate_r.py`: **14/14 matched, 0 mismatches**. No unreviewed executable extensions under `tools/rea-app/rea_app/` or `tools/rea-app/tests/` found in that tree.

@@ -74,6 +74,24 @@ class TestGateRSourceAttribution(unittest.TestCase):
         self.assertEqual(runner.call_count, 1)
         self.assertIn("@babel/parser/package.json", runner.call_args.args[0][2])
 
+    def test_symlinked_parent_directories_are_rejected(self) -> None:
+        # A directory link must not make a verified child appear to be local.
+        for name in ("rea_app", "tests"):
+            with self.subTest(directory=name):
+                original = self.root / name
+                relocated = self.root / (name + "_relocated")
+                original.rename(relocated)
+                try:
+                    original.symlink_to(relocated, target_is_directory=True)
+                except (OSError, NotImplementedError) as exc:
+                    relocated.rename(original)
+                    self.skipTest(f"directory symlinks unsupported on host: {exc}")
+                try:
+                    self.assertFalse(self.checked())
+                finally:
+                    original.unlink()
+                    relocated.rename(original)
+
     def test_symlink_in_manifest_is_rejected(self) -> None:
         source = self.root / "tests/test_smoke.py"
         source.unlink()

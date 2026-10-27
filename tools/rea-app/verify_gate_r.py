@@ -6,6 +6,7 @@ Exit nonzero if any protected source blob differs from the P24 snapshot.
 from __future__ import annotations
 
 import hashlib
+import stat
 import shutil
 import subprocess
 import sys
@@ -30,7 +31,7 @@ SOURCE_BLOBS = {
     "tests/test_cli.py": "6035ccc58fcfc8f2d8eceeba95b8d969ec257dc4",
     "tests/test_scan_open_races.py": "0601539e0a57807441fa31373339c689b2aa7439",
     "tests/test_scan_sensitive_exclusions.py": "3f40479907fe923137f9c018a57b2d3df08ba023",
-    "tests/test_verify_gate_r.py": "c8db5c2957cc365d6e3c4c6cfcc70d5f1351d7fc",
+    "tests/test_verify_gate_r.py": "d6b7bc8d56ff0ddd8f4d74958d62ac666ca6058a",
 }
 
 
@@ -40,6 +41,21 @@ def git_blob_id(data: bytes) -> str:
 
 
 def check_source() -> bool:
+    # Inspect parent directories before reading any reviewed file. A linked
+    # directory can otherwise hold matching child blobs outside the checkout.
+    for directory in ("rea_app", "tests"):
+        candidate = ROOT / directory
+        try:
+            metadata = candidate.lstat()
+        except OSError:
+            metadata = None
+        if metadata is None or not stat.S_ISDIR(metadata.st_mode) or (
+            getattr(metadata, "st_file_attributes", 0)
+            & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+        ):
+            print(f"SOURCE MISMATCH {directory}: MISSING_OR_LINK_DIRECTORY", file=sys.stderr)
+            print("STOP: reviewed source directory is missing or linked.", file=sys.stderr)
+            return False
     wrong = []
     for relative, expected in sorted(SOURCE_BLOBS.items()):
         source = ROOT / relative
@@ -63,7 +79,7 @@ def check_source() -> bool:
             print(f"SOURCE MISMATCH {relative}: {actual}", file=sys.stderr)
         print("STOP: reviewed source manifest differs; tests not attributed to Gate R P24.", file=sys.stderr)
         return False
-    print(f"SOURCE VERIFIED: {len(SOURCE_BLOBS)}/{len(SOURCE_BLOBS)} Git blobs match {BASELINE_COMMIT}", flush=True)
+    print(f"SOURCE VERIFIED: {len(SOURCE_BLOBS)}/{len(SOURCE_BLOBS)} Git blobs match reviewed manifest (analyzer baseline {BASELINE_COMMIT})", flush=True)
     return True
 
 

@@ -1,3 +1,10 @@
+## REA_APP P30 next task — complete full Gate R after verified directory-link regression (2026-10-27 KST)
+
+- New reviewed verifier/test Git blobs: `91e81f6bf31820f7d690e0837ac7170403c212d4` and `d6b7bc8d56ff0ddd8f4d74958d62ac666ca6058a`, byte-identical with Linux/Python 3.13.5 focused **8/8 actual PASS** after prepatch two-subcase failure. `tools/rea-app/P30_PARENT_DIR_GUARD.md` explains exact scope. `rea_app/` and `tests/` linked parents are now rejected before scanning manifest files.
+- **Not enough for Gate R sign-off:** current exact complete 14-file analyzer Python suite, genuine `@babel/parser@7.29.9` Node tests, Windows junction fixture, and end-to-end CLI reports remain UNVERIFIED.
+- Next: authorized full `REA_APP` checkout with installed pinned parser → `cd tools/rea-app && python verify_gate_r.py` → capture SHA/source 14/14, Python PASS/FAIL/SKIP, Node pinned parser PASS, platform. No new paid GitHub Actions; do not silently claim tests from metadata/old SHA.
+- Product progression remains REA_APP → permission-cleared contracts → Lightning Azent → HAE. No new engine work or external data access before required gates.
+
 ## REA_APP P29 — confirmed current GitHub tree, full Gate R still pending (2026-10-27 KST)
 
 - Audited `REA_APP@d53b2bbe9e2f4202a4353834034deecc5a1c8c55` against all 14 expected hashes in `tools/rea-app/verify_gate_r.py`: **14/14 exact Git blob IDs match**; no additional executable modules in analyzer/tests. This is connector-side static Git tree evidence; not an executed Python or Node regression.

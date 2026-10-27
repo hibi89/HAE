@@ -1,3 +1,7 @@
+## P30 — verifier now rejects linked source directories (2026-10-27 KST)
+
+The offline `verify_gate_r.py` now checks that `rea_app/` and `tests/` are real directories (not symlinks or Windows reparse-point directories) **before** reading any reviewed manifest file. `tests/test_verify_gate_r.py` adds two directory-link subcases. A local byte-exact reconstruction executed focused Python **8/8 PASS**, with the new subcases reproducing failures on the old verifier. See `tools/rea-app/P30_PARENT_DIR_GUARD.md`. Full 14-file Python analysis, real Babel tests and actual Windows junction tests remain pending. This is not a release sign-off.
+
 ### P27 — installed parser version must match (2026-10-27 KST)
 
 `python verify_gate_r.py` now checks the **locally installed** `@babel/parser` metadata through Node before calling the Node parser test. The installed version must be exactly `7.29.9`, matching the lockfile; a missing dependency or mismatched version fails. No dependencies are installed by the verifier.
