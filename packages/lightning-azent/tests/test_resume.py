@@ -120,5 +120,33 @@ class ResumeAcceptanceTests(unittest.TestCase):
 
 
 
+    def test_resume_rejects_empty_replacement_business_database(self):
+        plan = self.fixture("conditional-route.json")
+        self.assertEqual(self.executor.execute(plan, "ReplacedDB"), {"route": "accepted"})
+        self.business.unlink()
+        with sqlite3.connect(self.business):
+            pass  # Replacement exists but is not the original initialized schema.
+        with self.assertRaisesRegex(PlanError, "schema is missing"):
+            self.executor.resume(plan, "ReplacedDB")
+        with sqlite3.connect(self.business) as conn:
+            self.assertEqual(
+                conn.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table'").fetchone()[0], 0
+            )
+        self.assertEqual(self.executor.status("ReplacedDB")["status"], "completed")
+
+    def test_resume_rejects_dropped_business_receipt_table(self):
+        plan = self.fixture("conditional-route.json")
+        self.assertEqual(self.executor.execute(plan, "DroppedReceipt"), {"route": "accepted"})
+        with sqlite3.connect(self.business) as conn:
+            conn.execute("DROP TABLE records")
+        with self.assertRaisesRegex(PlanError, "schema is missing"):
+            self.executor.resume(plan, "DroppedReceipt")
+        with sqlite3.connect(self.business) as conn:
+            self.assertEqual(
+                conn.execute("SELECT COUNT(*) FROM sqlite_master WHERE name='records'").fetchone()[0], 0
+            )
+        self.assertEqual(self.executor.status("DroppedReceipt")["status"], "completed")
+
+
 if __name__ == "__main__":
     unittest.main()
