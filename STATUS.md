@@ -1,3 +1,9 @@
+## P25 — exact-source offline REA_APP regression gate added (2026-10-27 KST)
+- REA_APP branch base `33f6d345f8d4577194248eed4543d602819d3192`; new `tools/rea-app/verify_gate_r.py` pins 13 remote source, package and test Git blob SHAs and refuses unreviewed executable modules or test scripts. Commits `707f99af6c506ad46125127ec39ffaf1523652b3` initial, `d1269ffa7aaa3354ad99811c33ef24f609c89a9d` Git NUL header correction, `3cc5b0783142cc387d9f68265e5fdd5d8c96d6b3` unreviewed-test guard.
+- The script executes real Python unittest discovery and the existing pinned npm parser test **only after source fidelity passes**, without installing dependencies or contacting GitHub. Any mismatch or suite failure exits nonzero.
+- Independently checked the correct Git blob SHA of the exact remote `rea_app/__init__.py` (known `e6d7269a82c761c70eda0d52ee1d858711d92b21`) and that changing its bytes changes the hash: **2/2 isolated hash checks PASS**. Full P25 script and full REA_APP Python/Node suites are **NOT RUN**; no claim of actual GitHub HEAD regression PASS.
+- This removes one repeatability/attribution risk but does **not** solve private checkout unavailability. Gate R **PARTIAL**, Lightning Azent and HAE untouched.
+
 ## P24 — REA_APP avoid credential file collection (2026-10-27 KST)
 - Branch `REA_APP`, base `6b7f78ee93eccbf7f7afb457dbfd37cc025713ca`. Added private auth file exclusion and private-directory pruning to bounded `tools/rea-app/rea_app/scanner.py` (`019e022d1404cbdfc600a0d40cd0ef521c7d9191`), synthetic regression assertions (`67155aa73445ca4ed33dd97d02a0adbc1fa4aa86`), updated Gate R review and README.
 - Locally reproduced corresponding scanner filename/directory selection checks **2/2 PASS** on synthetic temp fixtures, **not** running actual modified repository import. Complete Python and Babel tests for updated SHA **NOT RUN**, so Gate R remains PARTIAL. Previous P23 incomplete verification remains and no 100% safety/release claim applies.
