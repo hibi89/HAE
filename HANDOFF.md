@@ -1,3 +1,16 @@
+## LATEST HANDOFF — final HAE product naming (2026-10-27 KST)
+
+1. **Goal and requirements:** Owner selected **HAE = Humanized Automation Ecosystem** as final product name formerly **AX FLOW**. Analysis tool **REA_APP**, independent engine **Lightning Azent**, customer platform **HAE**, separate data tool **DBVORA**.
+2. **Change/decision:** Updated main/feature customer-facing README, requirements, architecture and target blueprint; feature Lightning Azent master plan and local HTML/JS app brand; appended owner decision in DECISIONS and standardized AGENTS. Old technical identifiers intentionally preserved.
+3. **Tests:** GitHub source reread will confirm literal new names, but no Python, Node, Windows, UI or provider test was executed for this brand-only change. No completion or quality gate promoted.
+4. **Progress:** BRAND DOCS/FEATURE UI UPDATED. Lightning Azent not independently packaged; HAE full product remains NOT READY, existing limited synthetic progress heuristic unchanged.
+5. **Problems/alternatives:** Renaming repository, Python module, CLI, IR and branch names immediately would break links/imports/tests; keep compatibility identifiers pending separate approved migration. User requested product naming, not disruptive technical changes.
+6. **Repository/branches/paths:** `hibi89/AX_FLOW` private, `main` and `feature/axflow-mvp`; change set README, REQUIREMENTS, docs/ARCHITECTURE, docs/TARGET_BLUEPRINT_V1, docs/DECISIONS, AGENTS, apps/ax-flow/README, and feature UI `static/index.html` / `static/app.js` plus Lightning Azent master plan. Final remote branch SHAs must be verified after this handoff commit.
+7. **Production/execution:** No deployment (production N/A). `axflow` local synthetic CLI and `axflow.ir.v0` are unchanged, no process run; browser visual smoke not run.
+8. **Security/rollback:** No secrets, real data, OAuth, database or third-party license changed. Existing Git commits allow ordinary revert; no force push.
+9. **Next action:** Resume Gate R REA_APP verifiable testing and lawful n8n behavior research, then independent Lightning Azent engine extraction, then HAE consumer integration. New copy should use HAE, while legacy SHA/path references remain exact. Add specific HAE HTML/header smoke on an executable checkout when available.
+10. **Time/evidence:** 2026-10-27 KST, product name explicitly confirmed by owner; GitHub content/readback used. This naming decision is not a public trademark-availability claim.
+
 ## Latest checkpoint — Lightning Azent architecture/order handoff (2026-10-27 KST)
 
 1. **Goal/spec:** Owner approved name **Lightning Azent** (coined Azent = A to Z) for a separately reusable n8n-informed, independently engineered automation engine. Strict sequence REA_APP → evidence/contracts from lawful n8n analysis → Lightning Azent → AX FLOW. Preserve current synthetic baseline.
