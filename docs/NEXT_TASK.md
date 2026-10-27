@@ -1,3 +1,11 @@
+## REA_APP v0.3.0 FROZEN — next work routed to Lightning Azent (2026-10-28 KST)
+
+- **R1 MVP accepted:** original blueprint A on supported synthetic JS/TS, from P53 source `1ae3dac263a1a5c866434c8418fe7dbb1d3f1d48` and P53 Windows Gate R + wheel installation evidence, documented in `tools/rea-app/MVP_RELEASE_V0.3.0.md`. No additional REA_APP implementation is required for this internal CLI scope.
+- **P54 ON HOLD (not a blocker):** wildcard re-export inference can be considered for a future incremental feature, but is explicitly excluded from current scoped MVP and must not divert LA engine development.
+- **Product priority:** REA_APP becomes read-only supporting tool; execute Lightning Azent three real synthetic workflow fixtures on independent package, prove parity with preserved HAE tests, then integrate versioned engine into HAE. REA_APP frontend not planned for current cycle.
+- **Reopen criteria:** only a reproduced, high-impact analyzer bug preventing an authorized LA research workflow; minimal fix with new test, full Gate R and QA evidence at the changed commit, protected source pin refresh and rollback. Never silently claim unrestricted n8n source permission or general source reconstruction.
+- **Environment:** local Windows evidence P53 72 tests (66 pass, 6 skip), Node pass, QA 11 pass, fresh installed 8-file bundle; this freeze changed docs only and did not rerun tests.
+
 ## REA_APP P54 next — bounded static wildcard re-export contracts (2026-10-27 KST)
 
 - P53 completed direct named ESM re-exports in `source-map`, `functional-contracts`, and `change-impact` using one shared, uniquely linked graph record. Gate R is **25/25 blobs; 72 tests (66 pass, 6 skip); exact Babel Node PASS; QA 11/11 PASS**. Evidence: `E:\HAE\REA_APP_GATE_EVIDENCE\gate-r-vd4gdxam\evidence.json`. P53 is pushed on `REA_APP`.
