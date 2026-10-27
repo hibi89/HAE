@@ -229,6 +229,64 @@ raise SystemExit(main())
              source.stat().st_mtime_ns), source_before,
         )
 
+    def test_backup_discards_snapshot_when_source_changes_before_publish(self):
+        self.engine.execute(self.plan, "BackupSourceChange", approve_writes=True)
+        source = self.root / "state.db"
+        workspace_temp = Path(__file__).resolve().parents[3] / ".verification-temp"
+        workspace_temp.mkdir(exist_ok=True)
+        destinations = tempfile.TemporaryDirectory(prefix="p45-backup-source-change-", dir=workspace_temp)
+        self.addCleanup(destinations.cleanup)
+        output_root = Path(destinations.name)
+        target = output_root / "must-not-publish.sqlite"
+        before_hash = hashlib.sha256(source.read_bytes()).hexdigest()
+        with closing(sqlite3.connect(source)) as con:
+            before_runs = con.execute(
+                "SELECT run_id,plan_hash,status FROM runs ORDER BY run_id"
+            ).fetchall()
+            before_steps = con.execute(
+                "SELECT run_id,step_id,output_json FROM steps ORDER BY run_id,step_id"
+            ).fetchall()
+
+        from axflow import state_backup
+        real_fingerprint = state_backup._fingerprint
+        source_fingerprints = 0
+
+        def mutate_source_before_second_fingerprint(path):
+            nonlocal source_fingerprints
+            if Path(path) == source:
+                source_fingerprints += 1
+                if source_fingerprints == 2:
+                    with closing(sqlite3.connect(source)) as con:
+                        con.execute(
+                            "UPDATE runs SET status='failed' WHERE run_id=?",
+                            ("BackupSourceChange",),
+                        )
+                        con.commit()
+            return real_fingerprint(path)
+
+        with patch("axflow.state_backup._fingerprint", side_effect=mutate_source_before_second_fingerprint):
+            with self.assertRaisesRegex(StateBackupError, "source changed during backup"):
+                backup_runtime_state(source, target)
+
+        self.assertEqual(source_fingerprints, 2)
+        self.assertFalse(target.exists())
+        self.assertEqual(list(output_root.glob(".axflow-state-*.part")), [])
+        self.assertEqual(list(output_root.iterdir()), [])
+        self.assertNotEqual(hashlib.sha256(source.read_bytes()).hexdigest(), before_hash)
+        with closing(sqlite3.connect(source)) as con:
+            after_runs = con.execute(
+                "SELECT run_id,plan_hash,status FROM runs ORDER BY run_id"
+            ).fetchall()
+            after_steps = con.execute(
+                "SELECT run_id,step_id,output_json FROM steps ORDER BY run_id,step_id"
+            ).fetchall()
+        expected_runs = [
+            (run_id, plan_hash, "failed" if run_id == "BackupSourceChange" else status)
+            for run_id, plan_hash, status in before_runs
+        ]
+        self.assertEqual(after_runs, expected_runs)
+        self.assertEqual(after_steps, before_steps)
+
     def test_cli_runtime_backup_restore_requires_synthetic_and_preserves_state(self):
         self.engine.execute(self.plan, "CliBackupRun", approve_writes=True)
         source = self.root / "state.db"

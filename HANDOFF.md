@@ -1,11 +1,11 @@
-## Latest checkpoint — P44 backup failure cleanup
-1. **Branch:** hibi89/AX_FLOW feature/axflow-mvp; P43 commit e2d70db08a171ccd821b5b65de5e273c664cc91a.
-2. **Proof:** injected pre-publish error and post-publish integrity error both fail safely; no destination or .part remains, output folder is empty, and source SHA/size/mtime is unchanged.
-3. **Tests:** targeted 1/1 PASS (0.476 s); full Windows suite **76/76 PASS** (40.428 s); Node syntax/UI provenance and whitespace checks PASS.
-4. **Scope:** F2 cleanup verified; no DBVORA restore, power-loss or customer-release claim. Synthetic local fixtures only; no site/auth or external service.
-5. **Estimate:** **91% PARTIAL**; DBVORA D2, OAuth, independent security, signed/customer distribution and commercial gates remain open.
-6. **Next:** detect a source database changing during backup and ensure the attempted snapshot is discarded.
-7. **P44 implementation commit:** `7a51e933a133abf57254d4e7b216f4eae2bf0f9a`.
+## Latest checkpoint — P45 stale-source snapshot rejection
+1. **Branch:** hibi89/AX_FLOW feature/axflow-mvp; P44 implementation 7a51e933a133abf57254d4e7b216f4eae2bf0f9a.
+2. **Proof:** injected one committed source update after staging and before the after-fingerprint. Backup rejected with source-changed error, published no target, removed stage, and the only row change was the injection.
+3. **Tests:** targeted 1/1 PASS (0.366 s); full Windows suite **77/77 PASS** (40.902 s); Node syntax/UI provenance and whitespace checks PASS.
+4. **Failure/recovery:** first red test rolled its fixture update back because it omitted commit; added explicit commit and reran successfully. No product change.
+5. **Scope:** F2 rejects a stale snapshot; no DBVORA restore, power-loss or customer-release claim. Synthetic local fixtures only.
+6. **Estimate:** **91% PARTIAL**; DBVORA D2, OAuth, independent security, signed/customer distribution and commercial gates remain open.
+7. **Next:** review the full design matrix and complete remaining safe, locally verifiable requirements; no standalone engine.
 
 
 

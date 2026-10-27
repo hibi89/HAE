@@ -1,10 +1,10 @@
-## P44 complete — backup failure cleanup
-Fault injection forced one failure before native publication and another during post-publication integrity verification. Both operations failed safely; neither left a target or staging file. The disposable output directory was empty and the source SHA-256/size/mtime stayed unchanged.
+## P45 complete — reject a stale runtime backup
+The test committed one synthetic run-status change after the backup stage was created and before the source-after fingerprint. The backup rejected the changed source, published no artifact, removed the stage, and the only business-visible row change was the injected test mutation.
 
-**Verification:** targeted test 1/1 PASS in 0.476 s; full Windows Python suite **76/76 PASS** in 40.428 s with synthetic local-loopback access; Node syntax/UI provenance and whitespace/conflict audit PASS. No P44 test failure occurred. F2 remains PASS; overall estimate **91% PARTIAL**.
+**Verification:** targeted test 1/1 PASS in 0.366 s; full Windows Python suite **77/77 PASS** in 40.902 s with synthetic local-loopback access; Node syntax/UI provenance and whitespace/conflict audit PASS. First attempt rolled back its own fixture change because the test omitted an explicit SQLite commit; the fixture was corrected and both reruns passed. Product code was unchanged. F2 stays PASS; estimate **91% PARTIAL**.
 
-## Next atomic task — detect source changes during backup
-Inject an external source-ledger update after the staged snapshot is created but before the source-after fingerprint. Verify backup rejects the inconsistent snapshot, publishes no target, removes staging files, and reports the detected change. Keep the mutation limited to a disposable synthetic ledger and verify the caller-injected source change is the only source delta.
+## Next atomic task — reconcile remaining acceptance gaps
+Re-read the original requirements and acceptance matrix against the current code and test evidence. Choose the next runnable, local synthetic gap only. Hold DBVORA source restore, OAuth, external credentials, independent security review, signed/customer distribution, and commercial evidence until their required authorization or evidence is available. Do not implement a standalone engine.
 
 ## P41 complete — Windows DBVORA snapshot flush boundary diagnosed
 Read the exact DBVORA archive source and reproduced its staged-file read-only `fsync` failure on this Windows host (`OSError errno 9)); read/write `fsync` passed. A separate synthetic SQLite online backup and independent restore passed integrity/foreign-key/row checks with unchanged source SHA, size and mtime. This is platform diagnosis only; no product archive/restore passed and no DBVORA code changed.

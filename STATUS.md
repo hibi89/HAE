@@ -1,3 +1,9 @@
+## P45 — discard snapshots when the source changes (2026-10-27 12:25 KST)
+- **Verification:** after staging completed, the test injected and committed one external status update before the source-after fingerprint. Backup rejected the snapshot with “source changed during backup”, published no target, removed the stage, and the only source-row delta matched the injected update; source hash changed as expected from that test mutation.
+- **Tests:** targeted test 1/1 PASS in 0.366 s. Full Windows Python 3.11.9 suite **77/77 PASS** in 40.902 s with synthetic local-loopback access. Node syntax/UI provenance and changed-file whitespace/conflict audit PASS.
+- **Failure record:** first targeted run did not detect the mutation because the test fixture closed its SQLite connection without committing, so SQLite rolled it back. Added an explicit commit to the fixture; targeted and full reruns passed. Product code was unchanged.
+- **Acceptance/progress:** stale-source backup rejection is verified; F2 remains PASS. Overall stays **91% PARTIAL** (A100/B100/C95/D95/E65), heuristic. DBVORA D2, OAuth, independent security, signed/customer distribution and commercial gates remain open.
+
 ## P44 — injected runtime-backup failure cleanup (2026-10-27 12:24 KST)
 - **Coverage:** injected a native publish error before publication and an integrity error after publication. Both returned safe failure; neither left a target or staged .part file. Source SHA-256, size and mtime remained unchanged, and the output directory was empty.
 - **Tests:** targeted failure-path test 1/1 PASS in 0.476 s. Full Windows Python 3.11.9 suite **76/76 PASS** in 40.428 s with synthetic local-loopback access. Node syntax, UI provenance regression and changed-file whitespace/conflict audit PASS.
