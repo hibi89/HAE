@@ -45,6 +45,10 @@ class CliNoWritePreflightTests(unittest.TestCase):
         self.reject_without_db("csv-filter-import.json", "run",
                                ["--run-id", "DeniedWrite", "--input-root", str(self.root)])
 
+    def test_csv_missing_input_root_fails_before_sqlite_creation(self):
+        self.reject_without_db("csv-filter-import.json", "run",
+                               ["--run-id", "MissingRoot", "--approve-writes"])
+
     def test_invalid_schedule_id(self):
         self.reject_without_db("interval-replay.json", "schedule",
                                ["--schedule-id", "unsafe-id", "--approve-writes"])
