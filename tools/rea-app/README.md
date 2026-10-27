@@ -1,3 +1,11 @@
+# REA_APP v0.3.0 — accepted internal backend/CLI MVP
+
+**Scope frozen 2026-10-28 KST.** The supported read-only synthetic JS/TS acceptance in `docs/TARGET_BLUEPRINT_V1.md` A is met per P53 Windows Gate R and installed-wheel records. The new freeze checkpoint is documentation-only; no new independent source test was executed. Full evidence, SHA, exact installation limitation and exclusions are in [MVP_RELEASE_V0.3.0.md](MVP_RELEASE_V0.3.0.md).
+
+Use as local internal R&D evidence tooling, **not** as customer software or an n8n-derived implementation. Python >=3.11, Node >=20 and locked Babel parser 7.29.9; `bundle` generates six JSON/Markdown reports, optional `--with-diagram` generates eight including Mermaid source. Do not process third-party source without verifying access/use rights. No source execution, unrestricted language coverage or guarantee of runtime-call behavior.
+
+**Maintenance freeze:** P54 wildcard exports and frontend are deferred. Reopen only on a reproduced blocker, then rerun full Gate R/QA at the changed SHA. Older P24–P50 paragraphs below are historical checkpoints and their past “not yet verified” statements are superseded by the later P53 Windows evidence; retain them for provenance.
+
 ## P53 — direct ESM re-exports in the current callable inventory
 
 The current `source-map` and `functional-contracts` reports include explicit
