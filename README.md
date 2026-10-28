@@ -35,3 +35,6 @@ Read `HANDOFF.md` → `STATUS.md` → `AGENTS.md` → `REQUIREMENTS.md` → `doc
 
 ## CURRENT SPRINT OVERRIDE — 2026-10-27 KST
 **3–5-day preferred HAE hackathon-reusable supported-scope MVP (Oct31), max 7-day release review goal (Nov02)**. Active plan: [docs/SPRINT_7_DAY_HACKATHON.md](docs/SPRINT_7_DAY_HACKATHON.md). Previous five-week calendar is historical. This is not full commercial product completion; actual SHA-bound integration and security tests determine what can be reused. REA_APP and DBVORA remain independent tools.
+# Windows local quick start
+
+On Windows with Python 3.11 or newer installed, double-click `HAE-Start.cmd`. It starts the existing HAE app on loopback, waits until the page responds, and opens the default browser. The console stays open while HAE runs; closing it stops the local server. No administrator rights, installer, account, or external service is used. The default data directory is `%LOCALAPPDATA%\HAE`; set `HAE_DATA_DIR` to choose another location or `HAE_PORT` to select a different local port. The launcher prefers a compatible Lightning Azent package available in the checkout and otherwise uses HAE's existing local engine; set `HAE_BACKEND=lightning-azent` to require LA and fail closed if it is unavailable.
