@@ -81,11 +81,13 @@ def _preflight_ledger(path: Path, kind: str) -> None:
                 count = con.execute("SELECT COUNT(*) FROM csv_records").fetchone()[0]
                 if count:
                     raise PlanError("business CSV receipts lack source provenance; refusing migration")
-            if kind == "runtime" and version >= 2:
+            if kind == "runtime":
                 event_columns = {"event_id", "run_id", "plan_hash", "event_type", "occurred_at", "details_json"}
                 approval_columns = {"approval_id", "run_id", "plan_hash", "scope_json", "approved_at", "method"}
-                if ("audit_events" not in tables or not event_columns <= columns.get("audit_events", set()) or
-                        "approval_receipts" not in tables or not approval_columns <= columns.get("approval_receipts", set())):
+                if (("audit_events" in tables and not event_columns <= columns.get("audit_events", set())) or
+                        ("approval_receipts" in tables and not approval_columns <= columns.get("approval_receipts", set()))):
+                    raise PlanError("runtime SQLite audit schema is incompatible")
+                if version >= 2 and ("audit_events" not in tables or "approval_receipts" not in tables):
                     raise PlanError("runtime SQLite audit schema is incomplete")
         finally:
             con.close()
@@ -419,10 +421,10 @@ class Engine:
                 con.execute(
                     "INSERT INTO approval_receipts(run_id,plan_hash,scope_json,approved_at,method) "
                     "VALUES (?,?,?,?,?)",
-                    (run_id, digest, scope_json, approved_at, "explicit-local-flag"),
+                    (run_id, digest, scope_json, approved_at, "explicit-write-approval"),
                 )
                 _append_audit(con, run_id, digest, "write_approval_granted", {
-                    "scope": scope, "method": "explicit-local-flag",
+                    "scope": scope, "method": "explicit-write-approval",
                 })
         try:
             return self._execute_steps(plan, run_id, inject_stop_after_business)

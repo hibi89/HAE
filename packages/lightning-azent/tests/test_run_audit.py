@@ -43,7 +43,7 @@ class RunAuditAcceptanceTests(unittest.TestCase):
         self.assertNotIn("synthetic-private-sentinel", serialized)
         approval = next(event for event in audit["events"]
                         if event["event_type"] == "write_approval_granted")
-        self.assertEqual(approval["details"]["method"], "explicit-local-flag")
+        self.assertEqual(approval["details"]["method"], "explicit-write-approval")
         self.assertEqual(approval["details"]["scope"]["write_steps"],
                          [{"step_id": "save", "operation": "sqlite_put"}])
         self.assertEqual(approval["details"]["scope"]["plan_sha256"], audit["plan_sha256"])
@@ -55,7 +55,7 @@ class RunAuditAcceptanceTests(unittest.TestCase):
         self.assertEqual(receipt[0], audit["plan_sha256"])
         self.assertEqual(json.loads(receipt[1])["write_steps"],
                          [{"step_id": "save", "operation": "sqlite_put"}])
-        self.assertEqual(receipt[2], "explicit-local-flag")
+        self.assertEqual(receipt[2], "explicit-write-approval")
         self.assertEqual(len(audit["approval_receipts"]), 1)
         self.assertEqual(audit["approval_receipts"][0]["scope"]["write_steps"],
                          [{"step_id": "save", "operation": "sqlite_put"}])

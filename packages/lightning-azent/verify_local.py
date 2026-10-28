@@ -26,7 +26,7 @@ PKG = Path(__file__).resolve().parent
 ROOT = PKG.parents[1]
 FIX = ROOT / "docs" / "lightning-azent" / "fixtures"
 ORIGINAL = ROOT / "apps" / "ax-flow"
-EXPECTED_MIN_TESTS = 63
+EXPECTED_MIN_TESTS = 64
 
 
 def main() -> int:
@@ -204,8 +204,10 @@ def main() -> int:
         return {"ticks": 2, "business_rows": count}
 
     def wheel():
-        if any(importlib.util.find_spec(p) is None for p in ("pip", "setuptools", "wheel")):
-            return {"skip": "offline packaging modules missing"}
+        missing = [name for name in ("pip", "setuptools", "wheel")
+                   if importlib.util.find_spec(name) is None]
+        if missing:
+            return {"skip": "offline packaging modules missing: " + ", ".join(missing)}
         # setuptools can create build/egg-info: build only from disposable copy.
         copied = work / "package_source"
         shutil.copytree(PKG, copied, ignore=shutil.ignore_patterns(

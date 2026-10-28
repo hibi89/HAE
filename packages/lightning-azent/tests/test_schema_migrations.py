@@ -100,6 +100,26 @@ class LedgerSchemaMigrationTests(unittest.TestCase):
         self.assertEqual(digest(self.state), state_before)
         self.assertEqual(digest(self.business), business_before)
 
+    def test_v1_malformed_audit_name_collision_is_not_promoted_to_v2(self):
+        with closing(sqlite3.connect(self.state)) as con:
+            con.execute("CREATE TABLE runs (run_id TEXT PRIMARY KEY, plan_hash TEXT NOT NULL, status TEXT NOT NULL, output_json TEXT, error_type TEXT)")
+            con.execute("CREATE TABLE steps (run_id TEXT NOT NULL, step_id TEXT NOT NULL, output_json TEXT NOT NULL, status TEXT NOT NULL, error_type TEXT, attempt_count INTEGER NOT NULL DEFAULT 1, PRIMARY KEY(run_id,step_id))")
+            con.execute("CREATE TABLE audit_events (unrelated TEXT)")
+            con.execute("PRAGMA user_version=1")
+            con.commit()
+        with closing(sqlite3.connect(self.business)) as con:
+            con.execute("CREATE TABLE records (run_id TEXT NOT NULL, step_id TEXT NOT NULL, payload_json TEXT NOT NULL, PRIMARY KEY(run_id,step_id))")
+            con.execute("CREATE TABLE csv_records (run_id TEXT NOT NULL, import_step_id TEXT NOT NULL, source_sha256 TEXT NOT NULL, row_number INTEGER NOT NULL CHECK(row_number > 0), payload_json TEXT NOT NULL, PRIMARY KEY(run_id,import_step_id,row_number))")
+            con.execute("PRAGMA user_version=1")
+            con.commit()
+        state_before, business_before = digest(self.state), digest(self.business)
+
+        with self.assertRaisesRegex(PlanError, "audit schema is incompatible"):
+            Engine(self.state, self.business)
+
+        self.assertEqual(digest(self.state), state_before)
+        self.assertEqual(digest(self.business), business_before)
+
     def test_incompatible_business_ledger_is_rejected_before_state_creation(self):
         with closing(sqlite3.connect(self.business)) as con:
             con.execute("CREATE TABLE records (unrelated TEXT)")
