@@ -42,6 +42,8 @@ def main() -> int:
     p.add_argument("--max-runs", type=int, help="stop after this many due interval ticks (1-1000)")
     p.add_argument("--port", type=int, default=8765, help="loopback UI port for serve")
     p.add_argument("--dbvora-url", help="optional DBVORA loopback API origin, e.g. http://127.0.0.1:8766")
+    p.add_argument("--engine-backend", choices=("axflow", "lightning-azent"), default="axflow",
+                   help="serve only; Lightning Azent is an explicit synthetic development backend")
     p.add_argument("--approve-writes", action="store_true")
     p.add_argument("--synthetic", action="store_true", help="mandatory: this MVP handles synthetic fixtures only")
     a = p.parse_args()
@@ -50,6 +52,8 @@ def main() -> int:
             raise PlanError("MVP restricted to synthetic fixtures; include --synthetic")
         if a.command != "serve" and a.dbvora_url is not None:
             raise PlanError("--dbvora-url is only valid with serve")
+        if a.command != "serve" and a.engine_backend != "axflow":
+            raise PlanError("--engine-backend is only valid with serve")
         if a.command == "serve":
             if (a.plan is not None or a.name is not None or a.csv_path is not None or a.run_id is not None or
                     a.schedule_id is not None or a.max_runs is not None or
@@ -61,8 +65,11 @@ def main() -> int:
                 )
             from .web import create_server
 
-            server = create_server(a.input_root, a.state, a.data, port=a.port, dbvora_url=a.dbvora_url)
-            print(f"AX FLOW local UI ready: http://127.0.0.1:{server.server_port}/", flush=True)
+            server = create_server(
+                a.input_root, a.state, a.data, port=a.port, dbvora_url=a.dbvora_url,
+                engine_backend=a.engine_backend,
+            )
+            print(f"HAE local UI ({a.engine_backend}): http://127.0.0.1:{server.server_port}/", flush=True)
             try:
                 server.serve_forever(poll_interval=0.2)
             except KeyboardInterrupt:
