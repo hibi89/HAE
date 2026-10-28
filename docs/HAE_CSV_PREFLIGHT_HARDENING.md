@@ -14,10 +14,11 @@ Date: 2026-10-29 (KST)
 
 ## Verification
 
-- HAE: full suite 96/96 PASS on Windows Python 3.11.9 (53.986 s); `compileall` and `node --check` PASS.
+- HAE full suite before the latest regression addition: 96/96 PASS on Windows Python 3.11.9 (53.986 s); `compileall` and `node --check` PASS. After adding a dedicated cross-process adapter test: the adapter suite passes 4/4 and `compileall` passes; the entire HAE suite was not rerun after that test-only addition.
 - Lightning Azent reference package: 65/65 PASS on rerun with unrestricted temporary-file operations. Its first sandboxed run had 2 backup errors and 1 concurrency failure because Windows hardlink/temp-file operations were restricted; this was environmental, not a source change.
 - Browser E2E: localhost synthetic CSV Preview PASS (1 row, 2 columns, 25 bytes), explicit approval, SQLite execution completed with one row. No external service or customer data used.
 - HAE HTTP integration against the real Lightning Azent package: import, conditional filtered import, and read-only lookup all matched HAE results; preview created no SQLite files; same approval replay preserved the result. Missing or incompatible package failed closed.
+- Two separate Windows processes were synchronized and released together through the HAE adapter with the same run ID. Both returned completed status; the write-approval audit event appeared once and the SQLite import contained two rows. This confirms cross-process replay serialization for requests routed through HAE.
 - A 30-iteration direct-package process-race probe observed duplicate approval audit events in 18/30 runs while retaining one business row. HAE adapter serialization covers calls routed through HAE; the independent Lightning Azent branch remains read-only, so direct external package callers are outside this fix.
 
 ## Remaining limitations
