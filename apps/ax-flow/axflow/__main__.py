@@ -42,6 +42,7 @@ def main() -> int:
     p.add_argument("--max-runs", type=int, help="stop after this many due interval ticks (1-1000)")
     p.add_argument("--port", type=int, default=8765, help="loopback UI port for serve")
     p.add_argument("--dbvora-url", help="optional DBVORA loopback API origin, e.g. http://127.0.0.1:8766")
+    p.add_argument("--sovia-root", type=Path, help="optional local SOVIA source directory for post-execution advisory reconciliation")
     p.add_argument("--engine-backend", choices=("axflow", "lightning-azent"), default="axflow",
                    help="serve only; Lightning Azent is an explicit synthetic development backend")
     p.add_argument("--approve-writes", action="store_true")
@@ -50,8 +51,8 @@ def main() -> int:
     try:
         if not a.synthetic:
             raise PlanError("MVP restricted to synthetic fixtures; include --synthetic")
-        if a.command != "serve" and a.dbvora_url is not None:
-            raise PlanError("--dbvora-url is only valid with serve")
+        if a.command != "serve" and (a.dbvora_url is not None or a.sovia_root is not None):
+            raise PlanError("--dbvora-url and --sovia-root are only valid with serve")
         if a.command != "serve" and a.engine_backend != "axflow":
             raise PlanError("--engine-backend is only valid with serve")
         if a.command == "serve":
@@ -67,7 +68,7 @@ def main() -> int:
 
             server = create_server(
                 a.input_root, a.state, a.data, port=a.port, dbvora_url=a.dbvora_url,
-                engine_backend=a.engine_backend,
+                engine_backend=a.engine_backend, sovia_root=a.sovia_root,
             )
             print(f"HAE local UI ({a.engine_backend}): http://127.0.0.1:{server.server_port}/", flush=True)
             try:

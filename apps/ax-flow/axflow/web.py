@@ -22,6 +22,8 @@ from .engine import (
 )
 from .la_adapter import BackendUnavailable, execute as execute_lightning, inspect_backend
 from .dbvora_client import DbvoraClient
+from .sovia_adapter import SOVIAUnavailable, reconcile as reconcile_sovia
+from .sovia_store import SOVIAStore, SOVIAStoreError
 from .planner import plan_request, requires_write_approval, workflow_name
 from .runlog import RunLogError, inspect_run
 
@@ -66,6 +68,7 @@ def create_server(
     port: int = 8765,
     dbvora_url: str | None = None,
     engine_backend: str = "axflow",
+    sovia_root: Path | None = None,
 ):
     """Create a localhost-only server. Paths are fixed at startup, never supplied by HTTP."""
     root = Path(input_root).expanduser().resolve(strict=True)
@@ -75,6 +78,8 @@ def create_server(
         raise PlanError("CSV input root must be an existing directory")
     if state == business:
         raise PlanError("runtime and business SQLite files must be distinct")
+    if state.with_name(state.name + ".sovia-audit.sqlite") == business:
+        raise PlanError("SOVIA metadata store and business SQLite files must be distinct")
     if not state.parent.is_dir() or not business.parent.is_dir():
         raise PlanError("both database parent directories must already exist")
     if isinstance(port, bool) or not isinstance(port, int) or not 0 <= port <= 65535:
@@ -187,9 +192,24 @@ def create_server(
                     self._send_json(400, {"error": "a run ID from this UI is required"})
                     return
                 try:
-                    self._send_json(200, inspect_run(state, run_ids[0]))
+                    status = inspect_run(state, run_ids[0])
+                    status["integration"] = self.server.get_integration(run_ids[0])
+                    self._send_json(200, status)
                 except RunLogError as exc:
                     self._send_json(404, {"error": str(exc)})
+                return
+            if parsed.path == "/api/audit":
+                query = parse_qs(parsed.query, keep_blank_values=True)
+                run_ids = query.get("run_id", [])
+                if set(query) != {"run_id"} or len(run_ids) != 1 or not _RUN_ID.fullmatch(run_ids[0]):
+                    self._send_json(400, {"error": "a run ID from this UI is required"})
+                    return
+                integration = self.server.get_integration(run_ids[0])
+                report = integration.get("sovia_audit") if integration else None
+                if report is None:
+                    self._send_json(404, {"error": "post-execution SOVIA audit is not available for this server session"})
+                else:
+                    self._send_json(200, report)
                 return
             if parsed.path == "/api/dbvora":
                 self._send_json(200, self.server.dbvora_client.fetch_inventory())
@@ -309,7 +329,8 @@ def create_server(
                             plan, run_id, state_path=state, business_path=business,
                             input_root=root, approve_writes=body["approve_writes"],
                         )
-                        self._send_json(200, {"run_id": run_id, **outcome})
+                        integration = self.server.run_integrations(plan, run_id, plan_sha256, outcome, body["approve_writes"])
+                        self._send_json(200, {"run_id": run_id, **outcome, **integration})
                     else:
                         result = Engine(state, business, input_root=root).execute(
                             plan, run_id, approve_writes=body["approve_writes"]
@@ -333,7 +354,8 @@ def create_server(
                         input_root=root, approve_writes=body["approve_writes"],
                         csv_snapshot=csv_snapshot, expected_csv_sha256=approved_sha256,
                     )
-                    self._send_json(200, {"run_id": run_id, **outcome})
+                    integration = self.server.run_integrations(plan, run_id, plan_sha256, outcome, body["approve_writes"])
+                    self._send_json(200, {"run_id": run_id, **outcome, **integration})
                 else:
                     result = Engine(state, business, input_root=root).execute(
                         plan, run_id, approve_writes=body["approve_writes"],
@@ -374,6 +396,58 @@ def create_server(
             self._upload_dir: tempfile.TemporaryDirectory | None = None
             self._upload_count = 0
             self.engine_backend = engine_backend
+            self.sovia_root = Path(sovia_root) if sovia_root is not None else None
+            self.sovia_store = SOVIAStore(state, business)
+            self._sovia_lock = threading.Lock()
+            self._sovia_reports: OrderedDict[str, dict[str, object]] = OrderedDict()
+
+        def run_integrations(self, plan: dict, run_id: str, plan_sha256: str,
+                             outcome: dict, approved: bool) -> dict[str, object]:
+            try:
+                report = reconcile_sovia(
+                    plan, run_id, plan_sha256, outcome.get("status"), outcome.get("audit"),
+                    approved=approved, sovia_root=self.sovia_root,
+                )
+            except SOVIAUnavailable as exc:
+                report = {"available": False, "mode": "post_execution_advisory",
+                          "run_id": run_id, "plan_sha256": plan_sha256,
+                          "error": str(exc), "execution_gate": False}
+            dbvora = self.dbvora_client.fetch_inventory()
+            persisted = True
+            try:
+                self.sovia_store.save(run_id, plan_sha256, report)
+            except SOVIAStoreError:
+                persisted = False
+            status = ("completed" if outcome.get("status", {}).get("status") == "completed"
+                      and report.get("available") is True and dbvora.get("available") is True
+                      and persisted
+                      else "partial")
+            integration = {"sovia_audit": report, "dbvora": dbvora,
+                           "audit_persisted": persisted, "workflow_status": status}
+            with self._sovia_lock:
+                self._sovia_reports[run_id] = integration
+                self._sovia_reports.move_to_end(run_id)
+                while len(self._sovia_reports) > 60:
+                    self._sovia_reports.popitem(last=False)
+            return integration
+
+        def get_integration(self, run_id: str) -> dict[str, object] | None:
+            with self._sovia_lock:
+                report = self._sovia_reports.get(run_id)
+                if report is not None:
+                    return dict(report)
+            try:
+                audit = self.sovia_store.get(run_id)
+            except SOVIAStoreError as exc:
+                audit = {"available": False, "run_id": run_id,
+                         "error": str(exc), "execution_gate": False}
+            if audit is None:
+                return None
+            dbvora = self.dbvora_client.fetch_inventory()
+            status = ("completed" if audit.get("available") is True and dbvora.get("available") is True
+                      else "partial")
+            return {"sovia_audit": audit, "dbvora": dbvora,
+                    "audit_persisted": True, "workflow_status": status}
 
         def save_csv_upload(self, content: bytes) -> str:
             with self._upload_lock:
