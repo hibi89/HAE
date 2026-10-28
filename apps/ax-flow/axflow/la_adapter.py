@@ -18,6 +18,16 @@ class BackendUnavailable(RuntimeError):
     """The selected optional backend is missing or incompatible."""
 
 
+class LightningExecutionError(RuntimeError):
+    """LA failed after creating a run, with safe status and audit metadata available."""
+
+    def __init__(self, cause: Exception, status: dict[str, object], audit: dict[str, object]):
+        super().__init__("Lightning Azent execution failed: " + type(cause).__name__)
+        self.cause = cause
+        self.status = status
+        self.audit = audit
+
+
 def _load_backend(plan: object):
     try:
         package = importlib.import_module("lightning_azent")
@@ -113,7 +123,21 @@ def execute(plan: object, run_id: str, *, state_path: Path, business_path: Path,
             executor_type, Path(state_path), Path(business_path), Path(input_root),
             csv_snapshot, expected_csv_sha256,
         ) as executor:
-            result = executor.execute(plan, run_id, approve_writes=approve_writes)
+            try:
+                result = executor.execute(plan, run_id, approve_writes=approve_writes)
+            except Exception as cause:
+                # LA's durable ledger already records failed steps and retries.
+                # Preserve that evidence for SOVIA before propagating the failure.
+                try:
+                    status = executor.status(run_id)
+                    audit = executor.audit(run_id)
+                except Exception:
+                    raise cause
+                if (not isinstance(status, dict) or not isinstance(audit, dict)
+                        or status.get("run_id") != run_id or audit.get("run_id") != run_id
+                        or status.get("plan_sha256") != audit.get("plan_sha256")):
+                    raise cause
+                raise LightningExecutionError(cause, status, audit) from cause
             status = executor.status(run_id)
             audit = executor.audit(run_id)
     return {"result": result, "status": status, "audit": audit, "backend": backend}

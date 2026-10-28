@@ -49,6 +49,8 @@ class IntegratedMvpE2ETests(unittest.TestCase):
         self.bad_csv.write_text("amount,id\n100000\n", encoding="utf-8")
         self.numeric_csv = self.inputs / "numeric.csv"
         self.numeric_csv.write_text("amount,id\nnot-a-number,bad\n", encoding="utf-8")
+        self.locked_csv = self.inputs / "locked.csv"
+        self.locked_csv.write_text("amount,id\n110000,locked\n", encoding="utf-8")
         self.state = self.root / "state.sqlite"
         self.business = self.root / "business.sqlite"
         with closing(sqlite3.connect(self.business)) as connection:
@@ -103,7 +105,7 @@ class IntegratedMvpE2ETests(unittest.TestCase):
             headers["Content-Type"] = "application/json"
         request = Request(self.origin + path, data=data, headers=headers)
         try:
-            with urlopen(request, timeout=5) as response:
+            with urlopen(request, timeout=12) as response:
                 return response.status, json.loads(response.read())
         except HTTPError as error:
             return error.code, json.loads(error.read())
@@ -210,6 +212,45 @@ class IntegratedMvpE2ETests(unittest.TestCase):
         self.assertFalse(unavailable_dbvora["dbvora"]["available"])
         self.assertEqual(unavailable_dbvora["workflow_status"], "partial")
         self.server.dbvora_client = configured_dbvora
+
+        # A real LA SQLite write refusal must still deliver its failed-step
+        # audit to SOVIA, then a same-run resume must disclose recovery.
+        lock_task = "Import this CSV where amount >= 100000 into SQLite"
+        code, lock_preview = self.request("/api/preview", {
+            "task": lock_task, "csv_path": "locked.csv",
+        })
+        self.assertEqual(code, 200, lock_preview)
+        with closing(sqlite3.connect(self.business)) as connection:
+            connection.execute(
+                "CREATE TRIGGER refuse_synthetic_import BEFORE INSERT ON csv_records "
+                "BEGIN SELECT RAISE(ABORT, 'synthetic write refusal'); END"
+            )
+            connection.commit()
+        try:
+            code, failure = self.request("/api/run", {
+                "task": lock_task, "csv_path": "locked.csv",
+                "preview_id": lock_preview["preview_id"], "approve_writes": True,
+            })
+        finally:
+            with closing(sqlite3.connect(self.business)) as connection:
+                connection.execute("DROP TRIGGER refuse_synthetic_import")
+                connection.commit()
+        self.assertEqual(code, 422, failure)
+        self.assertNotIn("synthetic write refusal", failure["error"])
+        self.assertNotIn(str(self.root), json.dumps(failure))
+        failed_integration = failure["integration"]
+        self.assertEqual(failure["status"]["status"], "failed")
+        self.assertTrue(failed_integration["sovia_audit"]["available"])
+        self.assertIn("imported", failed_integration["sovia_audit"]["execution"]["failed_attempt_steps"])
+
+        code, recovered = self.request("/api/run", {
+            "task": lock_task, "csv_path": "locked.csv",
+            "preview_id": lock_preview["preview_id"], "approve_writes": True,
+        })
+        self.assertEqual(code, 200, recovered)
+        self.assertEqual(recovered["status"]["status"], "completed")
+        self.assertIn("imported", recovered["sovia_audit"]["execution"]["failed_attempt_steps"])
+        self.assertEqual(recovered["sovia_audit"]["execution"]["retry_count"], 1)
 
 
 if __name__ == "__main__":

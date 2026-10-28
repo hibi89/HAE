@@ -106,6 +106,8 @@ def reconcile(plan: dict, run_id: str, plan_sha256: str, la_status: object,
         details = event["details"]
         sid = details.get("step_id")
         kind = event.get("event_type")
+        if kind == "run_resumed":
+            retries += 1
         if kind == "step_completed" and isinstance(sid, str):
             attempts = details.get("attempt_count", 1)
             if isinstance(attempts, int) and not isinstance(attempts, bool) and attempts > 1:

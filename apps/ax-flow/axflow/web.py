@@ -20,7 +20,10 @@ from .engine import (
     ApprovalRequired, Engine, MAX_CSV_BYTES, PlanError, StepRetryExhausted, StepTimeout,
     canonical_json, preflight_csv_plan,
 )
-from .la_adapter import BackendUnavailable, execute as execute_lightning, inspect_backend
+from .la_adapter import (
+    BackendUnavailable, LightningExecutionError, execute as execute_lightning,
+    inspect_backend,
+)
 from .dbvora_client import DbvoraClient
 from .sovia_adapter import SOVIAUnavailable, reconcile as reconcile_sovia
 from .sovia_store import SOVIAStore, SOVIAStoreError
@@ -225,12 +228,17 @@ def create_server(
                 return
             run_id = None
 
-            def send_failure(status_code: int, exc: Exception) -> None:
+            def send_failure(status_code: int, exc: Exception,
+                             integration: dict[str, object] | None = None) -> None:
                 payload = {"error": str(exc)[:240], "error_type": type(exc).__name__}
                 if run_id is not None:
                     payload["run_id"] = run_id
                     try:
-                        payload["status"] = inspect_run(state, run_id)
+                        run_status = inspect_run(state, run_id)
+                        if integration is not None:
+                            run_status["integration"] = integration
+                            payload["integration"] = integration
+                        payload["status"] = run_status
                     except RunLogError:
                         pass
                 self._send_json(status_code, payload)
@@ -372,6 +380,20 @@ def create_server(
                 send_failure(422, exc)
             except ApprovalRequired as exc:
                 send_failure(403, exc)
+            except LightningExecutionError as exc:
+                cause = exc.cause
+                error_name = type(cause).__name__
+                status_code = 409 if error_name in {"StepTimeout", "StepRetryExhausted"} else 422
+                integration = None
+                if run_id is not None:
+                    integration = self.server.run_integrations(
+                        plan, run_id, plan_sha256,
+                        {"status": exc.status, "audit": exc.audit},
+                        body["approve_writes"],
+                    )
+                # SQLite error text may contain local paths or SQL details.
+                # The exception class and durable audit are sufficient here.
+                send_failure(status_code, exc, integration)
             except BackendUnavailable as exc:
                 send_failure(503, exc)
             except (StepRetryExhausted, StepTimeout) as exc:
