@@ -23,6 +23,9 @@ const dbvoraProvenance = document.querySelector("#dbvora-provenance");
 const dbvoraTables = document.querySelector("#dbvora-tables");
 const dbvoraRelations = document.querySelector("#dbvora-relations");
 const dbvoraRefreshButton = document.querySelector("#refresh-dbvora");
+const previewDetail = document.querySelector("#preview-detail");
+const backendOutput = document.querySelector("#engine-backend");
+const stepListOutput = document.querySelector("#step-list");
 
 let previewKey = "";
 let currentRunId = "";
@@ -92,6 +95,26 @@ async function checkConnection() {
 
 function clearChildren(element) {
   while (element.firstChild) element.removeChild(element.firstChild);
+}
+
+function renderPreviewSteps(plan) {
+  clearChildren(stepListOutput);
+  const labels = {
+    csv_read: "CSV 파일을 읽고 확인",
+    csv_normalize: "요청한 열을 변환",
+    csv_filter: "조건에 맞는 행을 찾기",
+    condition: "조건 분기 계산",
+    branch: "조건에 따라 분기",
+    sqlite_import_csv: "승인 후 SQLite에 CSV 행 저장",
+    sqlite_put: "승인 후 SQLite에 결과 저장",
+    sqlite_get: "SQLite 결과 조회",
+  };
+  for (const step of plan.steps) {
+    const item = document.createElement("li");
+    item.textContent = labels[step.op] || ("지원 단계 확인: " + step.op);
+    stepListOutput.appendChild(item);
+  }
+  previewDetail.hidden = false;
 }
 
 function describeDbvoraProvenance(result) {
@@ -200,6 +223,11 @@ previewButton.addEventListener("click", async () => {
       body: JSON.stringify({ task: taskInput.value, csv_path: csvInput.value }),
     });
     planOutput.textContent = JSON.stringify(response.plan, null, 2);
+    renderPreviewSteps(response.plan);
+    const backend = response.engine_backend || {};
+    backendOutput.textContent = backend.name === "Lightning Azent"
+      ? `실행 엔진: Lightning Azent ${backend.package_version} · 개발 모드 · 계약 확인 완료`
+      : "실행 엔진: HAE 기본 엔진";
     previewKey = requestKey();
     previewId = response.preview_id;
     requiresApproval = response.requires_approval;
@@ -217,6 +245,7 @@ previewButton.addEventListener("click", async () => {
     setMessage((descriptions[response.workflow] || "지원되는 CSV 흐름입니다.") + csvSummary, "success");
   } catch (error) {
     planOutput.textContent = "요청을 IR로 변환할 수 없습니다.";
+    previewDetail.hidden = true;
     setMessage(error.message, "error");
   } finally {
     previewButton.disabled = false;
@@ -231,6 +260,7 @@ for (const input of [taskInput, csvInput]) {
     requiresApproval = true;
     updateRunButton();
     resultCard.hidden = true;
+    previewDetail.hidden = true;
   });
 }
 csvFileInput.addEventListener("change", async () => {
@@ -292,6 +322,7 @@ runButton.addEventListener("click", async () => {
     });
     currentRunId = response.run_id;
     showStatus(response.status);
+    const auditCount = Array.isArray(response.audit?.events) ? response.audit.events.length : 0;
     if (Number.isInteger(response.result.imported_rows)) {
       rowCountLabel.textContent = "저장 행";
       rowCountOutput.textContent = String(response.result.imported_rows);
@@ -315,6 +346,9 @@ runButton.addEventListener("click", async () => {
       rowCountLabel.textContent = "처리 행";
       rowCountOutput.textContent = "0";
       resultCopy.textContent = "조건에 맞는 행이 없어 저장을 건너뛰었습니다.";
+    }
+    if (auditCount) {
+      resultCopy.textContent += ` Lightning Azent 감사 기록 ${auditCount}개를 조회했습니다. 기록에는 CSV 행 내용이 없습니다.`;
     }
     setMessage("실행 영수증을 만들었습니다.", "success");
   } catch (error) {
