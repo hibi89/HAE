@@ -14,7 +14,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from axflow.engine import (ApprovalRequired, Engine, InjectedStop, PlanError, StepRetryExhausted,
-                           StepTimeout, validate)
+                           StepTimeout, preflight_csv_plan, validate)
 from axflow.runlog import inspect_run
 from axflow.state_backup import StateBackupError, backup_runtime_state, restore_runtime_state
 from axflow.planner import plan_request, requires_write_approval
@@ -510,6 +510,35 @@ raise SystemExit(main())
                 "SELECT output_json FROM runs WHERE run_id='CsvMetadata'"
             ).fetchone()[0]
         self.assertNotIn("Alice", output_json)
+
+    def test_csv_preflight_detects_file_replacement_between_stat_and_open(self):
+        input_root = self.root / "csv-open-race"
+        input_root.mkdir()
+        source = input_root / "contacts.csv"
+        source.write_bytes(b"id\n1\n")
+        replacement = input_root / "replacement.csv"
+        replacement.write_bytes(b"id\n2\n")
+        plan = {"version": "axflow.ir.v0", "steps": [
+            {"id": "source", "op": "csv_read", "path": "contacts.csv"},
+        ]}
+        db_before = {
+            path: (path.read_bytes(), path.stat().st_mtime_ns)
+            for path in (self.root / "state.db", self.root / "business.db")
+        }
+        original_open = Path.open
+
+        def replace_before_open(path, *args, **kwargs):
+            if path == source and args and args[0] == "rb":
+                replacement.replace(source)
+            return original_open(path, *args, **kwargs)
+
+        with patch.object(Path, "open", replace_before_open):
+            with self.assertRaisesRegex(PlanError, "changed while it was being opened"):
+                preflight_csv_plan(plan, input_root)
+        self.assertEqual(db_before, {
+            path: (path.read_bytes(), path.stat().st_mtime_ns)
+            for path in (self.root / "state.db", self.root / "business.db")
+        })
 
     def test_csv_input_limits_and_path_allowlist_fail_before_business_writes(self):
         input_root = self.root / "invalid-csv"
