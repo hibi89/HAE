@@ -3,9 +3,11 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import subprocess
 import sys
 import tempfile
 import threading
+import time
 import unittest
 from contextlib import closing
 from pathlib import Path
@@ -51,6 +53,80 @@ class LightningAzentAdapterTests(unittest.TestCase):
         with patch("axflow.la_adapter.importlib.import_module", side_effect=ImportError("synthetic missing package")):
             with self.assertRaisesRegex(BackendUnavailable, "unavailable"):
                 inspect_backend(plan)
+
+    @unittest.skipUnless(LA_PACKAGE.is_dir(), "Lightning Azent sibling package is not present in this checkout")
+    def test_hae_adapter_serializes_cross_process_same_run_replay(self):
+        with tempfile.TemporaryDirectory(prefix="hae-la-process-lock-") as folder:
+            root = Path(folder)
+            inputs = root / "input"
+            inputs.mkdir()
+            (inputs / "contacts.csv").write_bytes(b"id,name\n31,Alice\n32,Bob\n")
+            state, business = root / "state.db", root / "business.db"
+            gate = root / "start.gate"
+            task = "Import this CSV into local SQLite"
+            plan = plan_request(task, "contacts.csv")
+            payload = json.dumps({
+                "plan": plan,
+                "input_root": str(inputs),
+                "state_path": str(state),
+                "business_path": str(business),
+                "run_id": "ConcurrentLA",
+                "gate": str(gate),
+                "ready_dir": str(root),
+            })
+            child = r'''
+import json, sys, time
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+sys.path.insert(0, sys.argv[2])
+from axflow.engine import preflight_csv_plan
+from axflow.la_adapter import execute
+data = json.loads(sys.argv[3])
+Path(data["ready_dir"], "ready-" + sys.argv[4]).touch()
+while not Path(data["gate"]).exists():
+    time.sleep(0.01)
+snapshot, _ = preflight_csv_plan(data["plan"], Path(data["input_root"]))
+result = execute(data["plan"], data["run_id"], state_path=Path(data["state_path"]),
+                 business_path=Path(data["business_path"]), input_root=Path(data["input_root"]),
+                 approve_writes=True, csv_snapshot=snapshot,
+                 expected_csv_sha256=snapshot["source_sha256"])
+print(json.dumps({"status": result["status"]["status"],
+                  "events": [item["event_type"] for item in result["audit"]["events"]]}))
+'''
+            processes = [subprocess.Popen(
+                [sys.executable, "-c", child, str(PACKAGE_ROOT), str(LA_PACKAGE), payload, str(index)],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+            ) for index in range(2)]
+            deadline = time.monotonic() + 20
+            while not all((root / f"ready-{index}").exists() for index in range(2)):
+                if time.monotonic() >= deadline:
+                    for process in processes:
+                        process.kill()
+                    for process in processes:
+                        process.communicate()
+                    self.fail("adapter child processes did not reach the synchronization gate")
+                time.sleep(0.01)
+            gate.write_text("go", encoding="ascii")
+            outputs = []
+            try:
+                for process in processes:
+                    stdout, stderr = process.communicate(timeout=30)
+                    self.assertEqual(process.returncode, 0, stderr)
+                    outputs.append(json.loads(stdout))
+            finally:
+                for process in processes:
+                    if process.poll() is None:
+                        process.kill()
+                        process.communicate()
+
+            self.assertEqual([output["status"] for output in outputs], ["completed", "completed"])
+            self.assertTrue(all(output["events"].count("write_approval_granted") == 1
+                                for output in outputs))
+            self.assertTrue(any("run_replayed" in output["events"] for output in outputs))
+            with closing(sqlite3.connect(business)) as con:
+                self.assertEqual(con.execute(
+                    "SELECT COUNT(*) FROM csv_records WHERE run_id=?", ("ConcurrentLA",)
+                ).fetchone()[0], 2)
 
     @unittest.skipUnless(LA_PACKAGE.is_dir(), "Lightning Azent sibling package is not present in this checkout")
     def test_http_flow_uses_real_lightning_backend_and_matches_axflow(self):
