@@ -20,6 +20,7 @@ from .engine import (
     ApprovalRequired, Engine, MAX_CSV_BYTES, PlanError, StepRetryExhausted, StepTimeout,
     canonical_json, preflight_csv_plan,
 )
+from .la_adapter import BackendUnavailable, execute as execute_lightning, inspect_backend
 from .dbvora_client import DbvoraClient
 from .planner import plan_request, requires_write_approval, workflow_name
 from .runlog import RunLogError, inspect_run
@@ -64,6 +65,7 @@ def create_server(
     *,
     port: int = 8765,
     dbvora_url: str | None = None,
+    engine_backend: str = "axflow",
 ):
     """Create a localhost-only server. Paths are fixed at startup, never supplied by HTTP."""
     root = Path(input_root).expanduser().resolve(strict=True)
@@ -77,6 +79,16 @@ def create_server(
         raise PlanError("both database parent directories must already exist")
     if isinstance(port, bool) or not isinstance(port, int) or not 0 <= port <= 65535:
         raise PlanError("port must be an integer from 0 to 65535")
+    if engine_backend not in {"axflow", "lightning-azent"}:
+        raise PlanError("engine_backend must be axflow or lightning-azent")
+
+    def backend_info(plan: dict) -> dict[str, object]:
+        if engine_backend == "lightning-azent":
+            return inspect_backend(plan)
+        return {
+            "name": "HAE local engine", "api_version": "axflow.ir.v0",
+            "capability_fingerprint": "axflow.ir.v0",
+        }
 
     class Handler(BaseHTTPRequestHandler):
         server_version = "AXFlowLocalUI"
@@ -246,16 +258,19 @@ def create_server(
                 if route == "/api/preview":
                     self._require_fields(body, {"task", "csv_path"})
                     plan = plan_request(body["task"], body["csv_path"])
+                    active_backend = backend_info(plan)
                     csv_snapshot, csv_summary = preflight_csv_plan(plan, root)
                     preview_id = self.server.save_preview(
                         body["task"], body["csv_path"], "Gui" + uuid.uuid4().hex[:12],
                         csv_snapshot["source_sha256"],
+                        str(active_backend["capability_fingerprint"]),
                     )
                     self._send_json(200, {
                         "validated": True,
                         "workflow": workflow_name(plan),
                         "requires_approval": requires_write_approval(plan),
                         "planner": "bounded local rules",
+                        "engine_backend": active_backend,
                         "preview_id": preview_id,
                         "plan": plan,
                         "input": {key: value for key, value in csv_summary.items() if key != "source_sha256"},
@@ -274,7 +289,11 @@ def create_server(
                 approval = self.server.get_preview(preview_id, body["task"], body["csv_path"])
                 if approval is None:
                     raise RequestError(409, "preview expired or no longer matches the request")
-                run_id, approved_sha256 = approval
+                run_id, approved_sha256, approved_backend = approval
+                active_backend = backend_info(plan)
+                if str(active_backend["capability_fingerprint"]) != approved_backend:
+                    self.server.invalidate_preview(preview_id)
+                    raise RequestError(409, "execution backend changed after preview; preview it again")
                 plan_sha256 = hashlib.sha256(canonical_json(plan).encode("utf-8")).hexdigest()
                 try:
                     prior = inspect_run(state, run_id)
@@ -285,12 +304,20 @@ def create_server(
                     # A completed run retry returns its durable receipt without
                     # executing again; input-change invalidation applies before
                     # a first execution or an incomplete-run resume.
-                    result = Engine(state, business, input_root=root).execute(
-                        plan, run_id, approve_writes=body["approve_writes"]
-                    )
-                    self._send_json(200, {
-                        "run_id": run_id, "result": result, "status": inspect_run(state, run_id),
-                    })
+                    if engine_backend == "lightning-azent":
+                        outcome = execute_lightning(
+                            plan, run_id, state_path=state, business_path=business,
+                            input_root=root, approve_writes=body["approve_writes"],
+                        )
+                        self._send_json(200, {"run_id": run_id, **outcome})
+                    else:
+                        result = Engine(state, business, input_root=root).execute(
+                            plan, run_id, approve_writes=body["approve_writes"]
+                        )
+                        self._send_json(200, {
+                            "run_id": run_id, "result": result, "status": inspect_run(state, run_id),
+                            "engine_backend": active_backend,
+                        })
                     return
                 try:
                     csv_snapshot, _ = preflight_csv_plan(plan, root)
@@ -300,18 +327,31 @@ def create_server(
                 if csv_snapshot["source_sha256"] != approved_sha256:
                     self.server.invalidate_preview(preview_id)
                     raise RequestError(409, "CSV changed after preview; preview it again before execution")
-                result = Engine(state, business, input_root=root).execute(
-                    plan, run_id, approve_writes=body["approve_writes"],
-                    csv_snapshot=csv_snapshot, expected_csv_sha256=approved_sha256,
-                )
-                status = inspect_run(state, run_id)
-                self._send_json(200, {"run_id": run_id, "result": result, "status": status})
+                if engine_backend == "lightning-azent":
+                    outcome = execute_lightning(
+                        plan, run_id, state_path=state, business_path=business,
+                        input_root=root, approve_writes=body["approve_writes"],
+                        csv_snapshot=csv_snapshot, expected_csv_sha256=approved_sha256,
+                    )
+                    self._send_json(200, {"run_id": run_id, **outcome})
+                else:
+                    result = Engine(state, business, input_root=root).execute(
+                        plan, run_id, approve_writes=body["approve_writes"],
+                        csv_snapshot=csv_snapshot, expected_csv_sha256=approved_sha256,
+                    )
+                    status = inspect_run(state, run_id)
+                    self._send_json(200, {
+                        "run_id": run_id, "result": result, "status": status,
+                        "engine_backend": active_backend,
+                    })
             except RequestError as exc:
                 send_failure(exc.status, exc)
             except PlanError as exc:
                 send_failure(422, exc)
             except ApprovalRequired as exc:
                 send_failure(403, exc)
+            except BackendUnavailable as exc:
+                send_failure(503, exc)
             except (StepRetryExhausted, StepTimeout) as exc:
                 send_failure(409, exc)
             except (OSError, RunLogError, ValueError) as exc:
@@ -329,10 +369,11 @@ def create_server(
             self._recent_requests: deque[float] = deque()
             self._rate_lock = threading.Lock()
             self._preview_lock = threading.Lock()
-            self._previews: OrderedDict[str, tuple[float, str, str, str, str]] = OrderedDict()
+            self._previews: OrderedDict[str, tuple[float, str, str, str, str, str]] = OrderedDict()
             self._upload_lock = threading.Lock()
             self._upload_dir: tempfile.TemporaryDirectory | None = None
             self._upload_count = 0
+            self.engine_backend = engine_backend
 
         def save_csv_upload(self, content: bytes) -> str:
             with self._upload_lock:
@@ -367,30 +408,33 @@ def create_server(
                 self._recent_requests.append(now)
                 return True
 
-        def save_preview(self, task: str, csv_path: str, run_id: str, source_sha256: str) -> str:
+        def save_preview(self, task: str, csv_path: str, run_id: str, source_sha256: str,
+                         backend_fingerprint: str) -> str:
             token = uuid.uuid4().hex
             now = time.monotonic()
             with self._preview_lock:
                 while self._previews and next(iter(self._previews.values()))[0] <= now:
                     self._previews.popitem(last=False)
-                self._previews[token] = (now + 600, task, csv_path, run_id, source_sha256)
+                self._previews[token] = (
+                    now + 600, task, csv_path, run_id, source_sha256, backend_fingerprint,
+                )
                 while len(self._previews) > 60:
                     self._previews.popitem(last=False)
             return token
 
-        def get_preview(self, token: str, task: str, csv_path: str) -> tuple[str, str] | None:
+        def get_preview(self, token: str, task: str, csv_path: str) -> tuple[str, str, str] | None:
             now = time.monotonic()
             with self._preview_lock:
                 entry = self._previews.get(token)
                 if entry is None:
                     return None
-                expires, saved_task, saved_path, run_id, source_sha256 = entry
+                expires, saved_task, saved_path, run_id, source_sha256, backend_fingerprint = entry
                 if expires <= now:
                     del self._previews[token]
                     return None
                 if saved_task != task or saved_path != csv_path:
                     return None
-                return run_id, source_sha256
+                return run_id, source_sha256, backend_fingerprint
 
         def invalidate_preview(self, token: str) -> None:
             with self._preview_lock:
