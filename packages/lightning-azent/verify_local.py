@@ -26,7 +26,7 @@ PKG = Path(__file__).resolve().parent
 ROOT = PKG.parents[1]
 FIX = ROOT / "docs" / "lightning-azent" / "fixtures"
 ORIGINAL = ROOT / "apps" / "ax-flow"
-EXPECTED_MIN_TESTS = 49
+EXPECTED_MIN_TESTS = 56
 
 
 def main() -> int:
@@ -38,9 +38,15 @@ def main() -> int:
     if not 10 <= opts.timeout <= 1800:
         ap.error("--timeout must be 10..1800 seconds")
 
-    work = Path(tempfile.mkdtemp(prefix="la-verify-"))
+    # Keep temporary SQLite/rename tests on the repository's writable volume.
+    # Some Windows sandbox temp volumes permit file creation but deny rename.
+    try:
+        work = Path(tempfile.mkdtemp(prefix="la-verify-", dir=ROOT.parent))
+    except OSError:
+        work = Path(tempfile.mkdtemp(prefix="la-verify-"))
     env = os.environ.copy()
     env.update(PYTHONDONTWRITEBYTECODE="1", PYTHONPATH=str(PKG),
+               TEMP=str(work), TMP=str(work), TMPDIR=str(work),
                PIP_NO_INDEX="1", PIP_DISABLE_PIP_VERSION_CHECK="1",
                PIP_CONFIG_FILE=os.devnull)
     checks = []
