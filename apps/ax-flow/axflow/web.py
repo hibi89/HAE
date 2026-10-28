@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+import hashlib
 import json
 import re
 import tempfile
@@ -15,13 +16,16 @@ from importlib.resources import files
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-from .engine import ApprovalRequired, Engine, PlanError, StepRetryExhausted, StepTimeout
+from .engine import (
+    ApprovalRequired, Engine, MAX_CSV_BYTES, PlanError, StepRetryExhausted, StepTimeout,
+    canonical_json, preflight_csv_plan,
+)
 from .dbvora_client import DbvoraClient
 from .planner import plan_request, requires_write_approval, workflow_name
 from .runlog import RunLogError, inspect_run
 
 MAX_BODY_BYTES = 8192
-MAX_UPLOAD_BYTES = 512 * 1024
+MAX_UPLOAD_BYTES = MAX_CSV_BYTES
 MAX_UPLOAD_BODY_BYTES = ((MAX_UPLOAD_BYTES + 2) // 3) * 4 + 4096
 MAX_UPLOADS_PER_SERVER = 10
 MAX_REQUESTS_PER_MINUTE = 60
@@ -220,7 +224,7 @@ def create_server(
                         raise RequestError(415, "only a plain CSV file is supported")
                     max_encoded = ((MAX_UPLOAD_BYTES + 2) // 3) * 4
                     if not isinstance(encoded, str) or len(encoded) > max_encoded:
-                        raise RequestError(413, "uploaded CSV exceeds 512 KiB")
+                        raise RequestError(413, "uploaded CSV exceeds 256 KiB")
                     try:
                         data = base64.b64decode(encoded, validate=True)
                     except (binascii.Error, ValueError) as exc:
@@ -228,7 +232,7 @@ def create_server(
                     if not data:
                         raise RequestError(400, "CSV file is empty")
                     if len(data) > MAX_UPLOAD_BYTES:
-                        raise RequestError(413, "uploaded CSV exceeds 512 KiB")
+                        raise RequestError(413, "uploaded CSV exceeds 256 KiB")
                     try:
                         text = data.decode("utf-8-sig")
                     except UnicodeDecodeError as exc:
@@ -242,8 +246,10 @@ def create_server(
                 if route == "/api/preview":
                     self._require_fields(body, {"task", "csv_path"})
                     plan = plan_request(body["task"], body["csv_path"])
+                    csv_snapshot, csv_summary = preflight_csv_plan(plan, root)
                     preview_id = self.server.save_preview(
-                        body["task"], body["csv_path"], "Gui" + uuid.uuid4().hex[:12]
+                        body["task"], body["csv_path"], "Gui" + uuid.uuid4().hex[:12],
+                        csv_snapshot["source_sha256"],
                     )
                     self._send_json(200, {
                         "validated": True,
@@ -252,6 +258,7 @@ def create_server(
                         "planner": "bounded local rules",
                         "preview_id": preview_id,
                         "plan": plan,
+                        "input": {key: value for key, value in csv_summary.items() if key != "source_sha256"},
                     })
                     return
 
@@ -264,11 +271,38 @@ def create_server(
                 preview_id = body["preview_id"]
                 if not isinstance(preview_id, str) or not _PREVIEW_ID.fullmatch(preview_id):
                     raise RequestError(409, "a recent matching preview is required before execution")
-                run_id = self.server.get_preview_run_id(preview_id, body["task"], body["csv_path"])
-                if run_id is None:
+                approval = self.server.get_preview(preview_id, body["task"], body["csv_path"])
+                if approval is None:
                     raise RequestError(409, "preview expired or no longer matches the request")
+                run_id, approved_sha256 = approval
+                plan_sha256 = hashlib.sha256(canonical_json(plan).encode("utf-8")).hexdigest()
+                try:
+                    prior = inspect_run(state, run_id)
+                except RunLogError:
+                    prior = None
+                if (prior is not None and prior["status"] == "completed"
+                        and prior["plan_sha256"] == plan_sha256):
+                    # A completed run retry returns its durable receipt without
+                    # executing again; input-change invalidation applies before
+                    # a first execution or an incomplete-run resume.
+                    result = Engine(state, business, input_root=root).execute(
+                        plan, run_id, approve_writes=body["approve_writes"]
+                    )
+                    self._send_json(200, {
+                        "run_id": run_id, "result": result, "status": inspect_run(state, run_id),
+                    })
+                    return
+                try:
+                    csv_snapshot, _ = preflight_csv_plan(plan, root)
+                except PlanError as exc:
+                    self.server.invalidate_preview(preview_id)
+                    raise RequestError(409, "CSV no longer passes the approved preview; preview it again") from exc
+                if csv_snapshot["source_sha256"] != approved_sha256:
+                    self.server.invalidate_preview(preview_id)
+                    raise RequestError(409, "CSV changed after preview; preview it again before execution")
                 result = Engine(state, business, input_root=root).execute(
-                    plan, run_id, approve_writes=body["approve_writes"]
+                    plan, run_id, approve_writes=body["approve_writes"],
+                    csv_snapshot=csv_snapshot, expected_csv_sha256=approved_sha256,
                 )
                 status = inspect_run(state, run_id)
                 self._send_json(200, {"run_id": run_id, "result": result, "status": status})
@@ -295,7 +329,7 @@ def create_server(
             self._recent_requests: deque[float] = deque()
             self._rate_lock = threading.Lock()
             self._preview_lock = threading.Lock()
-            self._previews: OrderedDict[str, tuple[float, str, str, str]] = OrderedDict()
+            self._previews: OrderedDict[str, tuple[float, str, str, str, str]] = OrderedDict()
             self._upload_lock = threading.Lock()
             self._upload_dir: tempfile.TemporaryDirectory | None = None
             self._upload_count = 0
@@ -333,29 +367,33 @@ def create_server(
                 self._recent_requests.append(now)
                 return True
 
-        def save_preview(self, task: str, csv_path: str, run_id: str) -> str:
+        def save_preview(self, task: str, csv_path: str, run_id: str, source_sha256: str) -> str:
             token = uuid.uuid4().hex
             now = time.monotonic()
             with self._preview_lock:
                 while self._previews and next(iter(self._previews.values()))[0] <= now:
                     self._previews.popitem(last=False)
-                self._previews[token] = (now + 600, task, csv_path, run_id)
+                self._previews[token] = (now + 600, task, csv_path, run_id, source_sha256)
                 while len(self._previews) > 60:
                     self._previews.popitem(last=False)
             return token
 
-        def get_preview_run_id(self, token: str, task: str, csv_path: str) -> str | None:
+        def get_preview(self, token: str, task: str, csv_path: str) -> tuple[str, str] | None:
             now = time.monotonic()
             with self._preview_lock:
                 entry = self._previews.get(token)
                 if entry is None:
                     return None
-                expires, saved_task, saved_path, run_id = entry
+                expires, saved_task, saved_path, run_id, source_sha256 = entry
                 if expires <= now:
                     del self._previews[token]
                     return None
                 if saved_task != task or saved_path != csv_path:
                     return None
-                return run_id
+                return run_id, source_sha256
+
+        def invalidate_preview(self, token: str) -> None:
+            with self._preview_lock:
+                self._previews.pop(token, None)
 
     return LocalHTTPServer(("127.0.0.1", port), Handler)

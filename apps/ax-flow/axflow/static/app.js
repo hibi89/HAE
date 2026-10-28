@@ -189,7 +189,7 @@ async function loadDbvora() {
 
 previewButton.addEventListener("click", async () => {
   previewButton.disabled = true;
-  setMessage("지원 범위와 IR을 검증하고 있습니다…");
+  setMessage("CSV 파일·구조·요청한 변환과 실행 범위를 읽기 전용으�� 검증하고 있습니다…");
   previewKey = "";
   previewId = "";
   requiresApproval = true;
@@ -210,7 +210,11 @@ previewButton.addEventListener("click", async () => {
       csv_conditional_import: "조건이 맞을 때만 CSV 행을 로컬 SQLite에 저장합니다.",
       csv_lookup: "읽기 전용으로 일치 행 수와 원본 행 번호만 확인합니다.",
     };
-    setMessage(descriptions[response.workflow] || "지원되는 CSV 흐름입니다.", "success");
+    const input = response.input;
+    const csvSummary = input
+      ? ` · ${input.row_count.toLocaleString()}행 · ${input.headers.length}열 · ${Number(input.size_bytes).toLocaleString()} bytes`
+      : "";
+    setMessage((descriptions[response.workflow] || "지원되는 CSV 흐름입니다.") + csvSummary, "success");
   } catch (error) {
     planOutput.textContent = "요청을 IR로 변환할 수 없습니다.";
     setMessage(error.message, "error");
@@ -242,8 +246,8 @@ csvFileInput.addEventListener("change", async () => {
     setMessage("UTF-8 CSV 파일만 선택할 수 있습니다.", "error");
     return;
   }
-  if (file.size === 0 || file.size > 512 * 1024) {
-    setMessage("CSV 파일은 비어 있지 않아야 하며 512 KiB 이하여야 합니다.", "error");
+  if (file.size === 0 || file.size > 256 * 1024) {
+    setMessage("CSV 파일은 비어 있지 않아야 하며 256 KiB 이하여야 합니다.", "error");
     return;
   }
   previewButton.disabled = true;

@@ -12,6 +12,7 @@ from urllib.parse import quote
 from urllib.request import Request, urlopen
 from unittest.mock import patch
 
+from axflow.engine import Engine
 from axflow.web import create_server
 
 
@@ -118,6 +119,23 @@ class WebUITests(unittest.TestCase):
         self._stop_server()
         self.assertFalse(upload_dir.exists())
 
+    def test_upload_and_preview_accept_engine_maximum_csv_size(self):
+        source = b"id\n" + (b"x" * 261 + b"\n") * 999 + b"y" * 402 + b"\n"
+        self.assertEqual(len(source), 256 * 1024)
+        status, _, uploaded = self.post_json("/api/upload", {
+            "filename": "maximum.csv", "content_base64": base64.b64encode(source).decode("ascii"),
+        })
+        self.assertEqual(status, 201, uploaded)
+        self.assertEqual(uploaded["size_bytes"], 256 * 1024)
+        status, _, preview = self.post_json("/api/preview", {
+            "task": "Import this CSV into local SQLite", "csv_path": uploaded["csv_path"],
+        })
+        self.assertEqual(status, 200, preview)
+        self.assertEqual(preview["input"]["size_bytes"], 256 * 1024)
+        self.assertEqual(preview["input"]["row_count"], 1000)
+        self.assertFalse(self.state.exists())
+        self.assertFalse(self.business.exists())
+
     def test_csv_upload_rejects_unsafe_names_bad_encoding_and_excess_size(self):
         valid = base64.b64encode(b"id\n1\n").decode("ascii")
         for filename in ("../escape.csv", "folder\\\\escape.csv", "data.json"):
@@ -137,7 +155,7 @@ class WebUITests(unittest.TestCase):
         })
         self.assertEqual(status, 415, body)
 
-        too_large = base64.b64encode(b"x" * (512 * 1024 + 1)).decode("ascii")
+        too_large = base64.b64encode(b"x" * (256 * 1024 + 1)).decode("ascii")
         status, _, body = self.post_json("/api/upload", {
             "filename": "large.csv", "content_base64": too_large,
         })
@@ -196,7 +214,10 @@ class WebUITests(unittest.TestCase):
         self.assertTrue(body["validated"])
         self.assertEqual(body["workflow"], "csv_to_sqlite")
         self.assertEqual(body["plan"]["steps"][0]["path"], "contacts.csv")
+        self.assertEqual(body["input"]["row_count"], 1)
+        self.assertEqual(body["input"]["headers"], ["id", "name"])
         self.assertFalse(self.state.exists(), "preview must not create a database")
+        self.assertFalse(self.business.exists(), "preview must not create a business database")
 
         for task in ("email this CSV to someone", "delete CSV rows in SQLite", "do not import CSV to SQLite"):
             code, _, error = self.post_json("/api/preview", {
@@ -204,6 +225,106 @@ class WebUITests(unittest.TestCase):
             })
             self.assertEqual(code, 422)
             self.assertIn("supported", error["error"])
+
+    def test_preview_rejects_bad_csv_before_creating_any_database(self):
+        fixtures = {
+            "bad-encoding.csv": b"id,name\n\xff,x\n",
+            "bad-width.csv": b"id,name\n1\n",
+            "bad-header.csv": b"id,id\n1,2\n",
+            "bad-syntax.csv": b'id,name\n"unterminated,x\n',
+            "too-large.csv": b"id\n1\n" + b" " * (256 * 1024),
+            "too-many-rows.csv": b"id\n" + b"1\n" * 1001,
+            "too-many-columns.csv": (",".join(f"c{i}" for i in range(65)) + "\n"
+                                     + ",".join("1" for _ in range(65)) + "\n").encode("utf-8"),
+            "long-cell.csv": b"id\n" + b"x" * 4097 + b"\n",
+        }
+        for name, content in fixtures.items():
+            with self.subTest(name=name):
+                (self.inputs / name).write_bytes(content)
+                status, _, response = self.post_json("/api/preview", {
+                    "task": "Import this CSV into local SQLite", "csv_path": name,
+                })
+                self.assertEqual(status, 422, response)
+                self.assertFalse(self.state.exists())
+                self.assertFalse(self.business.exists())
+
+    def test_preview_validates_requested_column_references(self):
+        for task in (
+            "Import this CSV where missing >= 1 into SQLite",
+            "Convert the missing column to a number, then import this CSV into local SQLite",
+        ):
+            with self.subTest(task=task):
+                status, _, response = self.post_json("/api/preview", {
+                    "task": task, "csv_path": "contacts.csv",
+                })
+                self.assertEqual(status, 422, response)
+                self.assertIn("missing", response["error"])
+                self.assertFalse(self.state.exists())
+                self.assertFalse(self.business.exists())
+
+    def test_preview_rejects_symlinked_csv_input(self):
+        link = self.inputs / "linked.csv"
+        link.write_text("id\n1\n", encoding="utf-8")
+        original_is_symlink = Path.is_symlink
+
+        def mark_link(candidate):
+            return candidate == link or original_is_symlink(candidate)
+
+        with patch.object(Path, "is_symlink", mark_link):
+            status, _, response = self.post_json("/api/preview", {
+                "task": "Import this CSV into local SQLite", "csv_path": "linked.csv",
+            })
+        self.assertEqual(status, 422, response)
+        self.assertIn("symbolic links", response["error"])
+        self.assertFalse(self.state.exists())
+        self.assertFalse(self.business.exists())
+
+    def test_preview_change_invalidates_approval_before_any_database_write(self):
+        source = self.inputs / "contacts.csv"
+        _, _, preview = self.post_json("/api/preview", {
+            "task": "Import this CSV into local SQLite", "csv_path": "contacts.csv",
+        })
+        source.write_text("id,name\n99,ChangedAfterPreview\n", encoding="utf-8")
+        code, _, failure = self.post_json("/api/run", {
+            "task": "Import this CSV into local SQLite", "csv_path": "contacts.csv",
+            "preview_id": preview["preview_id"], "approve_writes": True,
+        })
+        self.assertEqual(code, 409, failure)
+        self.assertIn("changed", failure["error"])
+        self.assertFalse(self.state.exists())
+        self.assertFalse(self.business.exists())
+
+        code, _, failure = self.post_json("/api/run", {
+            "task": "Import this CSV into local SQLite", "csv_path": "contacts.csv",
+            "preview_id": preview["preview_id"], "approve_writes": True,
+        })
+        self.assertEqual(code, 409, failure)
+
+    def test_run_executes_the_validated_snapshot_if_file_changes_during_run_start(self):
+        source = self.inputs / "contacts.csv"
+        approved_bytes = source.read_bytes()
+        _, _, preview = self.post_json("/api/preview", {
+            "task": "Import this CSV into local SQLite", "csv_path": "contacts.csv",
+        })
+        original_execute = Engine.execute
+
+        def change_after_run_preflight(engine, plan, run_id, **kwargs):
+            source.write_text("id,name\n99,ChangedDuringRun\n", encoding="utf-8")
+            return original_execute(engine, plan, run_id, **kwargs)
+
+        with patch("axflow.web.Engine.execute", change_after_run_preflight):
+            code, _, response = self.post_json("/api/run", {
+                "task": "Import this CSV into local SQLite", "csv_path": "contacts.csv",
+                "preview_id": preview["preview_id"], "approve_writes": True,
+            })
+        self.assertEqual(code, 200, response)
+        with closing(sqlite3.connect(self.business)) as business:
+            payload = business.execute(
+                "SELECT payload_json FROM csv_records WHERE run_id=? AND row_number=1",
+                (response["run_id"],),
+            ).fetchone()[0]
+        self.assertEqual(payload, '{"id":"11","name":"Synthetic"}')
+        self.assertNotEqual(hashlib.sha256(source.read_bytes()).digest(), hashlib.sha256(approved_bytes).digest())
 
     def test_write_needs_explicit_approval_and_rejects_path_escape(self):
         _, _, preview = self.post_json("/api/preview", {
@@ -240,6 +361,7 @@ class WebUITests(unittest.TestCase):
         self.assertEqual(body["result"]["imported_rows"], 1)
         self.assertEqual(body["status"]["status"], "completed")
         self.assertNotIn("Synthetic", json.dumps(body["status"]))
+        (self.inputs / "contacts.csv").write_text("id,name\n99,PostRunChange\n", encoding="utf-8")
         replay_code, _, replay = self.post_json("/api/run", payload)
         self.assertEqual(replay_code, 200)
         self.assertEqual(replay["run_id"], run_id)
@@ -395,23 +517,14 @@ class WebUITests(unittest.TestCase):
                 code, _, invalid_preview = self.post_json("/api/preview", {
                     "task": task, "csv_path": invalid_name,
                 })
-                self.assertEqual(code, 200, invalid_preview)
-                code, _, failure = self.post_json("/api/run", {
-                    "task": task, "csv_path": invalid_name,
-                    "preview_id": invalid_preview["preview_id"], "approve_writes": True,
-                })
-                self.assertEqual(code, 422, failure)
-                self.assertEqual(failure["error_type"], "PlanError")
-                self.assertEqual(failure["status"]["status"], "failed")
+                self.assertEqual(code, 422, invalid_preview)
+                self.assertEqual(invalid_preview["error_type"], "PlanError")
                 self.assertEqual(hashlib.sha256(invalid_path.read_bytes()).hexdigest(), original_hash)
                 self.assertEqual((invalid_path.stat().st_size, invalid_path.stat().st_mtime_ns), original_metadata)
                 with closing(sqlite3.connect(self.business)) as business:
-                    self.assertEqual(business.execute(
-                        "SELECT COUNT(*) FROM csv_records WHERE run_id=?", (failure["run_id"],)
-                    ).fetchone()[0], 0)
                     self.assertEqual(business.execute("SELECT COUNT(*) FROM csv_records").fetchone()[0], 5)
                 if value.strip():
-                    self.assertNotIn(value.strip(), json.dumps(failure["status"]))
+                    self.assertNotIn(value.strip(), json.dumps(invalid_preview))
 
     def test_run_rejects_missing_or_mismatched_preview_token(self):
         _, _, preview = self.post_json("/api/preview", {
@@ -430,22 +543,14 @@ class WebUITests(unittest.TestCase):
         self.assertEqual(code, 422)
         self.assertFalse(self.state.exists())
 
-    def test_failed_run_returns_redacted_receipt_and_recoverable_error(self):
-        _, _, preview = self.post_json("/api/preview", {
+    def test_preview_rejects_missing_csv_before_creating_a_run_or_database(self):
+        code, _, body = self.post_json("/api/preview", {
             "task": "Import this CSV into local SQLite", "csv_path": "missing.csv",
-        })
-        code, _, body = self.post_json("/api/run", {
-            "task": "Import this CSV into local SQLite", "csv_path": "missing.csv",
-            "preview_id": preview["preview_id"], "approve_writes": True,
         })
         self.assertEqual(code, 422)
         self.assertEqual(body["error_type"], "PlanError")
-        self.assertEqual(body["status"]["status"], "failed")
-        self.assertEqual(body["status"]["error_type"], "PlanError")
-        self.assertNotIn("contacts.csv", json.dumps(body["status"]))
-        code, _, raw = self.request("/api/status?run_id=" + quote(body["run_id"]))
-        self.assertEqual(code, 200)
-        self.assertEqual(json.loads(raw.decode("utf-8"))["status"], "failed")
+        self.assertFalse(self.state.exists())
+        self.assertFalse(self.business.exists())
 
     def test_numeric_filter_threshold_precision_preview_and_write_gate(self):
         source = self.inputs / "precise.csv"

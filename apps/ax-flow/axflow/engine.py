@@ -8,6 +8,7 @@ import json
 import math
 import re
 import sqlite3
+import threading
 import time
 from contextlib import contextmanager
 from decimal import Decimal, InvalidOperation
@@ -23,6 +24,35 @@ MAX_CSV_COLUMNS = 64
 MAX_CSV_CELL_CHARS = 4096
 MAX_SAFE_INTEGER = 9007199254740991
 NUMBER_TEXT = re.compile(r"^[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?$")
+_RUN_LOCK_GUARD = threading.Lock()
+_RUN_LOCKS: dict[tuple[str, str], tuple[threading.Lock, int]] = {}
+
+
+@contextmanager
+def _exclusive_run(state_path: Path, run_id: str):
+    """Serialize same-process attempts for one durable run identity."""
+    key = (str(state_path), str(run_id))
+    with _RUN_LOCK_GUARD:
+        entry = _RUN_LOCKS.get(key)
+        if entry is None:
+            lock, users = threading.Lock(), 0
+        else:
+            lock, users = entry
+        _RUN_LOCKS[key] = (lock, users + 1)
+    acquired = False
+    try:
+        lock.acquire()
+        acquired = True
+        yield
+    finally:
+        if acquired:
+            lock.release()
+        with _RUN_LOCK_GUARD:
+            current, users = _RUN_LOCKS[key]
+            if users == 1:
+                del _RUN_LOCKS[key]
+            else:
+                _RUN_LOCKS[key] = (current, users - 1)
 
 
 class PlanError(ValueError):
@@ -270,7 +300,20 @@ class Engine:
             con.close()
 
     def execute(self, plan: object, run_id: str, *, approve_writes: bool = False,
-                inject_stop_after_business: bool = False, interval_tick: bool = False) -> object:
+                inject_stop_after_business: bool = False, interval_tick: bool = False,
+                csv_snapshot: dict[str, object] | None = None,
+                expected_csv_sha256: str | None = None) -> object:
+        with _exclusive_run(self.state_path, run_id):
+            return self._execute_locked(
+                plan, run_id, approve_writes=approve_writes,
+                inject_stop_after_business=inject_stop_after_business, interval_tick=interval_tick,
+                csv_snapshot=csv_snapshot, expected_csv_sha256=expected_csv_sha256,
+            )
+
+    def _execute_locked(self, plan: object, run_id: str, *, approve_writes: bool = False,
+                        inject_stop_after_business: bool = False, interval_tick: bool = False,
+                        csv_snapshot: dict[str, object] | None = None,
+                        expected_csv_sha256: str | None = None) -> object:
         validate(plan)
         trigger = plan.get("trigger", {"type": "manual"})
         if trigger["type"] == "interval" and not interval_tick:
@@ -283,6 +326,12 @@ class Engine:
             raise PlanError("CSV workflows require an explicit --input-root")
         if any(s["op"] in {"sqlite_put", "sqlite_import_csv"} for s in plan["steps"]) and not approve_writes:
             raise ApprovalRequired("explicit --approve-writes required for local SQLite writes")
+        if csv_snapshot is not None:
+            csv_steps = [s for s in plan["steps"] if s["op"] == "csv_read"]
+            if (len(csv_steps) != 1 or csv_snapshot.get("source_path") != csv_steps[0]["path"]
+                    or not re.fullmatch(r"[a-f0-9]{64}", str(csv_snapshot.get("source_sha256", "")))
+                    or expected_csv_sha256 != csv_snapshot.get("source_sha256")):
+                raise PlanError("prevalidated CSV snapshot does not match the workflow input")
         digest = hashlib.sha256(canonical_json(plan).encode("utf-8")).hexdigest()
         with self._state() as con:
             # Reserve the claim transaction before reading so simultaneous processes
@@ -301,7 +350,7 @@ class Engine:
             else:
                 con.execute("UPDATE runs SET status='running',error_type=NULL WHERE run_id=?", (run_id,))
         try:
-            return self._execute_steps(plan, run_id, inject_stop_after_business)
+            return self._execute_steps(plan, run_id, inject_stop_after_business, csv_snapshot)
         except Exception as exc:
             with self._state() as con:
                 con.execute(
@@ -310,7 +359,8 @@ class Engine:
                 )
             raise
 
-    def _execute_steps(self, plan: dict, run_id: str, inject_stop_after_business: bool) -> object:
+    def _execute_steps(self, plan: dict, run_id: str, inject_stop_after_business: bool,
+                       csv_snapshot: dict[str, object] | None = None) -> object:
         results = {}
         outcomes = {}
         for step in plan["steps"]:
@@ -323,7 +373,7 @@ class Engine:
                 persisted = json.loads(saved[0])
                 if op == "csv_read" and saved[1] == "completed":
                     try:
-                        current = self._read_csv(step["path"])
+                        current = csv_snapshot if csv_snapshot is not None else self._read_csv(step["path"])
                         if current["source_sha256"] != persisted.get("source_sha256"):
                             raise PlanError("CSV content changed since this run was checkpointed")
                         results[sid] = current
@@ -383,12 +433,15 @@ class Engine:
                         if remaining <= 0:
                             raise StepTimeout("SQLite step exceeded its lock-wait budget")
                         try:
-                            value = self._evaluate_step(
-                                step, results, outcomes, run_id, inject_stop_after_business,
-                                # Let the explicit retry loop own lock waiting so each
-                                # attempt cannot silently exceed the total deadline.
-                                sqlite_timeout=0,
-                            )
+                            if op == "csv_read" and csv_snapshot is not None:
+                                value = csv_snapshot
+                            else:
+                                value = self._evaluate_step(
+                                    step, results, outcomes, run_id, inject_stop_after_business,
+                                    # Let the explicit retry loop own lock waiting so each
+                                    # attempt cannot silently exceed the total deadline.
+                                    sqlite_timeout=0,
+                                )
                         except sqlite3.OperationalError as exc:
                             transient = "locked" in str(exc).lower() or "busy" in str(exc).lower()
                             remaining = deadline - time.monotonic()
@@ -668,6 +721,7 @@ class Engine:
         return {
             "source_path": relative.as_posix(),
             "source_sha256": hashlib.sha256(raw).hexdigest(),
+            "size_bytes": len(raw),
             "headers": headers,
             "row_count": len(rows),
             "rows": rows,
@@ -748,3 +802,70 @@ class Engine:
                     "lt": left < right, "lte": left <= right}[operator]
         except (TypeError, ValueError) as exc:
             raise PlanError("condition values are not comparable") from exc
+
+
+def preflight_csv_plan(plan: object, input_root: Path) -> tuple[dict[str, object], dict[str, object]]:
+    """Validate a CSV workflow using engine rules without opening either SQLite DB."""
+    plan = validate(plan)
+    csv_steps = [step for step in plan["steps"] if step["op"] == "csv_read"]
+    if len(csv_steps) != 1:
+        raise PlanError("CSV preflight requires exactly one input file")
+
+    # _read_csv and the CSV transforms are intentionally reused from Engine. Avoid
+    # constructing Engine here because its constructor initializes both databases.
+    checker = object.__new__(Engine)
+    checker.input_root = Path(input_root).expanduser().resolve(strict=True)
+    results: dict[str, object] = {}
+    outcomes: dict[str, str] = {}
+    source: dict[str, object] | None = None
+    allowed = {"csv_read", "csv_normalize", "csv_filter", "condition", "branch", "literal", "sqlite_import_csv"}
+
+    for step in plan["steps"]:
+        sid, op = step["id"], step["op"]
+        if op not in allowed:
+            raise PlanError(f"operation {op} is not supported by CSV preflight")
+        guard = step.get("when")
+        if guard is not None and results[guard["condition"]] is not guard["equals"]:
+            results[sid], outcomes[sid] = None, "skipped"
+            continue
+        if op == "sqlite_import_csv":
+            imported = results.get(step["from"])
+            if not isinstance(imported, dict):
+                raise PlanError("sqlite_import_csv requires a validated CSV result")
+            if isinstance(imported.get("rows"), list):
+                row_numbers = imported.get("row_numbers", list(range(1, len(imported["rows"]) + 1)))
+                if not isinstance(row_numbers, list) or len(row_numbers) != len(imported["rows"]):
+                    raise PlanError("CSV row lineage is malformed")
+                rows = list(zip(row_numbers, imported["rows"]))
+            elif isinstance(imported.get("matches"), list):
+                try:
+                    rows = [(item["row_number"], item["values"]) for item in imported["matches"]]
+                except (KeyError, TypeError) as exc:
+                    raise PlanError("CSV filter match lineage is malformed") from exc
+            else:
+                raise PlanError("sqlite_import_csv requires a CSV row result")
+            if len(rows) > MAX_CSV_ROWS or any(
+                isinstance(number, bool) or not isinstance(number, int) or number < 1 or not isinstance(row, dict)
+                for number, row in rows
+            ):
+                raise PlanError("CSV import rows or row lineage are malformed")
+            seen: set[str] = set()
+            duplicates: list[int] = []
+            for number, row in rows:
+                fingerprint = canonical_json(row)
+                if fingerprint in seen:
+                    duplicates.append(number)
+                else:
+                    seen.add(fingerprint)
+            value = {"imported_rows": len(rows), "duplicate_count": len(duplicates),
+                     "duplicate_row_numbers": duplicates, "source_sha256": imported["source_sha256"]}
+        else:
+            value = checker._evaluate_step(step, results, outcomes, "PreflightOnly", False)
+        results[sid], outcomes[sid] = value, "completed"
+        if op == "csv_read":
+            source = value
+
+    if not isinstance(source, dict):
+        raise PlanError("CSV workflow has no validated input")
+    summary = {key: source[key] for key in ("source_path", "size_bytes", "headers", "row_count", "source_sha256")}
+    return source, summary
