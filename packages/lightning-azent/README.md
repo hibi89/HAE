@@ -40,7 +40,7 @@ python -m lightning_azent capabilities
 python -m lightning_azent validate docs/lightning-azent/fixtures/native-conditional-route.json
 ```
 
-**Current suite: 65 test definitions.** The latest full Windows run at the SHA above passed all 64 tests then present; the new scheduled process-death recovery test has passed focused verification. The full verifier is being rerun on the final checkpoint. Three synthetic CLI scenarios exercise native plan run/resume, CSV filter→SQLite import/replay and deleted-row resume refusal, plus two durable interval ticks. The overall verifier result remains PARTIAL because offline wheel smoke prerequisites are unavailable. No direct HAE-to-LA consumer adapter is present: `apps/ax-flow/` continues to use `axflow`, and the LA package remains separately importable. This local MVP verification does not complete SOVIA/DBVORA/HAE product integration.
+**Current suite: 65 test definitions.** At `19c092bdfbb160a3a8eadba216d5ca335be2c10b`, the full Windows verifier passed all 65 LA tests and all 84 existing HAE tests; it also passed preflight and three synthetic CLI scenarios covering native run/resume, CSV filter→SQLite import/replay and deleted-row resume refusal, plus two durable interval ticks. The real process-death recovery test exits after the committed business write, then verifies same-tick recovery without a duplicate row. The aggregate was **8 PASS / 0 FAIL / 1 SKIP**; offline wheel smoke was skipped because `wheel` is unavailable. No direct HAE-to-LA consumer adapter is present: `apps/ax-flow/` continues to use `axflow`, and the LA package remains separately importable. This local MVP verification does not complete SOVIA/DBVORA/HAE product integration.
 
 # Lightning Azent — isolated execution package (development stage)
 
@@ -65,6 +65,6 @@ The sample tests use only disposable temporary SQLite files and synthetic fixtur
 ## Scope / blockers
 
 - Stage copies of the owner-controlled `engine.py`, `scheduler.py`, `runlog.py`, and `state_backup.py` preserve existing `axflow.ir.v0` behavior intentionally; independent CLI was added.
-- These new-path tests are **UNVERIFIED** until run from a complete checkout; no CI workflow was added and no production URL exists.
+- These new-path tests were executed in the complete Windows checkout at the documented SHA; no CI workflow was added and no production URL exists.
 - Original HAE code has not been replaced. No source-delete or compatibility facade change is allowed before parity is measured.
 - See `docs/lightning-azent/RESEARCH_TO_CONTRACTS.md` for Gate N official-doc and licensing boundaries.

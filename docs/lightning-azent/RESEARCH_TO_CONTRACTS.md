@@ -1,5 +1,9 @@
 # Lightning Azent Gate N — official-document evidence → independent contracts
 
+## Local implementation verification update — 2026-10-28
+
+The table below preserves the earlier research snapshot; its historical `NOT RUN` entries are superseded for local MVP execution by `feature/lightning-azent@19c092bdfbb160a3a8eadba216d5ca335be2c10b`. Windows 10 / Python 3.11.9 `verify_local.py` recorded 8 PASS / 0 FAIL / 1 SKIP: LA 65/65, existing HAE regression 84/84, preflight and three synthetic CLI flows passed. A separate committed test hard-exits a real child process immediately after a scheduled SQLite commit and confirms same-tick recovery with exactly one business row. Offline wheel packaging remains skipped because `wheel` is unavailable. The product integration and licensing gates below remain open; this evidence proves only the tested local engine slice.
+
 Checkpoint: 2026-10-27 KST. **PARTIAL RESEARCH / SOURCE-INDEPENDENT PROTOTYPE.** This is not a claim that n8n internals, source code, or private workflows were inspected with REA_APP. REA_APP R1 is separately reported PASS at REA_APP@3fd0ac452ea3255a24998f550aba3cbf9e6a263d (Gate R 66 PASS / 6 SKIP; QA 11/11; real Babel and clean-wheel smoke logged). The runner itself has not rerun those tests.
 
 ## Legal boundary and method
