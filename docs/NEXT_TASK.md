@@ -377,3 +377,9 @@ Limits are enforced and tested: 256 KiB, 1000 data rows, 64 columns, 4096 chars 
 
 **NEXT ATOMIC TASK:** perform the user-authorized n8n behavior analysis against current public/authorized material and official licensing text. Record only evidence-backed functional behavior contracts; no code/assets/trademarks/connector copying. In parallel, add one deterministic built-in template that generates native IR, can be validated and exercised entirely offline with synthetic fixtures, and fails closed on unsupported requests. Then local GUI remains a separate user-notified step before any visible browser is opened. Full AX FLOW and DBVORA acceptance remain PARTIAL.
 
+## Next after Windows local-launch and flow verification — 2026-10-29 KST
+1. Finish safe functional commits and normal push of the Windows launcher/integration verification changes to `feature/axflow-mvp`; confirm remote SHA before deleting task-created temporary checkout.
+2. Resolve/retest LA's Windows state backup failures only in its own authorized branch: `test_state_backup.py` currently has 1 failure and 2 errors under this Windows environment. Keep HAE integration unmodified pending LA's supported contract.
+3. Review native Windows file-opening behavior for symlinks/reparse points and final-validation-to-open race; keep limitations explicit until a verified safe approach is available.
+4. Preserve local-only synthetic scope, explicit approval, 256 KiB CSV cap, post-execution-only SOVIA mode and read-only DBVORA inventory. Do not claim customer readiness or real-time SOVIA blocking.
+

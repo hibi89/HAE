@@ -61,6 +61,7 @@ class IntegratedMvpE2ETests(unittest.TestCase):
         with socket.socket() as listener:
             listener.bind(("127.0.0.1", 0))
             db_port = listener.getsockname()[1]
+        self.db_port = db_port
         self.db_server = uvicorn.Server(uvicorn.Config(
             create_app(self.business, port=db_port), host="127.0.0.1", port=db_port,
             log_level="critical", access_log=False,
@@ -76,7 +77,7 @@ class IntegratedMvpE2ETests(unittest.TestCase):
 
         self.server = create_server(
             self.inputs, self.state, self.business, port=0,
-            dbvora_url=f"http://127.0.0.1:{db_port}",
+            dbvora_url=f"http://127.0.0.1:{self.db_port}",
             engine_backend="lightning-azent", sovia_root=_SOVIA,
         )
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
@@ -251,6 +252,35 @@ class IntegratedMvpE2ETests(unittest.TestCase):
         self.assertEqual(recovered["status"]["status"], "completed")
         self.assertIn("imported", recovered["sovia_audit"]["execution"]["failed_attempt_steps"])
         self.assertEqual(recovered["sovia_audit"]["execution"]["retry_count"], 1)
+
+        # A server restart keeps durable status and audit queryable, but the
+        # old in-memory preview/approval token cannot authorize a new request.
+        approved_business_hash = hashlib.sha256(self.business.read_bytes()).hexdigest()
+        old_server, old_thread = self.server, self.thread
+        old_server.shutdown()
+        old_thread.join(timeout=3)
+        old_server.server_close()
+        from axflow.web import create_server
+        self.server = create_server(
+            self.inputs, self.state, self.business, port=0,
+            dbvora_url=f"http://127.0.0.1:{self.db_port}",
+            engine_backend="lightning-azent", sovia_root=_SOVIA,
+        )
+        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.thread.start()
+        self.origin = f"http://127.0.0.1:{self.server.server_port}"
+        code, restarted_status = self.request("/api/status?" + urlencode({"run_id": recovered["run_id"]}))
+        self.assertEqual(code, 200, restarted_status)
+        self.assertEqual(restarted_status["status"], "completed")
+        code, restarted_audit = self.request("/api/audit?" + urlencode({"run_id": recovered["run_id"]}))
+        self.assertEqual(code, 200, restarted_audit)
+        self.assertEqual(restarted_audit["run_id"], recovered["run_id"])
+        code, stale_approval = self.request("/api/run", {
+            "task": lock_task, "csv_path": "locked.csv",
+            "preview_id": lock_preview["preview_id"], "approve_writes": True,
+        })
+        self.assertEqual(code, 409, stale_approval)
+        self.assertEqual(hashlib.sha256(self.business.read_bytes()).hexdigest(), approved_business_hash)
 
 
 if __name__ == "__main__":
