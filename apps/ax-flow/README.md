@@ -8,7 +8,7 @@
 1. Python 3 stdlib `sqlite3` + JSON IR, local CLI: cheap/install-free engine proof and deterministic tests (SELECTED).
 2. Node.js workflow runner: more direct ecosystem integration for JS connectors but more dependency/runtime burden for the very first engine slice. May be revisited for adapters.
 
-This is the baseline for Blueprint B. REA_APP remains a separate tool in `tools/rea-app/`. DBVORA remains a separate process/repository. HAE has an independent read-only client for DBVORA's versioned local SQLite inventory API; live-service integration still needs an actual service smoke and is not claimed complete.
+This is the baseline for Blueprint B. REA_APP remains a separate tool in `tools/rea-app/`. DBVORA remains a separate process/repository. HAE has an independent read-only client for DBVORA's versioned local SQLite inventory API; this branch's actual service integration is covered with synthetic local data below.
 
 ## Executable scope
 - Strict `axflow.ir.v0` JSON plan validator; max 32 steps / 64KiB; allowed operations: `literal`, `field`, `map`, `condition`, `branch`, `csv_read`, `sqlite_put`, `sqlite_get`, `sqlite_import_csv`.
@@ -128,3 +128,21 @@ Evidence at the previous checkpoint: `axflow/runlog.py` and `tests/test_runlog.p
 ### Explicit Lightning Azent development adapter
 
 The optional `lightning-azent` backend is selected explicitly with `--engine-backend lightning-azent` on `serve`; it remains synthetic-local-only and never falls back to the HAE engine on a missing or incompatible package. Preview checks package capabilities and its plan-only preflight without opening SQLite. Run stages the exact approved CSV byte snapshot in a private temporary input root and invokes the package executor. HAE serializes attempts for a run ID across local processes using an OS lock. This does not change direct Lightning Azent package behavior for callers outside the HAE adapter; package-level cross-process audit races remain a separate reference-branch issue.
+
+### P2 local integration: HAE → Lightning Azent → SOVIA → DBVORA
+
+When serving with `--engine-backend lightning-azent`, optional `--sovia-root /path/to/SOVIA` calls the actual `sovia_la_observation_reconcile.reconcile()` after LA completes. The adapter passes a sanitized plan, plan-bound LA approval receipt scope, and metadata-only LA step events. The result is an **offline post-execution advisory**: SOVIA's contract explicitly reports unauthenticated evidence and `execution_authorized: false`; it is neither a real-time execution gate nor proof that an absent event did not occur. Missing or incompatible SOVIA is reported as unavailable and the overall integration is `partial`.
+
+The audit summary is stored separately in `<state-file>.sovia-audit.sqlite`, never in the business DB and never with CSV row values. `/api/audit?run_id=...` returns the stored result; `/api/status` returns it together with a fresh DBVORA inventory when available. The audit store remains local metadata and is not authenticated against a hostile local filesystem administrator.
+
+HAE reuses `--dbvora-url http://127.0.0.1:<port>` and its existing bounded client for the actual DBVORA `p0-01.v1` read-only inventory API. Configure that service to select the same synthetic business SQLite file HAE writes. DBVORA reports schema and measured file size; it does not inventory row data or include WAL/SHM bytes in its reported size. An unavailable DBVORA service yields an explicit partial integration result. No backup/restore interface is assumed.
+
+The local integrated acceptance test can run when the three reference source trees are present next to HAE (or set `HAE_INTEGRATION_ROOT` to their parent):
+
+```powershell
+$env:HAE_INTEGRATION_ROOT = 'C:\hae-integration'
+$env:PYTHONPATH = 'C:\hae-integration\apps\ax-flow;C:\hae-integration\packages\lightning-azent;C:\hae-integration\DBVORA'
+python -m unittest tests.test_p2_integrated_e2e -v
+```
+
+That test uses only generated CSV rows and temporary SQLite files. It covers no-write preview and approval denial, malformed CSV and numeric conversion preflight, changed-input invalidation, LA execution, actual SOVIA reconciliation and persisted lookup, DBVORA's actual local API inventory, idempotent retry, and unavailable/incompatible component partial states. HAE's upload, API, and engine CSV limits remain aligned at 256 KiB; the JSON request allowance accounts for base64 and framing without raising the CSV payload limit. This does not establish a visible browser E2E, authenticated SOVIA evidence, hostile-process filesystem atomicity, customer-data readiness, or a release gate.

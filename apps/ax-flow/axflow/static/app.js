@@ -26,6 +26,7 @@ const dbvoraRefreshButton = document.querySelector("#refresh-dbvora");
 const previewDetail = document.querySelector("#preview-detail");
 const backendOutput = document.querySelector("#engine-backend");
 const stepListOutput = document.querySelector("#step-list");
+const soviaResult = document.querySelector("#sovia-result");
 
 let previewKey = "";
 let currentRunId = "";
@@ -69,8 +70,10 @@ async function fileToBase64(file) {
 }
 
 function showStatus(status) {
-  resultStatus.textContent = status.status;
-  resultTitle.textContent = status.status === "completed" ? "흐름 실행 완료" :
+  const integration = status.integration || status;
+  const partial = integration.workflow_status === "partial";
+  resultStatus.textContent = partial ? "partial" : status.status;
+  resultTitle.textContent = partial ? "흐름 부분 완료" : status.status === "completed" ? "흐름 실행 완료" :
     (status.status === "failed" ? "실행 중단" : "실행 상태");
   resultCopy.textContent = status.error_type
     ? "마지막 단계에서 " + status.error_type + " 오류가 기록되었습니다. 입력 데이터는 실행 기록에 표시하지 않습니다."
@@ -79,6 +82,28 @@ function showStatus(status) {
   const outcomes = status.step_outcomes || {};
   stepCountOutput.textContent = (outcomes.completed || 0) + " / " + (status.steps_recorded || 0);
   resultCard.hidden = false;
+  renderSovia(integration.sovia_audit);
+  if (integration.dbvora) renderDbvora(integration.dbvora);
+  if (partial) resultCopy.textContent += " SOVIA 또는 DBVORA 통합 일부를 확인할 수 없어 부분 완료로 표시합니다.";
+}
+
+function renderSovia(report) {
+  if (!report) {
+    soviaResult.textContent = "SOVIA 사후 감사 결과가 이 서버 세션에 없습니다.";
+    return;
+  }
+  if (!report.available) {
+    soviaResult.textContent = "SOVIA 사후 감사 미실행: " + (report.error || "로컬 모듈을 사용할 수 없습니다.");
+    return;
+  }
+  const review = report.review || {};
+  const execution = report.execution || {};
+  const findingCount = Array.isArray(execution.policy_findings) ? execution.policy_findings.length : 0;
+  soviaResult.textContent = "SOVIA 사후 자문 · 실행 단계 " +
+    (execution.executed_steps || []).length + "개 관측 · 실패 " +
+    (execution.failed_steps || []).length + " · 확인 불가 " +
+    (execution.unverifiable_steps || []).length + " · 검토 항목 " + findingCount +
+    " · 증거 인증 안 됨 · 실행 차단 기능 아님 (" + (review.schema_version || "contract unknown") + ")";
 }
 
 async function checkConnection() {
@@ -321,7 +346,10 @@ runButton.addEventListener("click", async () => {
       }),
     });
     currentRunId = response.run_id;
-    showStatus(response.status);
+    showStatus({ ...response.status, integration: {
+      sovia_audit: response.sovia_audit, dbvora: response.dbvora,
+      workflow_status: response.workflow_status,
+    } });
     const auditCount = Array.isArray(response.audit?.events) ? response.audit.events.length : 0;
     if (Number.isInteger(response.result.imported_rows)) {
       rowCountLabel.textContent = "저장 행";
@@ -350,7 +378,11 @@ runButton.addEventListener("click", async () => {
     if (auditCount) {
       resultCopy.textContent += ` Lightning Azent 감사 기록 ${auditCount}개를 조회했습니다. 기록에는 CSV 행 내용이 없습니다.`;
     }
-    setMessage("실행 영수증을 만들었습니다.", "success");
+    const workflowStatus = response.workflow_status || "completed";
+    setMessage(workflowStatus === "partial"
+      ? "LA 실행은 끝났지만 사후 감사 또는 DBVORA 조회가 완료되지 않았습니다. 부분 완료입니다."
+      : "실행·사후 감사·DBVORA 조회를 완료했습니다.", workflowStatus === "partial" ? "error" : "success");
+    if (!response.dbvora) loadDbvora();
   } catch (error) {
     if (error.detail && error.detail.status && error.detail.run_id) {
       currentRunId = error.detail.run_id;
