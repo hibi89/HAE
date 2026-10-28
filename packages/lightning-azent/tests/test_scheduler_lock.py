@@ -167,7 +167,10 @@ with _schedule_lock(SimpleNamespace(state_path=state), "SharedSchedule"):
             lock_file = state.with_name(
                 f"{state.name}.la-{hashlib.sha256(b'SharedSchedule').hexdigest()[:16]}.lock"
             )
-            os.link(victim, lock_file)
+            try:
+                os.link(victim, lock_file)
+            except (NotImplementedError, PermissionError) as error:
+                self.skipTest(f"hard links are unavailable in this Windows environment: {error}")
             try:
                 with self.assertRaisesRegex(PlanError, "regular unlinked file"):
                     with _schedule_lock(SimpleNamespace(state_path=state), "SharedSchedule"):
