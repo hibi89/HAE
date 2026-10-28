@@ -58,7 +58,7 @@ class LedgerSchemaMigrationTests(unittest.TestCase):
         with closing(sqlite3.connect(self.state)) as con:
             con.execute("CREATE TABLE runs (run_id TEXT, plan_hash TEXT, status TEXT)")
             con.execute("CREATE TABLE steps (run_id TEXT, step_id TEXT, output_json TEXT)")
-            con.execute("PRAGMA user_version=2")
+            con.execute(f"PRAGMA user_version={LEDGER_SCHEMA_VERSION + 1}")
             con.commit()
         before = digest(self.state)
 
@@ -67,6 +67,38 @@ class LedgerSchemaMigrationTests(unittest.TestCase):
 
         self.assertEqual(digest(self.state), before)
         self.assertFalse(self.business.exists())
+
+    def test_v1_ledgers_migrate_to_v2_audit_schema(self):
+        with closing(sqlite3.connect(self.state)) as con:
+            con.execute("CREATE TABLE runs (run_id TEXT PRIMARY KEY, plan_hash TEXT NOT NULL, status TEXT NOT NULL, output_json TEXT, error_type TEXT)")
+            con.execute("CREATE TABLE steps (run_id TEXT NOT NULL, step_id TEXT NOT NULL, output_json TEXT NOT NULL, status TEXT NOT NULL, error_type TEXT, attempt_count INTEGER NOT NULL DEFAULT 1, PRIMARY KEY(run_id,step_id))")
+            con.execute("PRAGMA user_version=1")
+            con.commit()
+        with closing(sqlite3.connect(self.business)) as con:
+            con.execute("CREATE TABLE records (run_id TEXT NOT NULL, step_id TEXT NOT NULL, payload_json TEXT NOT NULL, PRIMARY KEY(run_id,step_id))")
+            con.execute("CREATE TABLE csv_records (run_id TEXT NOT NULL, import_step_id TEXT NOT NULL, source_sha256 TEXT NOT NULL, row_number INTEGER NOT NULL CHECK(row_number > 0), payload_json TEXT NOT NULL, PRIMARY KEY(run_id,import_step_id,row_number))")
+            con.execute("PRAGMA user_version=1")
+            con.commit()
+
+        Engine(self.state, self.business)
+
+        with closing(sqlite3.connect(self.state)) as con:
+            self.assertEqual(con.execute("PRAGMA user_version").fetchone()[0], LEDGER_SCHEMA_VERSION)
+            tables = {row[0] for row in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+            self.assertTrue({"audit_events", "approval_receipts"} <= tables)
+
+    def test_v2_missing_audit_table_fails_without_changing_either_ledger(self):
+        Engine(self.state, self.business)
+        with closing(sqlite3.connect(self.state)) as con:
+            con.execute("DROP TABLE audit_events")
+            con.commit()
+        state_before, business_before = digest(self.state), digest(self.business)
+
+        with self.assertRaisesRegex(PlanError, "audit schema is incomplete"):
+            Engine(self.state, self.business)
+
+        self.assertEqual(digest(self.state), state_before)
+        self.assertEqual(digest(self.business), business_before)
 
     def test_incompatible_business_ledger_is_rejected_before_state_creation(self):
         with closing(sqlite3.connect(self.business)) as con:

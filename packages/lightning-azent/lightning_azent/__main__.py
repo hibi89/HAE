@@ -10,7 +10,7 @@ from pathlib import Path
 from . import __version__
 from .contract import PreparedPlan, capabilities, preflight_summary, prepare_plan
 from .engine import ApprovalRequired, IDENTIFIER, PlanError, StepRetryExhausted, StepTimeout, MAX_SPEC_BYTES
-from .runlog import RunLogError, inspect_run
+from .runlog import RunLogError, inspect_audit, inspect_run
 from .runtime import LAExecutor
 from .scheduler import MAX_SCHEDULE_RUNS
 
@@ -45,7 +45,7 @@ def _read_plan(path: Path) -> PreparedPlan:
 def main() -> int:
     parser = argparse.ArgumentParser(prog="lightning-azent")
     parser.add_argument("--version", action="version", version=__version__)
-    parser.add_argument("command", choices=("capabilities", "validate", "preflight", "run", "resume", "status", "schedule", "verify"))
+    parser.add_argument("command", choices=("capabilities", "validate", "preflight", "run", "resume", "status", "audit", "schedule", "verify"))
     parser.add_argument("plan", nargs="?", type=Path)
     parser.add_argument("--state", type=Path)
     parser.add_argument("--data", type=Path)
@@ -66,6 +66,10 @@ def main() -> int:
             if args.plan is not None or args.state is None or args.run_id is None:
                 raise PlanError("status requires --state and --run-id without a plan")
             result = inspect_run(args.state, args.run_id)
+        elif args.command == "audit":
+            if args.plan is not None or args.state is None or args.run_id is None:
+                raise PlanError("audit requires --state and --run-id without a plan")
+            result = inspect_audit(args.state, args.run_id)
         else:
             if args.plan is None:
                 raise PlanError("this command requires a plan JSON path")

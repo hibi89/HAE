@@ -5,7 +5,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 
 from .engine import (
-    MAX_CSV_BYTES, MAX_CSV_ROWS, MAX_SPEC_BYTES, MAX_STEPS,
+    LEDGER_SCHEMA_VERSION, MAX_CSV_BYTES, MAX_CSV_ROWS, MAX_SPEC_BYTES, MAX_STEPS,
     PlanError, VERSION as LEGACY_VERSION, validate,
 )
 
@@ -72,6 +72,9 @@ def capabilities() -> dict[str, object]:
     return {
         "product": "Lightning Azent",
         "api_version": "azent.api.v0",
+        "runtime_schema_version": LEDGER_SCHEMA_VERSION,
+        "audit_feed": "metadata-only.v0",
+        "write_approval_receipts": True,
         "native_ir_version": NATIVE_VERSION,
         "legacy_ir_version": LEGACY_VERSION,
         "implemented_operations": list(OPERATIONS),

@@ -131,6 +131,10 @@ class NativeInterfaceTests(unittest.TestCase):
         info = capabilities()
         self.assertEqual(info["native_ir_version"], NATIVE_VERSION)
         self.assertEqual(info["legacy_ir_version"], LEGACY_VERSION)
+        self.assertEqual(info["api_version"], "azent.api.v0")
+        self.assertEqual(info["runtime_schema_version"], 2)
+        self.assertEqual(info["audit_feed"], "metadata-only.v0")
+        self.assertTrue(info["write_approval_receipts"])
         self.assertEqual(info["external_connectors"], [])
         self.assertNotIn("shell", info["implemented_operations"])
         self.assertNotIn("http_request", info["implemented_operations"])
@@ -150,6 +154,7 @@ class NativeInterfaceTests(unittest.TestCase):
             cwd=self.root, env=env, capture_output=True, text=True, timeout=12)
         self.assertEqual(cap.returncode, 0, cap.stderr)
         self.assertEqual(json.loads(cap.stdout)["native_ir_version"], NATIVE_VERSION)
+        self.assertEqual(json.loads(cap.stdout)["runtime_schema_version"], 2)
         self.assertFalse(self.state.exists())
         self.assertFalse(self.business.exists())
 

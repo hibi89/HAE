@@ -57,6 +57,61 @@ def inspect_run(state_path: Path, run_id: str) -> dict[str, object]:
     }
 
 
+def inspect_audit(state_path: Path, run_id: str) -> dict[str, object]:
+    """Return metadata-only, append-only execution events for one existing run."""
+    from .engine import IDENTIFIER
+    import json
+
+    if not isinstance(run_id, str) or not IDENTIFIER.fullmatch(run_id):
+        raise RunLogError("run_id must be a safe identifier")
+    db = Path(state_path).expanduser().resolve(strict=False)
+    if not db.is_file():
+        raise RunLogError("runtime ledger does not exist")
+    uri = "file:" + quote(db.as_posix(), safe="/:") + "?mode=ro"
+    try:
+        with closing(sqlite3.connect(uri, uri=True, timeout=2)) as con:
+            run = con.execute("SELECT plan_hash FROM runs WHERE run_id=?", (run_id,)).fetchone()
+            if run is None:
+                raise RunLogError("run_id not found")
+            integrity = con.execute("PRAGMA quick_check(1)").fetchone()
+            if not integrity or integrity[0] != "ok":
+                raise RunLogError("runtime audit ledger integrity check failed")
+            rows = con.execute(
+                "SELECT plan_hash,event_type,occurred_at,details_json FROM audit_events "
+                "WHERE run_id=? ORDER BY event_id", (run_id,)
+            ).fetchall()
+            approvals = con.execute(
+                "SELECT plan_hash,scope_json,approved_at,method FROM approval_receipts "
+                "WHERE run_id=? ORDER BY approval_id", (run_id,)
+            ).fetchall()
+    except sqlite3.DatabaseError as exc:
+        raise RunLogError("invalid or unreadable runtime audit ledger") from exc
+    events = []
+    for plan_hash, event_type, occurred_at, details_json in rows:
+        if plan_hash != run[0]:
+            raise RunLogError("audit event plan does not match its run")
+        try:
+            details = json.loads(details_json)
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            raise RunLogError("malformed audit event") from exc
+        if not isinstance(details, dict):
+            raise RunLogError("malformed audit event")
+        events.append({"event_type": event_type, "occurred_at": occurred_at, "details": details})
+    approval_receipts = []
+    for plan_hash, scope_json, approved_at, method in approvals:
+        if plan_hash != run[0]:
+            raise RunLogError("approval receipt plan does not match its run")
+        try:
+            scope = json.loads(scope_json)
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            raise RunLogError("malformed approval receipt") from exc
+        if not isinstance(scope, dict) or scope.get("plan_sha256") != run[0]:
+            raise RunLogError("malformed approval receipt")
+        approval_receipts.append({"scope": scope, "approved_at": approved_at, "method": method})
+    return {"run_id": run_id, "plan_sha256": run[0], "events": events,
+            "approval_receipts": approval_receipts}
+
+
 def inspect_business_ledger(business_path: Path) -> None:
     """Verify an existing local SQLite business ledger without creating or repairing it.
 

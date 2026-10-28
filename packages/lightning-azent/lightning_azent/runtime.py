@@ -11,7 +11,7 @@ from typing import Iterator
 
 from .contract import PreparedPlan, capabilities, preflight_summary, prepare_plan
 from .engine import ApprovalRequired, Engine, IDENTIFIER, PlanError, canonical_json
-from .runlog import RunLogError, inspect_business_ledger, inspect_completed_business_receipts, inspect_run
+from .runlog import RunLogError, inspect_audit, inspect_business_ledger, inspect_completed_business_receipts, inspect_run
 from .scheduler import MAX_SCHEDULE_RUNS, interval_ticks
 
 _WRITE_OPS = frozenset(("sqlite_put", "sqlite_import_csv"))
@@ -150,3 +150,7 @@ class LAExecutor:
     def status(self, run_id: str) -> dict[str, object]:
         """Read-only status query; never initializes an absent runtime DB."""
         return inspect_run(self.state_path, run_id)
+
+    def audit(self, run_id: str) -> dict[str, object]:
+        """Read-only metadata event feed; workflow payloads and CSV rows are omitted."""
+        return inspect_audit(self.state_path, run_id)

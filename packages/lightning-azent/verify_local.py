@@ -26,7 +26,7 @@ PKG = Path(__file__).resolve().parent
 ROOT = PKG.parents[1]
 FIX = ROOT / "docs" / "lightning-azent" / "fixtures"
 ORIGINAL = ROOT / "apps" / "ax-flow"
-EXPECTED_MIN_TESTS = 56
+EXPECTED_MIN_TESTS = 63
 
 
 def main() -> int:

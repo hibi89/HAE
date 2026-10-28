@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import csv
+from datetime import datetime, timezone
 import io
 import json
 import math
@@ -24,7 +25,7 @@ MAX_CSV_COLUMNS = 64
 MAX_CSV_CELL_CHARS = 4096
 MAX_SAFE_INTEGER = 9007199254740991
 NUMBER_TEXT = re.compile(r"^[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?$")
-LEDGER_SCHEMA_VERSION = 1
+LEDGER_SCHEMA_VERSION = 2
 
 
 def _preflight_ledger(path: Path, kind: str) -> None:
@@ -46,7 +47,8 @@ def _preflight_ledger(path: Path, kind: str) -> None:
             tables = {row[0] for row in con.execute(
                 "SELECT name FROM sqlite_master WHERE type='table'")}
             application_tables = tables - {"sqlite_sequence"}
-            table_names = ("runs", "steps") if kind == "runtime" else ("records", "csv_records")
+            table_names = (("runs", "steps", "audit_events", "approval_receipts")
+                           if kind == "runtime" else ("records", "csv_records"))
             columns = {
                 table: {row[1] for row in con.execute(f'PRAGMA table_info("{table}")')}
                 for table in table_names if table in tables
@@ -55,7 +57,7 @@ def _preflight_ledger(path: Path, kind: str) -> None:
                          "steps": {"run_id", "step_id", "output_json"}}
                         if kind == "runtime" else
                         {"records": {"run_id", "step_id", "payload_json"}})
-            if version == LEDGER_SCHEMA_VERSION:
+            if version >= 1:
                 required = ({"runs": required["runs"] | {"error_type"},
                              "steps": required["steps"] | {"status", "error_type", "attempt_count"}}
                             if kind == "runtime" else
@@ -79,6 +81,12 @@ def _preflight_ledger(path: Path, kind: str) -> None:
                 count = con.execute("SELECT COUNT(*) FROM csv_records").fetchone()[0]
                 if count:
                     raise PlanError("business CSV receipts lack source provenance; refusing migration")
+            if kind == "runtime" and version >= 2:
+                event_columns = {"event_id", "run_id", "plan_hash", "event_type", "occurred_at", "details_json"}
+                approval_columns = {"approval_id", "run_id", "plan_hash", "scope_json", "approved_at", "method"}
+                if ("audit_events" not in tables or not event_columns <= columns.get("audit_events", set()) or
+                        "approval_receipts" not in tables or not approval_columns <= columns.get("approval_receipts", set())):
+                    raise PlanError("runtime SQLite audit schema is incomplete")
         finally:
             con.close()
     except sqlite3.DatabaseError as exc:
@@ -107,6 +115,14 @@ class StepRetryExhausted(RuntimeError):
 
 def canonical_json(value: object) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False)
+
+
+def _append_audit(con: sqlite3.Connection, run_id: str, plan_hash: str,
+                  event_type: str, details: dict[str, object]) -> None:
+    con.execute(
+        "INSERT INTO audit_events(run_id,plan_hash,event_type,occurred_at,details_json) VALUES (?,?,?,?,?)",
+        (run_id, plan_hash, event_type, datetime.now(timezone.utc).isoformat(), canonical_json(details)),
+    )
 
 
 def validate(plan: object) -> dict:
@@ -311,6 +327,16 @@ class Engine:
                 con.execute("ALTER TABLE steps ADD COLUMN error_type TEXT")
             if "attempt_count" not in step_columns:
                 con.execute("ALTER TABLE steps ADD COLUMN attempt_count INTEGER NOT NULL DEFAULT 1")
+            con.execute(
+                "CREATE TABLE IF NOT EXISTS approval_receipts ("
+                "approval_id INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT NOT NULL, "
+                "plan_hash TEXT NOT NULL, scope_json TEXT NOT NULL, approved_at TEXT NOT NULL, method TEXT NOT NULL)"
+            )
+            con.execute(
+                "CREATE TABLE IF NOT EXISTS audit_events ("
+                "event_id INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT NOT NULL, plan_hash TEXT NOT NULL, "
+                "event_type TEXT NOT NULL, occurred_at TEXT NOT NULL, details_json TEXT NOT NULL)"
+            )
             con.execute(f"PRAGMA user_version={LEDGER_SCHEMA_VERSION}")
             if con.execute("PRAGMA quick_check(1)").fetchone() != ("ok",):
                 raise PlanError("runtime SQLite integrity check failed after migration")
@@ -365,22 +391,39 @@ class Engine:
         if any(s["op"] in {"sqlite_put", "sqlite_import_csv"} for s in plan["steps"]) and not approve_writes:
             raise ApprovalRequired("explicit --approve-writes required for local SQLite writes")
         digest = hashlib.sha256(canonical_json(plan).encode("utf-8")).hexdigest()
+        write_steps = [{"step_id": step["id"], "operation": step["op"]} for step in plan["steps"]
+                       if step["op"] in {"sqlite_put", "sqlite_import_csv"}]
         with self._state() as con:
             # Reserve the claim transaction before reading so simultaneous processes
             # cannot both create a fresh run row for the same run_id.
             con.execute("BEGIN IMMEDIATE")
             existing = con.execute("SELECT plan_hash,status,output_json FROM runs WHERE run_id=?", (run_id,)).fetchone()
+            if existing is not None and existing[0] != digest:
+                raise PlanError("same run id cannot be reused with a different plan")
+            if existing is not None and existing[1] == "completed":
+                _append_audit(con, run_id, digest, "run_replayed", {"cached_result": True})
+                return json.loads(existing[2])
             if existing is None:
                 con.execute(
                     "INSERT INTO runs (run_id,plan_hash,status,output_json,error_type) VALUES (?,?,?,NULL,NULL)",
                     (run_id, digest, "running"),
                 )
-            elif existing[0] != digest:
-                raise PlanError("same run id cannot be reused with a different plan")
-            elif existing[1] == "completed":
-                return json.loads(existing[2])
+                _append_audit(con, run_id, digest, "run_started", {"trigger": trigger["type"]})
             else:
                 con.execute("UPDATE runs SET status='running',error_type=NULL WHERE run_id=?", (run_id,))
+                _append_audit(con, run_id, digest, "run_resumed", {"previous_status": existing[1]})
+            if write_steps:
+                scope = {"plan_sha256": digest, "write_steps": write_steps}
+                scope_json = canonical_json(scope)
+                approved_at = datetime.now(timezone.utc).isoformat()
+                con.execute(
+                    "INSERT INTO approval_receipts(run_id,plan_hash,scope_json,approved_at,method) "
+                    "VALUES (?,?,?,?,?)",
+                    (run_id, digest, scope_json, approved_at, "explicit-local-flag"),
+                )
+                _append_audit(con, run_id, digest, "write_approval_granted", {
+                    "scope": scope, "method": "explicit-local-flag",
+                })
         try:
             return self._execute_steps(plan, run_id, inject_stop_after_business)
         except Exception as exc:
@@ -389,6 +432,7 @@ class Engine:
                     "UPDATE runs SET status='failed',error_type=? WHERE run_id=? AND status='running'",
                     (type(exc).__name__, run_id),
                 )
+                _append_audit(con, run_id, digest, "run_failed", {"error_type": type(exc).__name__})
             raise
 
     def _execute_steps(self, plan: dict, run_id: str, inject_stop_after_business: bool) -> object:
@@ -414,6 +458,11 @@ class Engine:
                                 "UPDATE steps SET status='failed',error_type=? WHERE run_id=? AND step_id=?",
                                 (type(exc).__name__, run_id, sid),
                             )
+                            run = con.execute("SELECT plan_hash FROM runs WHERE run_id=?", (run_id,)).fetchone()
+                            if run:
+                                _append_audit(con, run_id, run[0], "step_failed", {
+                                    "step_id": sid, "operation": op, "error_type": type(exc).__name__,
+                                })
                         raise
                 elif op == "csv_filter" and saved[1] == "completed":
                     # Filter rows stay in memory; deterministically rebuild them from
@@ -447,6 +496,7 @@ class Engine:
                     )
             try:
                 guard = step.get("when")
+                attempts_used = 0
                 if guard is not None and results[guard["condition"]] is not guard["equals"]:
                     value = None
                     status = "skipped"
@@ -455,6 +505,7 @@ class Engine:
                     timeout_seconds = step.get("timeout_ms", 5000) / 1000
                     deadline = time.monotonic() + timeout_seconds
                     for attempt in range(1, max_attempts + 1):
+                        attempts_used = attempt
                         with self._state() as con:
                             con.execute(
                                 "UPDATE steps SET attempt_count=? WHERE run_id=? AND step_id=?",
@@ -488,9 +539,14 @@ class Engine:
                 persisted_value = self._step_receipt(op, value)
                 with self._state() as con:
                     con.execute(
-                        "UPDATE steps SET output_json=?,status=?,error_type=NULL WHERE run_id=? AND step_id=?",
-                        (canonical_json(persisted_value), status, run_id, sid),
+                        "UPDATE steps SET output_json=?,status=?,error_type=NULL,attempt_count=? WHERE run_id=? AND step_id=?",
+                        (canonical_json(persisted_value), status, attempts_used, run_id, sid),
                     )
+                    run = con.execute("SELECT plan_hash FROM runs WHERE run_id=?", (run_id,)).fetchone()
+                    if run:
+                        _append_audit(con, run_id, run[0], "step_" + status, {
+                            "step_id": sid, "operation": op, "attempt_count": attempts_used,
+                        })
                 results[sid], outcomes[sid] = value, status
             except Exception as exc:
                 with self._state() as con:
@@ -498,15 +554,27 @@ class Engine:
                         "UPDATE steps SET status='failed',error_type=? WHERE run_id=? AND step_id=?",
                         (type(exc).__name__, run_id, sid),
                     )
+                    run = con.execute("SELECT plan_hash FROM runs WHERE run_id=?", (run_id,)).fetchone()
+                    if run:
+                        _append_audit(con, run_id, run[0], "step_failed", {
+                            "step_id": sid, "operation": op, "error_type": type(exc).__name__,
+                        })
                 raise
 
         last_step = plan["steps"][-1]
         output = self._step_receipt(last_step["op"], results[last_step["id"]])
         with self._state() as con:
+            output_json = canonical_json(output)
             con.execute(
                 "UPDATE runs SET status='completed',output_json=?,error_type=NULL WHERE run_id=?",
-                (canonical_json(output), run_id),
+                (output_json, run_id),
             )
+            run = con.execute("SELECT plan_hash FROM runs WHERE run_id=?", (run_id,)).fetchone()
+            if run:
+                _append_audit(con, run_id, run[0], "run_completed", {
+                    "step_count": len(plan["steps"]),
+                    "output_sha256": hashlib.sha256(output_json.encode("utf-8")).hexdigest(),
+                })
         return output
 
     def _evaluate_step(self, step: dict, results: dict, outcomes: dict, run_id: str,
