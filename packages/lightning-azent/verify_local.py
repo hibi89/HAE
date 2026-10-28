@@ -137,6 +137,29 @@ def main() -> int:
                     "Native duplicate run record")
         return {"run": "NativeSmoke", "idempotent": True}
 
+    def branch():
+        folder = work / "branch"; folder.mkdir()
+        state, data = str(folder / "state.sqlite"), str(folder / "data.sqlite")
+        run_id = "BranchSmoke"
+        plan = str(FIX / "conditional-route.json")
+        result = command_json("branch_run", [
+            "run", plan, "--state", state, "--data", data,
+            "--run-id", run_id, "--synthetic"])
+        status = command_json("branch_status", [
+            "status", "--state", state, "--run-id", run_id])
+        audit = command_json("branch_audit", [
+            "audit", "--state", state, "--run-id", run_id])
+        with closing(sqlite3.connect(data)) as db:
+            writes = db.execute("SELECT COUNT(*) FROM records").fetchone()[0]
+        require(result == {"route": "accepted"} and
+                status.get("status") == "completed" and
+                status.get("step_outcomes", {}).get("skipped") == 1 and
+                any(event.get("event_type") == "step_skipped"
+                    for event in audit.get("events", [])) and writes == 0,
+                "Conditional route, skipped-branch receipt, or read-only behavior failed")
+        return {"route": "accepted", "skipped_steps": 1,
+                "audit_records_skip": True, "business_rows": writes}
+
     def csv():
         folder = work / "csv"; folder.mkdir()
         source = folder / "orders.csv"
@@ -235,6 +258,7 @@ def main() -> int:
         ("la_full_regression", lambda: regression("la_unittest", PKG / "tests",
                                                  min_tests=EXPECTED_MIN_TESTS)),
         ("native_cli_resume", native),
+        ("conditional_branch", branch),
         ("csv_import_replay", csv),
         ("interval_two_ticks", interval),
         ("legacy_regression", lambda: regression(
