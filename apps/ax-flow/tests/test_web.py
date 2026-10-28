@@ -1,7 +1,9 @@
 import base64
 import hashlib
 import json
+import os
 import sqlite3
+import subprocess
 import tempfile
 import threading
 import unittest
@@ -279,6 +281,34 @@ class WebUITests(unittest.TestCase):
         self.assertFalse(self.state.exists())
         self.assertFalse(self.business.exists())
 
+    def test_preview_rejects_actual_windows_junction_inside_input_root(self):
+        target = self.inputs / "junction-target"
+        target.mkdir()
+        (target / "contacts.csv").write_text("id\n1\n", encoding="utf-8")
+        junction = self.inputs / "junction-alias"
+        if os.name == "nt":
+            created = subprocess.run(
+                ["cmd.exe", "/c", "mklink", "/J", str(junction), str(target)],
+                capture_output=True, text=True, timeout=5,
+            )
+            if created.returncode != 0:
+                self.skipTest("Windows junction creation is unavailable in this environment")
+            self.addCleanup(junction.rmdir)
+        else:
+            try:
+                junction.symlink_to(target, target_is_directory=True)
+            except (OSError, NotImplementedError) as exc:
+                self.skipTest(f"directory-link creation is unavailable: {type(exc).__name__}")
+            self.addCleanup(junction.unlink)
+
+        status, _, response = self.post_json("/api/preview", {
+            "task": "Import this CSV into local SQLite", "csv_path": "junction-alias/contacts.csv",
+        })
+        self.assertEqual(status, 422, response)
+        self.assertIn("reparse points", response["error"])
+        self.assertFalse(self.state.exists())
+        self.assertFalse(self.business.exists())
+
     def test_preview_change_invalidates_approval_before_any_database_write(self):
         source = self.inputs / "contacts.csv"
         _, _, preview = self.post_json("/api/preview", {
@@ -542,6 +572,23 @@ class WebUITests(unittest.TestCase):
         })
         self.assertEqual(code, 422)
         self.assertFalse(self.state.exists())
+
+    def test_preview_approval_is_invalidated_when_input_file_is_replaced(self):
+        source = self.inputs / "contacts.csv"
+        _, _, preview = self.post_json("/api/preview", {
+            "task": "Import this CSV into local SQLite", "csv_path": "contacts.csv",
+        })
+        replacement = self.inputs / "replacement.csv"
+        replacement.write_text("id,name\n99,Replacement\n", encoding="utf-8")
+        replacement.replace(source)
+        code, _, failure = self.post_json("/api/run", {
+            "task": "Import this CSV into local SQLite", "csv_path": "contacts.csv",
+            "preview_id": preview["preview_id"], "approve_writes": True,
+        })
+        self.assertEqual(code, 409, failure)
+        self.assertIn("changed", failure["error"])
+        self.assertFalse(self.state.exists())
+        self.assertFalse(self.business.exists())
 
     def test_preview_rejects_missing_csv_before_creating_a_run_or_database(self):
         code, _, body = self.post_json("/api/preview", {
