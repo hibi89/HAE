@@ -6,8 +6,10 @@ import csv
 import io
 import json
 import math
+import os
 import re
 import sqlite3
+import stat
 import threading
 import time
 from contextlib import contextmanager
@@ -28,9 +30,89 @@ _RUN_LOCK_GUARD = threading.Lock()
 _RUN_LOCKS: dict[tuple[str, str], tuple[threading.Lock, int]] = {}
 
 
+def _has_reparse_point(path: Path) -> bool:
+    """Reject symlinks and Windows junctions/mount points in selected paths."""
+    info = path.lstat()
+    reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+    return bool(getattr(info, "st_file_attributes", 0) & reparse_flag) or path.is_symlink()
+
+
+def _same_file_identity(left: os.stat_result, right: os.stat_result) -> bool:
+    """Compare an opened handle with the path metadata captured before open."""
+    if left.st_ino and right.st_ino:
+        return os.path.samestat(left, right)
+    return (left.st_dev, left.st_size, left.st_mtime_ns, left.st_ctime_ns) == (
+        right.st_dev, right.st_size, right.st_mtime_ns, right.st_ctime_ns,
+    )
+
+
+@contextmanager
+def _cross_process_run_lock(state_path: Path, run_id: str):
+    """Acquire a crash-releasing, per-run OS lock without deleting lock artifacts."""
+    identity = os.path.normcase(str(state_path.resolve())) + "\0" + run_id
+    name_hash = hashlib.sha256(identity.encode("utf-8")).hexdigest()
+    if os.name == "nt":
+        import ctypes
+        from ctypes import wintypes
+
+        kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel.CreateMutexW.argtypes = (wintypes.LPVOID, wintypes.BOOL, wintypes.LPCWSTR)
+        kernel.CreateMutexW.restype = wintypes.HANDLE
+        kernel.WaitForSingleObject.argtypes = (wintypes.HANDLE, wintypes.DWORD)
+        kernel.WaitForSingleObject.restype = wintypes.DWORD
+        kernel.ReleaseMutex.argtypes = (wintypes.HANDLE,)
+        kernel.ReleaseMutex.restype = wintypes.BOOL
+        kernel.CloseHandle.argtypes = (wintypes.HANDLE,)
+        kernel.CloseHandle.restype = wintypes.BOOL
+        handle = kernel.CreateMutexW(None, False, "Local\\HAE-AxFlow-Run-" + name_hash)
+        if not handle:
+            raise OSError(ctypes.get_last_error(), "could not create run mutex")
+        try:
+            waited = kernel.WaitForSingleObject(handle, 0xFFFFFFFF)
+            if waited not in (0x00000000, 0x00000080):  # acquired or abandoned-and-acquired
+                raise OSError(ctypes.get_last_error(), "could not acquire run mutex")
+            try:
+                yield
+            finally:
+                if not kernel.ReleaseMutex(handle):
+                    raise OSError(ctypes.get_last_error(), "could not release run mutex")
+        finally:
+            kernel.CloseHandle(handle)
+        return
+
+    import fcntl
+
+    lock_root = state_path.resolve().parent / ".axflow-run-locks"
+    lock_root.mkdir(mode=0o700, parents=False, exist_ok=True)
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    directory_flag = getattr(os, "O_DIRECTORY", 0)
+    directory_fd = os.open(lock_root, os.O_RDONLY | directory_flag | nofollow)
+    descriptor = None
+    try:
+        root_info = os.fstat(directory_fd)
+        if not stat.S_ISDIR(root_info.st_mode):
+            raise PlanError("run lock directory is not a regular directory")
+        filename = name_hash + ".lock"
+        descriptor = os.open(filename, os.O_CREAT | os.O_RDWR | nofollow, 0o600, dir_fd=directory_fd)
+        opened = os.fstat(descriptor)
+        linked = os.stat(filename, dir_fd=directory_fd, follow_symlinks=False)
+        if (not stat.S_ISREG(opened.st_mode) or opened.st_nlink != 1
+                or not os.path.samestat(opened, linked)):
+            raise PlanError("unsafe run lock file")
+        fcntl.flock(descriptor, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(descriptor, fcntl.LOCK_UN)
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+        os.close(directory_fd)
+
+
 @contextmanager
 def _exclusive_run(state_path: Path, run_id: str):
-    """Serialize same-process attempts for one durable run identity."""
+    """Serialize attempts for one durable run identity across threads and processes."""
     key = (str(state_path), str(run_id))
     with _RUN_LOCK_GUARD:
         entry = _RUN_LOCKS.get(key)
@@ -43,7 +125,8 @@ def _exclusive_run(state_path: Path, run_id: str):
     try:
         lock.acquire()
         acquired = True
-        yield
+        with _cross_process_run_lock(state_path, run_id):
+            yield
     finally:
         if acquired:
             lock.release()
@@ -675,8 +758,8 @@ class Engine:
         try:
             for part in relative.parts:
                 candidate = candidate / part
-                if candidate.is_symlink():
-                    raise PlanError("CSV input must not traverse symbolic links")
+                if _has_reparse_point(candidate):
+                    raise PlanError("CSV input must not traverse symbolic links or reparse points")
             resolved = candidate.resolve(strict=True)
         except (OSError, RuntimeError) as exc:
             raise PlanError("CSV input file is unavailable") from exc
@@ -685,10 +768,20 @@ class Engine:
         if not resolved.is_file() or resolved.suffix.lower() != ".csv":
             raise PlanError("CSV input must be a regular .csv file")
         try:
-            if resolved.stat().st_size > MAX_CSV_BYTES:
+            before_open = resolved.stat()
+            if before_open.st_size > MAX_CSV_BYTES:
                 raise PlanError("CSV input exceeds 256 KiB")
             with resolved.open("rb") as stream:
+                opened = os.fstat(stream.fileno())
+                if not _same_file_identity(before_open, opened):
+                    raise PlanError("CSV input changed while it was being opened")
                 raw = stream.read(MAX_CSV_BYTES + 1)
+                after_read = os.fstat(stream.fileno())
+                if (not _same_file_identity(opened, after_read)
+                        or opened.st_size != after_read.st_size
+                        or opened.st_mtime_ns != after_read.st_mtime_ns
+                        or opened.st_ctime_ns != after_read.st_ctime_ns):
+                    raise PlanError("CSV input changed while it was being read")
         except OSError as exc:
             raise PlanError("CSV input could not be read") from exc
         if len(raw) > MAX_CSV_BYTES:
@@ -722,6 +815,7 @@ class Engine:
             "source_path": relative.as_posix(),
             "source_sha256": hashlib.sha256(raw).hexdigest(),
             "size_bytes": len(raw),
+            "raw_bytes": raw,
             "headers": headers,
             "row_count": len(rows),
             "rows": rows,
