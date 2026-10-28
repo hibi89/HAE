@@ -12,6 +12,7 @@ import time
 from contextlib import contextmanager
 from decimal import Decimal, InvalidOperation
 from pathlib import Path, PurePosixPath
+from urllib.parse import quote
 
 VERSION = "axflow.ir.v0"
 IDENTIFIER = re.compile(r"^[a-zA-Z][a-zA-Z0-9_]{0,31}$")
@@ -23,6 +24,65 @@ MAX_CSV_COLUMNS = 64
 MAX_CSV_CELL_CHARS = 4096
 MAX_SAFE_INTEGER = 9007199254740991
 NUMBER_TEXT = re.compile(r"^[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?$")
+LEDGER_SCHEMA_VERSION = 1
+
+
+def _preflight_ledger(path: Path, kind: str) -> None:
+    """Check existing SQLite state read-only before either ledger is initialized."""
+    if not path.exists():
+        return
+    if not path.is_file():
+        raise PlanError(f"{kind} SQLite path must be a regular file")
+    uri = "file:" + quote(path.as_posix(), safe="/:") + "?mode=ro"
+    try:
+        con = sqlite3.connect(uri, uri=True, timeout=2)
+        try:
+            check = con.execute("PRAGMA quick_check(1)").fetchone()
+            if not check or check[0] != "ok":
+                raise PlanError(f"{kind} SQLite integrity check failed")
+            version = con.execute("PRAGMA user_version").fetchone()[0]
+            if version > LEDGER_SCHEMA_VERSION:
+                raise PlanError(f"{kind} SQLite schema version is newer than this Lightning Azent")
+            tables = {row[0] for row in con.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'")}
+            application_tables = tables - {"sqlite_sequence"}
+            table_names = ("runs", "steps") if kind == "runtime" else ("records", "csv_records")
+            columns = {
+                table: {row[1] for row in con.execute(f'PRAGMA table_info("{table}")')}
+                for table in table_names if table in tables
+            }
+            required = ({"runs": {"run_id", "plan_hash", "status"},
+                         "steps": {"run_id", "step_id", "output_json"}}
+                        if kind == "runtime" else
+                        {"records": {"run_id", "step_id", "payload_json"}})
+            if version == LEDGER_SCHEMA_VERSION:
+                required = ({"runs": required["runs"] | {"error_type"},
+                             "steps": required["steps"] | {"status", "error_type", "attempt_count"}}
+                            if kind == "runtime" else
+                            {"records": required["records"],
+                             "csv_records": {"run_id", "import_step_id", "source_sha256",
+                                             "row_number", "payload_json"}})
+            for table, expected in required.items():
+                if table in tables and not expected <= columns.get(table, set()):
+                    raise PlanError(f"{kind} SQLite schema is incompatible")
+                if version == LEDGER_SCHEMA_VERSION and table not in tables:
+                    raise PlanError(f"{kind} SQLite schema is incomplete")
+            must_exist = {"runs", "steps"} if kind == "runtime" else {"records"}
+            if application_tables and not must_exist <= tables:
+                raise PlanError(f"{kind} SQLite schema is incompatible")
+            if kind == "business" and "csv_records" in tables and not {
+                "run_id", "import_step_id", "row_number", "payload_json"
+            } <= columns.get("csv_records", set()):
+                raise PlanError("business SQLite schema is incompatible")
+            if (kind == "business" and "csv_records" in tables and
+                    "source_sha256" not in columns.get("csv_records", set())):
+                count = con.execute("SELECT COUNT(*) FROM csv_records").fetchone()[0]
+                if count:
+                    raise PlanError("business CSV receipts lack source provenance; refusing migration")
+        finally:
+            con.close()
+    except sqlite3.DatabaseError as exc:
+        raise PlanError(f"{kind} SQLite database is corrupt or unreadable") from exc
 
 
 class PlanError(ValueError):
@@ -230,7 +290,15 @@ class Engine:
             raise PlanError("both database parent directories must already exist")
         if self.input_root is not None and not self.input_root.is_dir():
             raise PlanError("CSV input root must be an existing directory")
+        # Inspect both ledgers before modifying either one. A bad business DB must
+        # not leave a freshly initialized runtime ledger behind (or vice versa).
+        _preflight_ledger(self.state_path, "runtime")
+        _preflight_ledger(self.business_path, "business")
         with self._state() as con:
+            con.execute("BEGIN IMMEDIATE")
+            version = con.execute("PRAGMA user_version").fetchone()[0]
+            if version > LEDGER_SCHEMA_VERSION:
+                raise PlanError("runtime SQLite schema version is newer than this Lightning Azent")
             con.execute("CREATE TABLE IF NOT EXISTS runs (run_id TEXT PRIMARY KEY, plan_hash TEXT NOT NULL, status TEXT NOT NULL, output_json TEXT, error_type TEXT)")
             columns = {row[1] for row in con.execute("PRAGMA table_info(runs)")}
             if "error_type" not in columns:
@@ -243,13 +311,26 @@ class Engine:
                 con.execute("ALTER TABLE steps ADD COLUMN error_type TEXT")
             if "attempt_count" not in step_columns:
                 con.execute("ALTER TABLE steps ADD COLUMN attempt_count INTEGER NOT NULL DEFAULT 1")
+            con.execute(f"PRAGMA user_version={LEDGER_SCHEMA_VERSION}")
+            if con.execute("PRAGMA quick_check(1)").fetchone() != ("ok",):
+                raise PlanError("runtime SQLite integrity check failed after migration")
         with self._business() as con:
+            con.execute("BEGIN IMMEDIATE")
+            version = con.execute("PRAGMA user_version").fetchone()[0]
+            if version > LEDGER_SCHEMA_VERSION:
+                raise PlanError("business SQLite schema version is newer than this Lightning Azent")
             con.execute("CREATE TABLE IF NOT EXISTS records (run_id TEXT NOT NULL, step_id TEXT NOT NULL, payload_json TEXT NOT NULL, PRIMARY KEY(run_id,step_id))")
             con.execute(
                 "CREATE TABLE IF NOT EXISTS csv_records (run_id TEXT NOT NULL, import_step_id TEXT NOT NULL, "
                 "source_sha256 TEXT NOT NULL, row_number INTEGER NOT NULL CHECK(row_number > 0), "
                 "payload_json TEXT NOT NULL, PRIMARY KEY(run_id,import_step_id,row_number))"
             )
+            csv_columns = {row[1] for row in con.execute("PRAGMA table_info(csv_records)")}
+            if "source_sha256" not in csv_columns:
+                con.execute("ALTER TABLE csv_records ADD COLUMN source_sha256 TEXT NOT NULL DEFAULT ''")
+            con.execute(f"PRAGMA user_version={LEDGER_SCHEMA_VERSION}")
+            if con.execute("PRAGMA quick_check(1)").fetchone() != ("ok",):
+                raise PlanError("business SQLite integrity check failed after migration")
 
     @contextmanager
     def _state(self):
