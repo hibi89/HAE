@@ -476,7 +476,9 @@ def create_server(
             persisted = True
             try:
                 self.sovia_store.save(run_id, plan_sha256, report)
-            except SOVIAStoreError:
+            except (SOVIAStoreError, OSError, ValueError):
+                # Audit persistence is optional; never overwrite a committed
+                # workflow receipt with an advisory storage failure.
                 persisted = False
             status = ("completed" if outcome.get("status", {}).get("status") == "completed"
                       and report.get("available") is True and dbvora.get("available") is True
@@ -498,9 +500,10 @@ def create_server(
                     return dict(report)
             try:
                 audit = self.sovia_store.get(run_id)
-            except SOVIAStoreError as exc:
+            except (SOVIAStoreError, OSError, ValueError) as exc:
                 audit = {"available": False, "run_id": run_id,
-                         "error": str(exc), "execution_gate": False}
+                         "error": "persisted SOVIA audit unavailable",
+                         "error_type": type(exc).__name__, "execution_gate": False}
             if audit is None:
                 return None
             try:
