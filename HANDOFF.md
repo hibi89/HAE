@@ -7,8 +7,8 @@
 6. **Packaged output:** Rebuilt `hae-integrated.pyz` using `tools/package_hae_integrated.py` with LA source extracted from the previously verified package; refreshed `HAE-Windows-offline.zip` via `tools/repack_hae_windows_release.py` and existing ZIP packaging. Windows package acceptance passed.
 7. **Product status:** This work keeps the existing bounded synthetic MVP completion claim intact. It does not establish full commercial product completion. OAuth/providers, DBVORA supported-source restore and customer pilots remain separate; Production N/A.
 8. **Environment/safety:** Existing source project, its SQLite files, credentials, other branches and security settings were not changed. Generated fixture lives under ignored temporary checkout work/.
-9. **Identity/delivery:** Configured author/committer is `이해인 <haein5898@naver.com>`; connected profile is `hibi89 <godls5898@gmail.com>`. Mismatch is real; do not override identity. Commit/push to this work branch only after documenting the mismatch; verify remote SHA.
-10. **Next:** Commit and push `feat/windows-ux-followup`, read back the exact remote SHA, then remove only generated `work/` clone/staging data. No merge to `feature/axflow-mvp` or `main`.
+9. **Identity/delivery:** Source commit author/committer is `이해인 <haein5898@naver.com>`; connected profile is `hibi89 <godls5898@gmail.com>`. The mismatch was reported and was not overridden. The follow-up documentation commit was made through the connected GitHub account.
+10. **Next:** Development commit `9892fa2fb68c600123de1c7636325e6e8f8b7b64` is pushed to `feat/windows-ux-followup`; temporary checkout and packaging staging folders are removed. Base `feature/axflow-mvp` and `main` remain unchanged. Production is N/A.
 
 ## HAE 핵심 통합 검증 완료 — 해총 인수인계 (2026-10-29 KST)
 - **먼저 읽을 것:** `TO_HAECHONG.md` (해총 보고) → `docs/HAE_LA_TROUBLESHOOTING_2026-10-29.md` (장애 원인·해결·재발 방지) → `apps/ax-flow/ACCEPTANCE-EVIDENCE-20261029.md` (실행 증빙).
