@@ -121,6 +121,19 @@ def execute(plan: object, run_id: str, *, state_path: Path, business_path: Path,
     """Execute with LA under HAE's per-run process lock and return receipts/audit."""
     executor_type, _, backend = _load_backend(plan)
     with _exclusive_run(Path(state_path).resolve(), run_id):
+        # Resolve the durable run under the same cross-process lock: another
+        # request may have created it after the HTTP handler checked status.
+        from .runlog import inspect_run
+        try:
+            existing = inspect_run(Path(state_path), run_id)
+        except RunLogError as exc:
+            if Path(state_path).is_file():
+                raise BackendUnavailable("existing LA run ledger cannot be verified") from exc
+            existing = None
+        if existing is not None:
+            resume_existing = True
+        elif resume_existing:
+            raise BackendUnavailable("LA run to resume is missing from durable ledger")
         with _executor_for_snapshot(
             executor_type, Path(state_path), Path(business_path), Path(input_root),
             csv_snapshot, expected_csv_sha256,
