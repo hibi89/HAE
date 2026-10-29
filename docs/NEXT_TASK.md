@@ -411,3 +411,9 @@ Limits are enforced and tested: 256 KiB, 1000 data rows, 64 columns, 4096 chars 
 1. The recent list is available through read-only `GET /api/runs?limit=10` (maximum 20), exposes only HAE UI IDs/status/UTC time/step counts, and opens existing status and SOVIA audit views without executing a workflow. Native HAE and the current LA adapter record timestamp metadata; old records with no known time remain manually ID-queryable.
 2. HTTP/browser verification is still SKIP on this Windows host due `WinError 10013` loopback connect denial. Do not retry through an alternate route that evades this boundary. The actual LA cross-process adapter test, local SQLite contract tests and Node UI harness passed.
 3. Next independent task: in an approved browser environment, exercise recent list → status/audit detail after a server restart, and test recovery of an LA run if HAE exits between the LA ledger commit and the timestamp update. Keep no-duplicate writes and timestamp uncertainty explicit.
+
+
+## Next — real browser validation of recent execution history
+1. LA's lazy-ledger crash window now has a synthetic subprocess regression: after a forced exit following LA's committed write, same-run HAE replay restores the recent timestamp without additional rows or approval receipts.
+2. Next, use an approved browser-capable environment to verify the actual `/api/runs` UI list, select an item, reopen status/SOVIA audit, then restart HAE and reopen the same ID. This Windows environment's known loopback denial remains a hard SKIP; do not retry or bypass it.
+3. Keep older runs without verified timestamps out of the chronological list, while retaining explicit ID lookup. SOVIA remains advisory and post-execution; DBVORA remains a live read-only inventory.
