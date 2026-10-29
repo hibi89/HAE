@@ -1,0 +1,28 @@
+name: HAE AX Flow regression
+on:
+  push:
+    branches: [feature/axflow-mvp]
+    paths:
+      - 'apps/ax-flow/**'
+      - '.github/workflows/hae-axflow-tests.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  synthetic-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify UI races in Node
+        working-directory: apps/ax-flow
+        run: node tests/test_ui_races.cjs
+      - name: Verify synthetic end-to-end Python suite
+        working-directory: apps/ax-flow
+        run: python -m unittest discover -s tests -v
