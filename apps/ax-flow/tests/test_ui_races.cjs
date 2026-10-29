@@ -94,9 +94,40 @@ async function testRecentRunsNewestWins() {
   assert.equal(ui.get("#recent-runs-list").children.length, 1);
   assert.equal(button.disabled, false);
 }
+async function testHistoryStaleFailure() {
+  const ui = setup();
+  const id = ui.get("#history-run-id");
+  id.value = "Gui0123456789ab";
+  const first = ui.get("#load-run-history").fire("click");
+  const request = ui.requests.find((r) => r.url.startsWith("/api/status?"));
+  assert.ok(request, "history request must start");
+  id.value = "Gui0123456789ac";
+  await id.fire("input");
+  request.reject(new Error("old history failed"));
+  await first;
+  assert.equal(ui.get("#history-state").className, "history-state");
+  assert.equal(ui.get("#load-run-history").disabled, false);
+}
+async function testPreviewSupersededByNewRequest() {
+  const ui = setup();
+  ui.get("#task").value = "Import CSV into SQLite";
+  ui.get("#csv-path").value = "data.csv";
+  const first = ui.get("#preview").fire("click");
+  const second = ui.get("#preview").fire("click");
+  const requests = ui.requests.filter((r) => r.url === "/api/preview");
+  assert.equal(requests.length, 2);
+  requests[0].reject(new Error("old request"));
+  await first;
+  assert.equal(ui.get("#preview").disabled, true, "older request must not re-enable newer preview");
+  requests[1].reject(new Error("current request"));
+  await second;
+  assert.equal(ui.get("#preview").disabled, false);
+}
 (async () => {
   await testPreviewStaleFailure();
+  await testHistoryStaleFailure();
+  await testPreviewSupersededByNewRequest();
   await testUploadStaleResponse();
   await testRecentRunsNewestWins();
-  console.log("HAE simulated UI race tests: 3 PASS");
+  console.log("HAE simulated UI race tests: 5 PASS");
 })().catch((error) => { console.error(error); process.exitCode = 1; });
