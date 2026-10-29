@@ -31,11 +31,21 @@ def build_windows_bundle(destination: Path, la_package: Path) -> Path:
     with tempfile.TemporaryDirectory(prefix="hae-bundle-", dir=destination.parent) as temporary:
         staging = Path(temporary) / "HAE-Windows"
         staging.mkdir()
-        for filename in ("run-bundled.cmd", "launch_integrated.py"):
+        for filename in ("run-bundled.cmd", "launch_integrated.py",
+                         "VERIFY-WINDOWS.cmd", "windows_offline_acceptance.py"):
             original = source / filename
             if original.is_symlink() or not original.is_file():
                 raise FileNotFoundError("Windows launcher source missing or unsafe: " + filename)
             shutil.copyfile(original, staging / filename)
+        (staging / "README.txt").write_text(
+            "HAE + Lightning Azent synthetic local MVP\\n"
+            "Requires Python 3.11+; no Git/pip/network at runtime.\\n"
+            "Start: double-click run-bundled.cmd\\n"
+            "Check Windows/NTFS: double-click VERIFY-WINDOWS.cmd\\n"
+            "HTTP/SQLite test only: run-bundled.cmd --verify\\n"
+            "Only synthetic CSV data is supported.\\n",
+            encoding="utf-8",
+        )
         build_integrated_zipapp(staging / "hae-integrated.pyz", la_package)
         if destination.exists() or destination.is_symlink():
             raise FileExistsError("refusing to overwrite an existing Windows bundle")
