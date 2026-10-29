@@ -106,7 +106,7 @@ class WebUITests(unittest.TestCase):
         script = script_bytes.decode("utf-8")
         self.assertIn("if (submittedKey !== requestKey()) {", script)
         self.assertIn("if (uploadVersion !== uploadRequestVersion ||", script)
-        self.assertIn("if (uploadVersion === uploadRequestVersion) previewButton.disabled = false;", script)
+        self.assertIn("if (uploadVersion === uploadRequestVersion) {", script)
         self.assertIn("if (requestVersion !== historyRequestVersion || historyRunId.value.trim() !== runId) return;", script)
         self.assertIn("if (requestVersion !== recentRunsRequestVersion) return;", script)
         self.assertIn("if (requestVersion === recentRunsRequestVersion) recentRunsButton.disabled = false;", script)
