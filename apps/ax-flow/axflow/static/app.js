@@ -91,7 +91,7 @@ async function fileToBase64(file) {
 
 function showStatus(status) {
   const integration = status.integration || status;
-  const partial = integration.workflow_status === "partial";
+  const partial = status.status === "completed" && integration.workflow_status === "partial";
   resultStatus.textContent = status.status || "unknown";
   resultTitle.textContent = partial ? "실행 완료 · 통합 일부 확인 불가" : status.status === "completed" ? "흐름 실행 완료" :
     (status.status === "failed" ? "실행 실패" : status.status === "running" ? "실행 진행 중 또는 중단됨" : "실행 상태");
@@ -575,10 +575,12 @@ runButton.addEventListener("click", async () => {
       }),
     });
     rememberRunId(response.run_id);
-    showStatus({ ...response.status, integration: {
-      sovia_audit: response.sovia_audit, dbvora: response.dbvora,
-      workflow_status: response.workflow_status,
-    } });
+    const integration = response.backend?.name === "Lightning Azent"
+      ? { sovia_audit: response.sovia_audit, dbvora: response.dbvora,
+          workflow_status: response.workflow_status,
+          execution_status: response.execution_status }
+      : {};
+    showStatus({ ...response.status, integration });
     const auditCount = Array.isArray(response.audit?.events) ? response.audit.events.length : 0;
     if (Number.isInteger(response.result.imported_rows)) {
       rowCountLabel.textContent = "저장 행";
