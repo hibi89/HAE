@@ -390,6 +390,7 @@ def create_server(
                     outcome = execute_lightning(
                         plan, run_id, state_path=state, business_path=business,
                         input_root=root, approve_writes=body["approve_writes"],
+                        resume_existing=prior is not None,
                         csv_snapshot=csv_snapshot, expected_csv_sha256=approved_sha256,
                     )
                     integration = self.server.run_integrations(plan, run_id, plan_sha256, outcome, body["approve_writes"])
