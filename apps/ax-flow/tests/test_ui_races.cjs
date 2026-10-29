@@ -172,6 +172,70 @@ async function testExecutionIsSingleFlightAndNeedsFreshPreview() {
   assert.equal(ui.get("#run").disabled, true, "new preview required after run attempt");
   assert.equal(ui.get("#approval").checked, false);
 }
+async function testFailedDurableRunCanRetryWithSamePreviewAfterReapproval() {
+  const ui = setup();
+  ui.get("#task").value = "Import CSV into SQLite";
+  ui.get("#csv-path").value = "data.csv";
+  const preview = ui.get("#preview").fire("click");
+  const previewRequest = ui.requests.find((r) => r.url === "/api/preview");
+  ui.respond(previewRequest, {
+    plan: { steps: [] }, engine_backend: { name: "Lightning Azent" },
+    preview_id: "approved-preview", requires_approval: true,
+    workflow: "csv_to_sqlite", input: { row_count: 1, headers: ["id"], size_bytes: 5 },
+  });
+  await preview;
+  ui.get("#approval").checked = true;
+  await ui.get("#approval").fire("change");
+  const first = ui.get("#run").fire("click");
+  const firstRun = ui.requests.find((r) => r.url === "/api/run");
+  ui.respond(firstRun, {
+    error: "Lightning Azent execution failed: StepTimeout",
+    error_type: "LightningExecutionError", run_id: "Gui0123456789ab",
+    status: { run_id: "Gui0123456789ab", status: "failed", steps_recorded: 1, error_type: "StepTimeout" },
+  }, 409);
+  await first;
+  assert.equal(ui.get("#run").disabled, true, "a failed write still requires fresh explicit approval");
+  assert.equal(ui.get("#approval").checked, false);
+  assert.ok(ui.get("#message").textContent.includes("다시 시도"));
+  ui.get("#approval").checked = true;
+  await ui.get("#approval").fire("change");
+  assert.equal(ui.get("#run").disabled, false, "same approved preview permits retry after reapproval");
+  const second = ui.get("#run").fire("click");
+  const submissions = ui.requests.filter((r) => r.url === "/api/run");
+  assert.equal(submissions.length, 2);
+  assert.equal(JSON.parse(submissions[1].options.body).preview_id, "approved-preview");
+  assert.equal(JSON.parse(submissions[1].options.body).approve_writes, true);
+  ui.respond(submissions[1], {
+    run_id: "Gui0123456789ab", result: { imported_rows: 1 },
+    status: { run_id: "Gui0123456789ab", status: "completed", steps_recorded: 1 },
+    backend: { name: "Lightning Azent" }, workflow_status: "partial",
+  });
+  await second;
+  assert.equal(ui.get("#run").disabled, true, "successful execution consumes the UI preview");
+}
+async function testInvalidatedPreviewNeverRetried() {
+  const ui = setup();
+  ui.get("#task").value = "Import CSV into SQLite";
+  ui.get("#csv-path").value = "data.csv";
+  const preview = ui.get("#preview").fire("click");
+  ui.respond(ui.requests.find((r) => r.url === "/api/preview"), {
+    plan: { steps: [] }, preview_id: "invalidated-preview", requires_approval: true,
+    workflow: "csv_to_sqlite", input: { row_count: 1, headers: ["id"], size_bytes: 5 },
+  });
+  await preview;
+  ui.get("#approval").checked = true;
+  await ui.get("#approval").fire("change");
+  const run = ui.get("#run").fire("click");
+  ui.respond(ui.requests.find((r) => r.url === "/api/run"), {
+    error: "CSV changed after preview; preview it again before execution",
+    error_type: "RequestError", run_id: "Gui0123456789ab",
+    status: { run_id: "Gui0123456789ab", status: "failed" },
+  }, 409);
+  await run;
+  ui.get("#approval").checked = true;
+  await ui.get("#approval").fire("change");
+  assert.equal(ui.get("#run").disabled, true, "input invalidation must require a new preview");
+}
 async function testDbvoraNewestResponseWins() {
   const ui = setup();
   const button = ui.get("#refresh-dbvora");
@@ -195,5 +259,7 @@ async function testDbvoraNewestResponseWins() {
   await testPreviewSupersededByNewRequest();
   await testUploadStaleResponse();
   await testRecentRunsNewestWins();
-  console.log("HAE simulated UI race tests: 8 PASS");
+  await testFailedDurableRunCanRetryWithSamePreviewAfterReapproval();
+  await testInvalidatedPreviewNeverRetried();
+  console.log("HAE simulated UI race tests: 10 PASS");
 })().catch((error) => { console.error(error); process.exitCode = 1; });
