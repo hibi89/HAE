@@ -49,6 +49,7 @@ let recentRunsRequestVersion = 0;
 let previewRequestVersion = 0;
 let uploadInProgress = false;
 let executionInProgress = false;
+let dbvoraRequestVersion = 0;
 
 function requestKey() {
   return JSON.stringify([taskInput.value, csvInput.value]);
@@ -399,17 +400,21 @@ function renderDbvora(result) {
 }
 
 async function loadDbvora() {
+  const requestVersion = ++dbvoraRequestVersion;
   dbvoraRefreshButton.disabled = true;
   dbvoraStatus.textContent = "DBVORA 읽기 전용 메타데이터 조회 중…";
   dbvoraStatus.className = "dbvora-status";
   try {
-    renderDbvora(await api("/api/dbvora"));
+    const result = await api("/api/dbvora");
+    if (requestVersion !== dbvoraRequestVersion) return;
+    renderDbvora(result);
   } catch {
+    if (requestVersion !== dbvoraRequestVersion) return;
     dbvoraStatus.textContent = "HAE 로컬 서비스에서 DBVORA 상태를 확인할 수 없습니다.";
     dbvoraStatus.className = "dbvora-status offline";
     dbvoraMeta.textContent = "";
   } finally {
-    dbvoraRefreshButton.disabled = false;
+    if (requestVersion === dbvoraRequestVersion) dbvoraRefreshButton.disabled = false;
   }
 }
 
