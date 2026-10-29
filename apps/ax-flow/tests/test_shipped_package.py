@@ -68,6 +68,8 @@ class ShippedOfflinePackageTests(unittest.TestCase):
             "run-bundled.cmd": (ROOT / "apps" / "ax-flow" / "run-bundled.cmd").read_bytes(),
             "launch_integrated.py": (ROOT / "apps" / "ax-flow" / "launch_integrated.py").read_bytes(),
             "hae-integrated.pyz": PACKAGE.read_bytes(),
+            "VERIFY-WINDOWS.cmd": (ROOT / "apps" / "ax-flow" / "VERIFY-WINDOWS.cmd").read_bytes(),
+            "windows_offline_acceptance.py": (ROOT / "apps" / "ax-flow" / "windows_offline_acceptance.py").read_bytes(),
         }
         with ZipFile(RELEASE_ZIP) as z:
             names = {name for name in z.namelist() if not name.endswith("/")}
