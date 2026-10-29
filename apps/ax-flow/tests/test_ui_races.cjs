@@ -149,6 +149,9 @@ async function testExecutionIsSingleFlightAndNeedsFreshPreview() {
   assert.equal(submitted.approve_writes, true);
   assert.equal(ui.get("#run").disabled, true);
   assert.equal(ui.get("#preview").disabled, true);
+  csv.value = "changed-while-running.csv";
+  await csv.fire("input");
+  assert.equal(ui.get("#preview").disabled, true, "input changes must preserve execution lock");
   await ui.get("#preview").fire("click");
   assert.equal(ui.requests.filter((r) => r.url === "/api/preview").length, 1, "execution blocks new preview");
   const request = ui.requests.find((r) => r.url === "/api/run");
