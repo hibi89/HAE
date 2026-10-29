@@ -1,3 +1,8 @@
+## HAE next regression gate — 2026-10-29 KST
+1. In an authenticated executable checkout at the updated `feature/axflow-mvp` SHA, run `cd apps/ax-flow && node --test tests/test_history_stale_error.cjs tests/test_history_race.cjs tests/test_approval_state.cjs tests/test_run_history.cjs` and record PASS/FAIL/SKIP.
+2. Run full Python, Node syntax, synthetic HAE/LA integration and GUI checks on matching source SHA. The new stale-error test was evaluated using a V8 shim only; **native execution remains unverified**.
+3. Resolve or explicitly characterize Windows long-path fixture failure (WinError 206) without weakening local path/CSV read-only approvals. Do not overwrite parallel source commits or claim 111 PASS on the newer SHA.
+
 ## Next after CSV preflight completion — 2026-10-29 KST
 
 1. Four-system HAE → Lightning Azent → SOVIA → DBVORA synthetic E2E passed with pinned read-only refs (LA `9cba6424`, SOVIA `7418b23a`, DBVORA `7f9a1c0d`). Preserve this as the executable contract and rerun when those interfaces change.
