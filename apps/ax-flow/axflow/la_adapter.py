@@ -114,6 +114,59 @@ def _executor_for_snapshot(executor_type, state_path: Path, business_path: Path,
         yield executor_type(state_path, business_path, input_root=staged_root)
 
 
+def read_execution_audit(state_path: Path, run_id: str) -> dict[str, object]:
+    """Read LA's durable audit without initializing the engine or opening business SQLite.
+
+    Return only event type, time and bounded step identifiers. Never expose
+    audit details, approval scopes, local file paths or business payloads.
+    """
+    try:
+        runlog = importlib.import_module("lightning_azent.runlog")
+    except ImportError as exc:
+        raise BackendUnavailable("Lightning Azent audit reader is not installed") from exc
+    try:
+        raw = runlog.inspect_audit(Path(state_path), run_id)
+    except runlog.RunLogError as exc:
+        if str(exc) in {"run_id not found", "runtime ledger does not exist"}:
+            raise LookupError("Lightning Azent run audit does not exist") from exc
+        raise BackendUnavailable("Lightning Azent audit ledger could not be verified") from exc
+
+    events = raw.get("events") if isinstance(raw, dict) else None
+    approvals = raw.get("approval_receipts") if isinstance(raw, dict) else None
+    if (not isinstance(events, list) or not isinstance(approvals, list)
+            or raw.get("run_id") != run_id
+            or not isinstance(raw.get("plan_sha256"), str)
+            or len(raw["plan_sha256"]) != 64
+            or len(events) > 10000):
+        raise BackendUnavailable("Lightning Azent audit contract is invalid")
+    redacted = []
+    for item in events[-100:]:
+        if not isinstance(item, dict):
+            raise BackendUnavailable("Lightning Azent audit event is invalid")
+        kind = item.get("event_type")
+        occurred_at = item.get("occurred_at")
+        details = item.get("details")
+        if (not isinstance(kind, str) or len(kind) > 60
+                or not isinstance(occurred_at, str) or len(occurred_at) > 48
+                or not isinstance(details, dict)):
+            raise BackendUnavailable("Lightning Azent audit event is invalid")
+        step_id = details.get("step_id")
+        redacted.append({
+            "event_type": kind,
+            "occurred_at": occurred_at,
+            **({"step_id": step_id} if isinstance(step_id, str) and len(step_id) <= 32
+               and step_id.isidentifier() else {}),
+        })
+    return {
+        "run_id": run_id,
+        "plan_sha256": raw["plan_sha256"],
+        "total_events": len(events),
+        "approval_count": len(approvals),
+        "events": redacted,
+        "truncated": len(events) > len(redacted),
+    }
+
+
 def execute(plan: object, run_id: str, *, state_path: Path, business_path: Path,
             input_root: Path, approve_writes: bool, resume_existing: bool = False,
             csv_snapshot: dict[str, object] | None = None,
