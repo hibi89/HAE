@@ -552,7 +552,8 @@ csvFileInput.addEventListener("change", async () => {
 approvalInput.addEventListener("change", updateRunButton);
 
 runButton.addEventListener("click", async () => {
-  if (executionInProgress || !previewKey || (requiresApproval && !approvalInput.checked) || previewKey !== requestKey()) return;
+  if (executionInProgress || uploadInProgress || !previewKey || !previewId ||
+      (requiresApproval && !approvalInput.checked) || previewKey !== requestKey()) return;
   executionInProgress = true;
   previewRequestVersion += 1;
   previewButton.disabled = true;
