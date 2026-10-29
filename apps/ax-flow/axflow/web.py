@@ -508,7 +508,19 @@ def create_server(
             except Exception as exc:
                 dbvora = {"available": False, "error": "DBVORA inventory unavailable",
                           "error_type": type(exc).__name__}
-            status = ("completed" if audit.get("available") is True and dbvora.get("available") is True
+            # Recover the execution status from LA's durable run ledger after
+            # server restart; advisory availability alone cannot prove success.
+            try:
+                durable_run = inspect_run(state, run_id)
+                execution_completed = durable_run.get("status") == "completed"
+                audit_matches_run = (
+                    audit.get("plan_sha256") == durable_run.get("plan_sha256")
+                )
+            except RunLogError:
+                execution_completed = False
+                audit_matches_run = False
+            status = ("completed" if execution_completed and audit_matches_run
+                      and audit.get("available") is True and dbvora.get("available") is True
                       else "partial")
             return {"sovia_audit": audit, "dbvora": dbvora,
                     "audit_persisted": True, "workflow_status": status}
