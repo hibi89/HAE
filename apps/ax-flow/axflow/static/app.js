@@ -30,6 +30,7 @@ const soviaResult = document.querySelector("#sovia-result");
 const laAuditResult = document.querySelector("#la-audit-result");
 const historyRunId = document.querySelector("#history-run-id");
 const historyLoadButton = document.querySelector("#load-run-history");
+const resumePreviewButton = document.querySelector("#prepare-resume");
 const historyCopyButton = document.querySelector("#copy-run-id");
 const historyState = document.querySelector("#history-state");
 const recentRunsButton = document.querySelector("#refresh-run-list");
@@ -448,15 +449,18 @@ async function loadDbvora() {
   }
 }
 
-previewButton.addEventListener("click", async () => {
+async function submitPreview(resumeRunId = null) {
   if (executionInProgress || uploadInProgress) return;
   const submittedTask = taskInput.value;
   const submittedCsvPath = csvInput.value;
   const submittedKey = JSON.stringify([submittedTask, submittedCsvPath]);
   const requestVersion = ++previewRequestVersion;
   previewButton.disabled = true;
+  resumePreviewButton.disabled = true;
   approvalInput.checked = false;
-  setMessage("CSV 파일·구조·요청한 변환과 실행 범위를 읽기 전용으로 검증하고 있습니다…");
+  setMessage(resumeRunId
+    ? "기존 LA 실행 이력과 원래 작업·CSV 일치 여부를 읽기 전용으로 검증하고 있습니다…"
+    : "CSV 파일·구조·요청한 변환과 실행 범위를 읽기 전용으로 검증하고 있습니다…");
   previewKey = "";
   previewId = "";
   requiresApproval = true;
@@ -464,9 +468,13 @@ previewButton.addEventListener("click", async () => {
   try {
     const response = await api("/api/preview", {
       method: "POST",
-      body: JSON.stringify({ task: submittedTask, csv_path: submittedCsvPath }),
+      body: JSON.stringify({
+        task: submittedTask, csv_path: submittedCsvPath,
+        ...(resumeRunId ? { resume_run_id: resumeRunId } : {}),
+      }),
     });
-    if (requestVersion !== previewRequestVersion) return;
+    if (requestVersion !== previewRequestVersion ||
+        (resumeRunId && historyRunId.value.trim() !== resumeRunId)) return;
     if (submittedKey !== requestKey()) {
       setMessage("미리보기 중 입력이 변경되었습니다. 현재 입력으로 다시 미리보기를 실행하세요.", "error");
       return;
@@ -491,9 +499,12 @@ previewButton.addEventListener("click", async () => {
     const csvSummary = input
       ? ` · ${input.row_count.toLocaleString()}행 · ${input.headers.length}열 · ${Number(input.size_bytes).toLocaleString()} bytes`
       : "";
-    setMessage((descriptions[response.workflow] || "지원되는 CSV 흐름입니다.") + csvSummary, "success");
+    setMessage((resumeRunId ? "기존 LA 실행 " + resumeRunId + "의 재개 미리보기 완료. "
+      : "") + (descriptions[response.workflow] || "지원되는 CSV 흐름입니다.") +
+      csvSummary + (resumeRunId ? " 쓰기 작업은 재승인해야 실행할 수 있습니다." : ""), "success");
   } catch (error) {
-    if (requestVersion !== previewRequestVersion) return;
+    if (requestVersion !== previewRequestVersion ||
+        (resumeRunId && historyRunId.value.trim() !== resumeRunId)) return;
     if (submittedKey !== requestKey()) {
       setMessage("미리보기 중 입력이 변경되었습니다. 현재 입력으로 다시 미리보기를 실행하세요.", "error");
       return;
@@ -502,9 +513,22 @@ previewButton.addEventListener("click", async () => {
     previewDetail.hidden = true;
     setMessage(safeFailureMessage(error), "error");
   } finally {
-    if (requestVersion === previewRequestVersion) previewButton.disabled = uploadInProgress;
+    if (requestVersion === previewRequestVersion) {
+      previewButton.disabled = uploadInProgress;
+      resumePreviewButton.disabled = false;
+    }
     updateRunButton();
   }
+}
+
+previewButton.addEventListener("click", () => submitPreview());
+resumePreviewButton.addEventListener("click", () => {
+  const runId = historyRunId.value.trim();
+  if (!RUN_ID_PATTERN.test(runId)) {
+    setMessage("재개할 미완료 LA 실행 ID를 입력하세요.", "error");
+    return;
+  }
+  return submitPreview(runId);
 });
 
 for (const input of [taskInput, csvInput]) {
