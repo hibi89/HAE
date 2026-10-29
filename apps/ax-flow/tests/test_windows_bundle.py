@@ -43,7 +43,20 @@ class PortableWindowsBundleTests(unittest.TestCase):
             self.assertEqual(built.returncode, 0, built.stderr)
             self.assertEqual({name.name for name in bundle.iterdir()}, {
                 "run-bundled.cmd", "launch_integrated.py", "hae-integrated.pyz",
+                "VERIFY-WINDOWS.cmd", "windows_offline_acceptance.py",
+                "README.txt",
             })
+            offline_verifier = subprocess.run([
+                sys.executable, str(bundle / "windows_offline_acceptance.py"),
+            ], cwd=root, capture_output=True, text=True, timeout=10)
+            if os.name != "nt":
+                self.assertEqual(offline_verifier.returncode, 3)
+                self.assertIn("UNVERIFIED", offline_verifier.stdout)
+            else:
+                self.assertEqual(offline_verifier.returncode, 0,
+                                 offline_verifier.stdout + offline_verifier.stderr)
+                self.assertIn("4/4 PASS", offline_verifier.stdout)
+
             duplicate = subprocess.run([
                 sys.executable, str(REPO / "tools" / "build_hae_windows_bundle.py"),
                 "--la-package", str(LA_PACKAGE), "--output-dir", str(bundle),
