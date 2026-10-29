@@ -33,6 +33,19 @@ def source_files(folder: Path, prefix: str) -> dict[str, bytes]:
     }
 
 
+class WindowsCertificationBoundaryTests(unittest.TestCase):
+    @unittest.skipIf(os.name == "nt", "Windows host must execute full release acceptance")
+    def test_nonwindows_cannot_claim_native_release_success(self):
+        gate = ROOT / "apps" / "ax-flow" / "windows_acceptance.py"
+        result = subprocess.run(
+            [sys.executable, str(gate)],
+            capture_output=True, text=True, timeout=10,
+        )
+        self.assertEqual(result.returncode, 3)
+        self.assertIn("UNVERIFIED", result.stdout)
+        self.assertNotIn("PASS", result.stdout)
+
+
 @unittest.skipUnless(PACKAGE.is_file(), "prebuilt HAE+LA package is missing")
 class ShippedOfflinePackageTests(unittest.TestCase):
     def test_checked_in_zipapp_matches_current_hae_and_staged_la_sources(self):
