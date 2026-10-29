@@ -544,6 +544,10 @@ approvalInput.addEventListener("change", updateRunButton);
 runButton.addEventListener("click", async () => {
   if (executionInProgress || !previewKey || (requiresApproval && !approvalInput.checked) || previewKey !== requestKey()) return;
   executionInProgress = true;
+  const approvedTask = taskInput.value;
+  const approvedCsvPath = csvInput.value;
+  const approvedPreviewId = previewId;
+  const approvedWrites = requiresApproval && approvalInput.checked;
   updateRunButton();
   setMessage(requiresApproval
     ? "합성 CSV를 검사한 뒤 로컬 SQLite에 저장합니다…"
@@ -552,8 +556,8 @@ runButton.addEventListener("click", async () => {
     const response = await api("/api/run", {
       method: "POST",
       body: JSON.stringify({
-        task: taskInput.value, csv_path: csvInput.value,
-        preview_id: previewId, approve_writes: requiresApproval && approvalInput.checked,
+        task: approvedTask, csv_path: approvedCsvPath,
+        preview_id: approvedPreviewId, approve_writes: approvedWrites,
       }),
     });
     rememberRunId(response.run_id);
