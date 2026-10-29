@@ -154,12 +154,27 @@ async function testExecutionIsSingleFlightAndNeedsFreshPreview() {
   assert.equal(ui.get("#run").disabled, true, "new preview required after run attempt");
   assert.equal(ui.get("#approval").checked, false);
 }
+async function testDbvoraNewestResponseWins() {
+  const ui = setup();
+  const button = ui.get("#refresh-dbvora");
+  const first = button.fire("click");
+  const second = button.fire("click");
+  const requests = ui.requests.filter((r) => r.url === "/api/dbvora");
+  assert.equal(requests.length, 3); // initial load and two refreshes
+  ui.respond(requests[2], { available: false, error_code: "NOT_CONFIGURED" });
+  await second;
+  ui.respond(requests[1], { available: false, error_code: "UNAVAILABLE" });
+  await first;
+  assert.equal(ui.get("#dbvora-status").textContent, "DBVORA 미설정");
+  assert.equal(button.disabled, false);
+}
 (async () => {
+  await testDbvoraNewestResponseWins();
   await testPreviewStaleFailure();
   await testExecutionIsSingleFlightAndNeedsFreshPreview();
   await testHistoryStaleFailure();
   await testPreviewSupersededByNewRequest();
   await testUploadStaleResponse();
   await testRecentRunsNewestWins();
-  console.log("HAE simulated UI race tests: 6 PASS");
+  console.log("HAE simulated UI race tests: 7 PASS");
 })().catch((error) => { console.error(error); process.exitCode = 1; });
