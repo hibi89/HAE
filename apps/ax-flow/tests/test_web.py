@@ -390,6 +390,7 @@ class WebUITests(unittest.TestCase):
         self.assertRegex(run_id, r"^Gui[A-Fa-f0-9]{12}$")
         self.assertEqual(body["result"]["imported_rows"], 1)
         self.assertEqual(body["status"]["status"], "completed")
+        self.assertEqual(body["status"]["result_summary"], {"kind": "saved", "count": 1, "duplicate_count": 0})
         self.assertNotIn("Synthetic", json.dumps(body["status"]))
         (self.inputs / "contacts.csv").write_text("id,name\n99,PostRunChange\n", encoding="utf-8")
         replay_code, _, replay = self.post_json("/api/run", payload)
@@ -408,6 +409,7 @@ class WebUITests(unittest.TestCase):
         self.assertEqual(code, 200)
         status = json.loads(raw.decode("utf-8"))
         self.assertEqual(status["status"], "completed")
+        self.assertEqual(status["result_summary"], {"kind": "saved", "count": 1, "duplicate_count": 0})
         self.assertNotIn("Synthetic", json.dumps(status))
 
     def test_preview_and_execute_filtered_import_lookup_and_conditional_flows(self):
@@ -690,3 +692,4 @@ class WebUITests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
