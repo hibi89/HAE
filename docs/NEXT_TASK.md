@@ -394,3 +394,8 @@ Limits are enforced and tested: 256 KiB, 1000 data rows, 64 columns, 4096 chars 
 1. Existing HAE launcher user path is now verified in Chrome through Preview, explicit approval, Lightning Azent import, SOVIA post-execution audit and DBVORA inventory. Synthetic run `Gui3c712726b35c` completed with 2 stored rows; Preview left the empty business DB SHA unchanged.
 2. Keep SOVIA explicitly advisory/unauthenticated. The UI says execution completed because all three local integrations returned successfully; this is not a production/security acceptance.
 3. Follow-up if needed: capture a browser screenshot and verify the same UI's persisted status after restarting the just-tested profile. Computer Use stopped when Windows URL confidence could not be established. Prior API-based launcher restart/audit persistence test passed.
+
+## Next — read-only run recovery and history view
+1. Highest-value follow-up after CSV Preview/approval/integration: let a user reopen a completed local run by ID after HAE restart and inspect status, redacted receipt/result summary and SOVIA advisory without raw CSV row payloads.
+2. Current APIs expose `/api/status?run_id=...` and `/api/audit?run_id=...`; the page does not persist a run ID or offer a history/recovery control after reload. Keep this product gap separate from the environmental browser SKIP (WinError 10013 loopback connect restriction).
+3. Keep DBVORA as live read-only inventory and SOVIA as unauthenticated post-execution advisory. Design a privacy-preserving result summary before adding any endpoint/UI state.
