@@ -56,7 +56,9 @@ if ($Smoke) {
     if (-not (Test-Path $ExpectedLa -PathType Leaf)) {
         $StagedParent = Join-Path $RepoRootForTests 'packages'
         New-Item -ItemType Directory -Force -Path $StagedParent | Out-Null
-        Copy-Item -Recurse -Force -Path $LaPackage -Destination $StagedParent
+        if ((Resolve-Path $LaPackage).Path -ne (Join-Path $StagedParent 'lightning-azent')) {
+            Copy-Item -Recurse -Force -Path $LaPackage -Destination $StagedParent
+        }
     }
     if (-not (Test-Path $ExpectedLa -PathType Leaf)) {
         throw 'Unable to stage LA for integration smoke; refusing skipped tests.'
