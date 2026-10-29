@@ -3,6 +3,7 @@ import hashlib
 import json
 import os
 import sqlite3
+import shutil
 import subprocess
 import tempfile
 import threading
@@ -85,6 +86,18 @@ class WebUITests(unittest.TestCase):
         self.assertFalse(self.state.exists())
         self.assertFalse(self.business.exists())
 
+
+    def test_ui_async_race_scenarios_with_node_when_available(self):
+        node = shutil.which("node")
+        if node is None:
+            self.skipTest("Node.js unavailable; browser UI race harness requires Node.js")
+        harness = Path(__file__).with_name("test_ui_races.cjs")
+        result = subprocess.run(
+            [node, str(harness)], capture_output=True, text=True, timeout=20,
+            cwd=Path(__file__).resolve().parents[1],
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("3 PASS", result.stdout)
 
     def test_ui_async_response_guards_are_shipped_in_served_asset(self):
         # Static regression contract; browser-level race behavior needs a DOM runner.
