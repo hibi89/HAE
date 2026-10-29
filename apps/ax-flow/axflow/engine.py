@@ -93,6 +93,10 @@ def _open_csv_readonly(path: Path, input_root: Path):
         wintypes.HANDLE, wintypes.LPWSTR, wintypes.DWORD, wintypes.DWORD,
     )
     kernel.GetFinalPathNameByHandleW.restype = wintypes.DWORD
+    # HANDLE is pointer-sized on Win64. Without argtypes ctypes coerces a
+    # Python integer to c_int (32-bit) and can truncate CloseHandle targets.
+    kernel.CloseHandle.argtypes = (wintypes.HANDLE,)
+    kernel.CloseHandle.restype = wintypes.BOOL
 
     invalid_handle = ctypes.c_void_p(-1).value
     share_read_write_delete = 0x1 | 0x2 | 0x4
