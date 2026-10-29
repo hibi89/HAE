@@ -38,12 +38,12 @@ def build_windows_bundle(destination: Path, la_package: Path) -> Path:
                 raise FileNotFoundError("Windows launcher source missing or unsafe: " + filename)
             shutil.copyfile(original, staging / filename)
         (staging / "README.txt").write_text(
-            "HAE + Lightning Azent synthetic local MVP\\n"
-            "Requires Python 3.11+; no Git/pip/network at runtime.\\n"
-            "Start: double-click run-bundled.cmd\\n"
-            "Check Windows/NTFS: double-click VERIFY-WINDOWS.cmd\\n"
-            "HTTP/SQLite test only: run-bundled.cmd --verify\\n"
-            "Only synthetic CSV data is supported.\\n",
+            "HAE + Lightning Azent synthetic local MVP\n"
+            "Requires Python 3.11+; no Git/pip/network at runtime.\n"
+            "Start: double-click run-bundled.cmd\n"
+            "Check Windows/NTFS: double-click VERIFY-WINDOWS.cmd\n"
+            "HTTP/SQLite test only: run-bundled.cmd --verify\n"
+            "Only synthetic CSV data is supported.\n",
             encoding="utf-8",
         )
         build_integrated_zipapp(staging / "hae-integrated.pyz", la_package)
