@@ -62,7 +62,8 @@ function setMessage(text, state = "") {
 
 function updateRunButton() {
   approvalSection.hidden = !requiresApproval;
-  runButton.disabled = executionInProgress || uploadInProgress || !previewKey || previewKey !== requestKey() || (requiresApproval && !approvalInput.checked);
+  runButton.disabled = executionInProgress || uploadInProgress || !previewKey || !previewId ||
+    previewKey !== requestKey() || (requiresApproval && !approvalInput.checked);
 }
 
 async function api(path, options = {}) {
