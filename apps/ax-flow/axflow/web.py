@@ -500,9 +500,11 @@ def create_server(
                 report = self._sovia_reports.get(run_id)
                 if report is not None:
                     return dict(report)
+            persisted = True
             try:
                 audit = self.sovia_store.get(run_id)
             except (SOVIAStoreError, OSError, ValueError) as exc:
+                persisted = False
                 audit = {"available": False, "run_id": run_id,
                          "error": "persisted SOVIA audit unavailable",
                          "error_type": type(exc).__name__, "execution_gate": False}
@@ -528,7 +530,7 @@ def create_server(
                       and audit.get("available") is True and dbvora.get("available") is True
                       else "partial")
             return {"sovia_audit": audit, "dbvora": dbvora,
-                    "audit_persisted": True, "workflow_status": status}
+                    "audit_persisted": persisted, "workflow_status": status}
 
         def save_csv_upload(self, content: bytes) -> str:
             with self._upload_lock:
