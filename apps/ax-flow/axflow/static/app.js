@@ -446,6 +446,10 @@ previewButton.addEventListener("click", async () => {
       : "";
     setMessage((descriptions[response.workflow] || "지원되는 CSV 흐름입니다.") + csvSummary, "success");
   } catch (error) {
+    if (submittedKey !== requestKey()) {
+      setMessage("미리보기 중 입력이 변경되었습니다. 현재 입력으로 다시 미리보기를 실행하세요.", "error");
+      return;
+    }
     planOutput.textContent = "요청을 IR로 변환할 수 없습니다.";
     previewDetail.hidden = true;
     setMessage(safeFailureMessage(error), "error");
