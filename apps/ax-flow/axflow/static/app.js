@@ -44,6 +44,7 @@ let currentRunId = "";
 let previewId = "";
 let requiresApproval = true;
 let historyRequestVersion = 0;
+let uploadRequestVersion = 0;
 
 function requestKey() {
   return JSON.stringify([taskInput.value, csvInput.value]);
@@ -461,6 +462,7 @@ previewButton.addEventListener("click", async () => {
 
 for (const input of [taskInput, csvInput]) {
   input.addEventListener("input", () => {
+    uploadRequestVersion += 1;
     previewKey = "";
     previewId = "";
     requiresApproval = true;
@@ -471,6 +473,7 @@ for (const input of [taskInput, csvInput]) {
   });
 }
 csvFileInput.addEventListener("change", async () => {
+  const uploadVersion = ++uploadRequestVersion;
   const file = csvFileInput.files?.[0];
   if (!file) return;
   previewKey = "";
@@ -498,6 +501,7 @@ csvFileInput.addEventListener("change", async () => {
         content_base64: await fileToBase64(file),
       }),
     });
+    if (uploadVersion !== uploadRequestVersion || csvFileInput.files?.[0] !== file || csvInput.value) return;
     csvInput.value = response.csv_path;
     setMessage(
       file.name + " · " + Number(response.size_bytes).toLocaleString() +
@@ -505,9 +509,11 @@ csvFileInput.addEventListener("change", async () => {
       "success",
     );
   } catch (error) {
-    setMessage(safeFailureMessage(error), "error");
+    if (uploadVersion === uploadRequestVersion && csvFileInput.files?.[0] === file && !csvInput.value) {
+      setMessage(safeFailureMessage(error), "error");
+    }
   } finally {
-    previewButton.disabled = false;
+    if (uploadVersion === uploadRequestVersion) previewButton.disabled = false;
     updateRunButton();
   }
 });
