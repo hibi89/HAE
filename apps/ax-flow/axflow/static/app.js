@@ -622,7 +622,7 @@ runButton.addEventListener("click", async () => {
             ? "LA 실행·사후 감사·DBVORA 조회를 완료했습니다."
             : "LA 실행은 완료됐지만 사후 통합 상태는 확인되지 않았습니다.";
     const confirmedSuccess = executionCompleted && (!isLightning || workflowStatus === "completed");
-    setMessage(message, confirmedSuccess ? "success" : workflowStatus === "partial" ? "error" : "info");
+    setMessage(message, confirmedSuccess ? "success" : workflowStatus === "partial" ? "error" : "");
     if (!response.dbvora) loadDbvora();
   } catch (error) {
     if (error.detail && error.detail.status && error.detail.run_id) {
