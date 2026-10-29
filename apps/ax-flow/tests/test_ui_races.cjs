@@ -265,6 +265,60 @@ async function testResumePreviewRejectsInvalidRunIdWithoutRequest() {
   assert.equal(ui.requests.filter((r) => r.url === "/api/preview").length, 0);
   assert.equal(ui.requests.filter((r) => r.url === "/api/run").length, 0);
 }
+async function testLiveReceiptRendersRedactedLaEvents() {
+  const ui = setup();
+  ui.get("#task").value = "Import CSV into SQLite";
+  ui.get("#csv-path").value = "data.csv";
+  const preview = ui.get("#preview").fire("click");
+  ui.respond(ui.requests.find((r) => r.url === "/api/preview"), {
+    plan: { steps: [] }, engine_backend: { name: "Lightning Azent" },
+    preview_id: "approved", requires_approval: true, workflow: "csv_to_sqlite",
+    input: { row_count: 1, headers: ["id"], size_bytes: 4 },
+  });
+  await preview;
+  ui.get("#approval").checked = true;
+  await ui.get("#approval").fire("change");
+  const executing = ui.get("#run").fire("click");
+  ui.respond(ui.requests.find((r) => r.url === "/api/run"), {
+    run_id: "Gui0123456789ab",
+    status: { run_id: "Gui0123456789ab", status: "completed", steps_recorded: 2 },
+    result: { imported_rows: 1 }, backend: { name: "Lightning Azent" },
+    audit: { events: [{ event_type: "step_completed", occurred_at: "2026-10-29T05:00:00Z",
+      details: { step_id: "csv_read", secret: "MUST_NOT_DISPLAY" } }] },
+    sovia_audit: { available: false }, dbvora: { available: false }, workflow_status: "partial",
+  });
+  await executing;
+  assert.equal(ui.get("#la-audit-details").hidden, false);
+  assert.equal(ui.get("#la-audit-events").children.length, 1);
+  const rendered = ui.get("#la-audit-events").children[0].textContent;
+  assert.ok(rendered.includes("step_completed"));
+  assert.ok(rendered.includes("csv_read"));
+  assert.equal(rendered.includes("MUST_NOT_DISPLAY"), false, "raw audit details must never render");
+}
+async function testHistoryRestoresLaAuditWithoutSovia() {
+  const ui = setup();
+  ui.get("#history-run-id").value = "Gui0123456789ab";
+  const loading = ui.get("#load-run-history").fire("click");
+  const status = ui.requests.find((r) => r.url.startsWith("/api/status?"));
+  ui.respond(status, {
+    run_id: "Gui0123456789ab", status: "completed", steps_recorded: 2, integration: {},
+  });
+  await ui.flush();
+  const sovia = ui.requests.find((r) => r.url.startsWith("/api/audit?"));
+  assert.ok(sovia);
+  ui.respond(sovia, { error: "SOVIA unavailable" }, 404);
+  await ui.flush();
+  const la = ui.requests.find((r) => r.url.startsWith("/api/la-audit?"));
+  assert.ok(la, "LA audit remains available when SOVIA is missing");
+  ui.respond(la, {
+    run_id: "Gui0123456789ab", total_events: 3, approval_count: 1,
+    events: [{ event_type: "run_started", occurred_at: "2026-10-29T05:00:00Z" }],
+  });
+  await loading;
+  assert.equal(ui.get("#la-audit-details").hidden, false);
+  assert.equal(ui.get("#la-audit-events").children.length, 1);
+  assert.ok(ui.get("#la-audit-result").textContent.includes("이벤트 3건"));
+}
 async function testDbvoraNewestResponseWins() {
   const ui = setup();
   const button = ui.get("#refresh-dbvora");
@@ -292,5 +346,7 @@ async function testDbvoraNewestResponseWins() {
   await testInvalidatedPreviewNeverRetried();
   await testResumePreviewRequiresMatchingRunAndReapproval();
   await testResumePreviewRejectsInvalidRunIdWithoutRequest();
-  console.log("HAE simulated UI race tests: 12 PASS");
+  await testLiveReceiptRendersRedactedLaEvents();
+  await testHistoryRestoresLaAuditWithoutSovia();
+  console.log("HAE simulated UI race tests: 14 PASS");
 })().catch((error) => { console.error(error); process.exitCode = 1; });
