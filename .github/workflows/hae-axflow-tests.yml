@@ -27,6 +27,16 @@ jobs:
       - name: Verify UI races in Node
         working-directory: apps/ax-flow
         run: node tests/test_ui_races.cjs
+      - name: Checkout Lightning Azent development branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/lightning-azent
+          path: la-source
+      - name: Stage Lightning Azent package for integration
+        shell: bash
+        run: |
+          mkdir -p packages
+          cp -R la-source/packages/lightning-azent packages/lightning-azent
       - name: Require Lightning Azent source (no skipped integration)
         shell: bash
         run: |
