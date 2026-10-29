@@ -512,6 +512,11 @@ def create_server(
             self._upload_dir: tempfile.TemporaryDirectory | None = None
             self._upload_count = 0
             self.engine_backend = engine_backend
+            # Record which optional integrations were requested at startup.
+            # A configured service that later disconnects must remain partial,
+            # while an intentionally unconfigured service cannot block core LA.
+            self._sovia_expected = sovia_root is not None
+            self._dbvora_expected = dbvora_url is not None
             self.sovia_root = Path(sovia_root) if sovia_root is not None else None
             self.sovia_store = SOVIAStore(state, business)
             self._sovia_lock = threading.Lock()
@@ -534,10 +539,10 @@ def create_server(
             if (la_evidence.get("plan_sha256") != plan_sha256
                     or la_evidence.get("total_events", 0) < 1):
                 return "partial"
-            if self.sovia_root is not None and (
+            if self._sovia_expected and (
                     sovia_audit.get("available") is not True or not audit_persisted):
                 return "partial"
-            if self.dbvora_client.base_url is not None and dbvora.get("available") is not True:
+            if self._dbvora_expected and dbvora.get("available") is not True:
                 return "partial"
             return "completed"
 
@@ -624,7 +629,7 @@ def create_server(
                 run_id, durable_run.get("plan_sha256", "") if execution_completed else "",
                 durable_status, audit, dbvora, persisted,
             ) if (execution_completed and
-                  (audit_matches_run or self.sovia_root is None)) else "partial"
+                  (audit_matches_run or not self._sovia_expected)) else "partial"
             return {"sovia_audit": audit, "dbvora": dbvora,
                     "audit_persisted": persisted, "workflow_status": status,
                     "execution_status": durable_status}
