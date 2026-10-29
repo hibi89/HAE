@@ -17,6 +17,13 @@ from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
+# CI stages the independent LA branch under packages; a local launcher may
+# instead inject an external LA checkout through PYTHONPATH.
+REPO_ROOT = Path(__file__).resolve().parents[2]
+LA_PACKAGE = REPO_ROOT / "packages" / "lightning-azent"
+if LA_PACKAGE.is_dir():
+    sys.path.insert(0, str(LA_PACKAGE))
+
 from axflow.web import create_server
 
 TASK = "Import this CSV into local SQLite"
