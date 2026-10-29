@@ -48,8 +48,8 @@ if (-not (Test-Path $Sample)) {
 $OldPythonPath = $env:PYTHONPATH
 $env:PYTHONPATH = "$AppRoot;$LaPackage"
 if ($OldPythonPath) { $env:PYTHONPATH += ";$OldPythonPath" }
-& python -c "from lightning_azent.runtime import LAExecutor; from axflow.web import create_server; print('HAE and Lightning Azent imports OK')"
-if ($LASTEXITCODE -ne 0) { throw 'HAE / Lightning Azent integration import failed; refusing to start.' }
+& python -c "from axflow.planner import plan_request; from axflow.la_adapter import inspect_backend; from axflow.web import create_server; p=plan_request('Import this CSV into local SQLite', 'contacts.csv'); b=inspect_backend(p); assert b['api_version']=='azent.api.v0'; assert b['preflight']['executes_workflow'] is False; print('HAE-LA plan-only compatibility preflight OK')"
+if ($LASTEXITCODE -ne 0) { throw 'HAE / Lightning Azent plan-only compatibility check failed; refusing to start.' }
 if ($Smoke) {
     $RepoRootForTests = (Resolve-Path (Join-Path $AppRoot '..\..')).Path
     $ExpectedLa = Join-Path $RepoRootForTests 'packages\lightning-azent\lightning_azent\__init__.py'
