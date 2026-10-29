@@ -229,8 +229,8 @@ def create_server(
                     return
                 integration = self.server.get_integration(run_ids[0])
                 report = integration.get("sovia_audit") if integration else None
-                if report is None:
-                    self._send_json(404, {"error": "post-execution SOVIA audit is not available for this server session"})
+                if report is None or report.get("available") is not True:
+                    self._send_json(404, {"error": "post-execution SOVIA audit is not available for this run"})
                 else:
                     self._send_json(200, report)
                 return
@@ -536,6 +536,7 @@ def create_server(
                 audit_matches_run = False
             status = ("completed" if execution_completed and audit_matches_run
                       and audit.get("available") is True and dbvora.get("available") is True
+                      and persisted
                       else "partial")
             return {"sovia_audit": audit, "dbvora": dbvora,
                     "audit_persisted": persisted, "workflow_status": status,
