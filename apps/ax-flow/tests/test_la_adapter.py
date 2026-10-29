@@ -156,6 +156,13 @@ print(json.dumps({"status": result["status"]["status"],
             self.addCleanup(server.shutdown)
             origin = f"http://127.0.0.1:{server.server_port}"
 
+            with urlopen(origin + "/api/health", timeout=5) as health_response:
+                health = json.loads(health_response.read().decode("utf-8"))
+            self.assertEqual(health["ready"], True)
+            self.assertEqual(health["engine_backend"]["name"], "Lightning Azent")
+            self.assertFalse(state.exists())
+            self.assertFalse(business.exists())
+
             def post_json(route: str, payload: dict):
                 request = Request(
                     origin + route, data=json.dumps(payload).encode("utf-8"),
