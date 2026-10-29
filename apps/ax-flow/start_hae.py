@@ -78,7 +78,9 @@ def main(argv: list[str] | None = None) -> int:
         if requested:
             if selected != "integrated":
                 raise StartError("Offline verification requires the bundled Lightning Azent engine")
-            cmd.extend(requested)
+            # The verification harness uses a private temporary SQLite root.
+            # User-configured HAE_PORT is unrelated to that ephemeral server.
+            cmd = [sys.executable, str(root / "apps" / "ax-flow" / "launch_integrated.py"), "--verify"]
         print("HAE launcher: " + selected, flush=True)
         if selected == "preserved-legacy":
             print("Existing HAE SQLite data detected; no automatic engine or data migration.", flush=True)

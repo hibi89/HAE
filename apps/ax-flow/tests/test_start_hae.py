@@ -111,6 +111,13 @@ class HaeStartTests(unittest.TestCase):
         self.assertEqual(Path(captured[0][1]).name, "launch_integrated.py")
         self.assertEqual((data / "state.sqlite").read_bytes(), b"EXISTING-USER-DATA")
 
+    def test_verify_ignores_user_port_and_no_browser_flags(self):
+        self.ship()
+        commands = []
+        with patch.object(launcher, "__file__", str(self.app / "start_hae.py")), patch.dict(os.environ, self.env, clear=True), patch.object(launcher.subprocess, "call", side_effect=lambda cmd, **kwargs: commands.append(cmd) or 0):
+            self.assertEqual(launcher.main(["--verify"]), 0)
+        self.assertEqual(commands, [[sys.executable, str(self.app / "launch_integrated.py"), "--verify"]])
+
     def test_unknown_arguments_rejected(self):
         with patch.object(launcher, "__file__", str(self.app / "start_hae.py")), patch.dict(os.environ, self.env, clear=True):
             self.assertEqual(launcher.main(["--unknown"]), 2)
