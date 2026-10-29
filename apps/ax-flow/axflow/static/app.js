@@ -560,8 +560,10 @@ runButton.addEventListener("click", async () => {
   previewButton.disabled = true;
   const approvedTask = taskInput.value;
   const approvedCsvPath = csvInput.value;
+  const approvedTaskCsvKey = requestKey();
   const approvedPreviewId = previewId;
   const approvedWrites = requiresApproval && approvalInput.checked;
+  let retryEligible = false;
   updateRunButton();
   setMessage(requiresApproval
     ? "합성 CSV를 검사한 뒤 로컬 SQLite에 저장합니다…"
@@ -629,13 +631,23 @@ runButton.addEventListener("click", async () => {
       rememberRunId(error.detail.run_id);
       showStatus(error.detail.status);
       resultCopy.textContent = safeFailureMessage(error) + " 실행 기록에 내부 오류 유형만 저장했습니다.";
+      // Keep this exact approved run identity only for an execution failure.
+      // CSV/plan/approval invalidation (409) still requires a fresh preview.
+      const recoverableErrors = new Set(["LightningExecutionError", "StepTimeout", "StepRetryExhausted"]);
+      retryEligible = error.detail.status.status === "failed" &&
+        recoverableErrors.has(error.detail.error_type) &&
+        requestKey() === approvedTaskCsvKey;
     }
-    setMessage(safeFailureMessage(error), "error");
+    setMessage(retryEligible
+      ? safeFailureMessage(error) + " 기존 미리보기로 다시 시도할 수 있습니다. 쓰기 작업은 재승인이 필요합니다."
+      : safeFailureMessage(error), "error");
   } finally {
     executionInProgress = false;
     previewButton.disabled = uploadInProgress;
-    previewKey = "";
-    previewId = "";
+    if (!retryEligible) {
+      previewKey = "";
+      previewId = "";
+    }
     approvalInput.checked = false;
     updateRunButton();
     loadRecentRuns();
