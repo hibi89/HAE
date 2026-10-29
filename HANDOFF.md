@@ -1,3 +1,16 @@
+## HAE stale history response regression handoff — 2026-10-29 KST
+
+1. **Goal/spec/tech:** Guard HAE local JavaScript history UI consistency when an old asynchronous status lookup fails after a newer run succeeds. Existing Python/SQLite workflow architecture and current CSV scope unchanged.
+2. **Completed/change/design:** Added `apps/ax-flow/tests/test_history_stale_error.cjs` with deterministic delayed old failure and active new failure. The parallel code writer had already committed the exact minimal freshness guard in `app.js`; we kept it. Request-version guards were preferred to broader AbortController cancellation and preserve current accepted design.
+3. **Tests/evidence:** Exact committed test file and current GitHub `app.js` passed **1/1 scripted run in V8 using Node-module/DOM/fetch shims**; verified stale failure leaves newest result visible and active error reports correctly. **Native Node command, full Python/Node suite, Windows, browser and 4-system E2E were not rerun on this updated HEAD.** Earlier 111 PASS/1 SKIP Windows suite applies to a previous checkpoint.
+4. **State:** Source guard present, regression test committed, native full validation **PENDING**. Synthetic HAE is not customer-ready; LA/REA/DBVORA separate gates remain.
+5. **Problems/failures/recovery:** Reproduced earlier source race; created a candidate Git object commit from a remote snapshot, but parallel commits advanced HEAD and GraphQL ref updates failed twice. Neither orphan object was pushed; stopped this route and used GitHub Contents API to create the nonconflicting test. No forced branch changes.
+6. **Repo/branch/SHAs/paths:** Private `hibi89/HAE`, `feature/axflow-mvp`; test addition commit `b2413ae1dfff00dbe1e11412b2d6b473362a7610`; file `apps/ax-flow/tests/test_history_stale_error.cjs`. Post-addition remotely observed branch HEAD `7565f8cdc9ebc4974b640b88fe20316f130c2bbb` (parallel writes may supersede it).
+7. **Production/environment:** GitHub connector, V8 isolated synthetic evaluation; no native Node Windows checkout, UI server, Vercel/Production URL (N/A). No customer deployment.
+8. **Originals/backups/auth:** Original code/tests/SQLite/customer sources unchanged by this task; Git history retained for normal revert. GitHub connected identity `hibi89`, no auth secrets or `.env` stored/transmitted. No cost, public permission or production settings altered.
+9. **Next work/acceptance/approvals:** Run targeted native Node race tests, full Python/Node regression and Windows long-path scenario on identical SHA. Keep real providers/OAuth/customer files, source DB edits, publishing and paid CI behind explicit approval.
+10. **Checkpoint/provenance:** 2026-10-29 KST. Current GitHub test/source blob and test commit independently reread. Scripted test PASS does not substitute for native test or acceptance; final remote branch HEAD recheck required after document writes.
+
 ## HAE CSV input preflight and approval binding — 2026-10-29 KST
 
 1. **Goal/spec/tech:** Complete read-only actual-CSV validation before approval for legacy HAE apps/ax-flow on feature/axflow-mvp. Reuse engine CSV parser and transform/filter semantics; retain 256 KiB cap and synthetic-only SQLite writes. Follow-ups verified cross-process execution ownership and Windows CSV handle/path safety.
