@@ -17,7 +17,7 @@
 - **배포 아티팩트:** 기존 `hae-integrated.pyz` 패키징 절차 및 `repack_hae_windows_release.py`로 모두 갱신; Windows release checker PASS.
 - **보존/경계:** 작업 트리는 `work/hae-product` 임시 clone이며 사용자 로컬 프로젝트/SQLite를 수정하지 않음. 실제 외부 연동·OAuth·고객 데이터 없음. Production 미적용. 핵심 synthetic MVP 완료 판정은 기존 범위대로 유지; 전체 상용 제품 완성을 의미하지 않음.
 - **Git 신원:** 설정 및 이번 커밋 author/committer가 `이해인 <haein5898@naver.com>`이고 연결 프로필은 `hibi89 <godls5898@gmail.com>`으로 이메일 불일치. 신원을 임의로 변경하지 않음; 저장소 push 권한과 커밋 author 표시가 연결됐다고 주장하지 말 것.
-- **현재 상태:** 구현 및 검증 완료. 문서화/commit/push, remote SHA readback가 남음.
+- **최종 상태:** 구현·검증·문서 갱신·commit·push 완료. 개발 브랜치 `feat/windows-ux-followup` remote SHA `9892fa2fb68c600123de1c7636325e6e8f8b7b64` 확인. 임시 checkout/staging 폴더 정리 완료. Author/Committer 이메일은 연결 프로필과 불일치하며 임의 변경하지 않음.
 
 ## 2026-10-29 HAE–LA 핵심 통합 실행 성공 / 해총 보고
 - **실제 Linux Python 3.13 실행으로 검증:** 동일 GitHub 배포 바이너리로 HAE + LA HTTP/SQLite E2E **7/7 PASS**, launcher regression **13/13 PASS**, backend smoke PASS. 검증 코드 SHA `dc252b22266ad4e5d95f7a16c0cddfac2371ef58`; 증빙 `apps/ax-flow/ACCEPTANCE-EVIDENCE-20261029.md`.
