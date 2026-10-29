@@ -54,8 +54,8 @@ def run_windows_acceptance() -> int:
         # on its own synthetic TemporaryDirectory, never on --data-dir.
         guarded = Path(tmp) / "real-user-data-must-remain-absent"
         verification = subprocess.run(
-            ["cmd.exe", "/d", "/s", "/c", str(launcher),
-             "--verify", "--data-dir", str(guarded)],
+            ["cmd.exe", "/d", "/c",
+             'call "' + str(launcher) + '" --verify --data-dir "' + str(guarded) + '"'],
             cwd=APP, capture_output=True, text=True,
             errors="replace", timeout=60,
         )
