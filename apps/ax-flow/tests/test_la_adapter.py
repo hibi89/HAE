@@ -283,6 +283,45 @@ print(json.dumps({"status": result["status"]["status"],
                     "SELECT COUNT(*) FROM csv_records WHERE run_id=?", (first["run_id"],)
                 ).fetchone()[0], 2)
 
+            # Simulate interrupted execution after durable SQLite receipts.
+            # A fresh matching preview must target the original run ID and
+            # require a new explicit write approval before LA resumes.
+            (inputs / "contacts.csv").write_bytes(contacts)
+            with closing(sqlite3.connect(state)) as con:
+                with con:
+                    con.execute("UPDATE runs SET status='failed' WHERE run_id=?", (first["run_id"],))
+            status, resume_preview = post_json("/api/preview", {
+                "task": retry_task, "csv_path": retry_path,
+                "resume_run_id": first["run_id"],
+            })
+            self.assertEqual(status, 200, resume_preview)
+            self.assertEqual(resume_preview["resumes_run_id"], first["run_id"])
+            self.assertEqual(resume_preview["requires_approval"], True)
+            with self.assertRaises(HTTPError) as no_consent:
+                post_json("/api/run", {
+                    "task": retry_task, "csv_path": retry_path,
+                    "preview_id": resume_preview["preview_id"], "approve_writes": False,
+                })
+            self.assertEqual(no_consent.exception.code, 403)
+            status, resumed = post_json("/api/run", {
+                "task": retry_task, "csv_path": retry_path,
+                "preview_id": resume_preview["preview_id"], "approve_writes": True,
+            })
+            self.assertEqual(status, 200, resumed)
+            self.assertEqual(resumed["run_id"], first["run_id"])
+            self.assertEqual(resumed["status"]["status"], "completed")
+            self.assertEqual(resumed["result"], first["result"])
+            with closing(sqlite3.connect(business)) as con:
+                self.assertEqual(con.execute(
+                    "SELECT COUNT(*) FROM csv_records WHERE run_id=?", (first["run_id"],)
+                ).fetchone()[0], 2)
+            with self.assertRaises(HTTPError) as already_completed:
+                post_json("/api/preview", {
+                    "task": retry_task, "csv_path": retry_path,
+                    "resume_run_id": first["run_id"],
+                })
+            self.assertEqual(already_completed.exception.code, 409)
+
 
 if __name__ == "__main__":
     unittest.main()
