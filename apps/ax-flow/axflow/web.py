@@ -454,7 +454,13 @@ def create_server(
                 report = {"available": False, "mode": "post_execution_advisory",
                           "run_id": run_id, "plan_sha256": plan_sha256,
                           "error": str(exc), "execution_gate": False}
-            dbvora = self.dbvora_client.fetch_inventory()
+            try:
+                dbvora = self.dbvora_client.fetch_inventory()
+            except Exception as exc:
+                # DBVORA is an optional read-only advisor. A monitoring failure
+                # must never hide a committed Lightning Azent SQLite receipt.
+                dbvora = {"available": False, "error": "DBVORA inventory unavailable",
+                          "error_type": type(exc).__name__}
             persisted = True
             try:
                 self.sovia_store.save(run_id, plan_sha256, report)
@@ -485,7 +491,11 @@ def create_server(
                          "error": str(exc), "execution_gate": False}
             if audit is None:
                 return None
-            dbvora = self.dbvora_client.fetch_inventory()
+            try:
+                dbvora = self.dbvora_client.fetch_inventory()
+            except Exception as exc:
+                dbvora = {"available": False, "error": "DBVORA inventory unavailable",
+                          "error_type": type(exc).__name__}
             status = ("completed" if audit.get("available") is True and dbvora.get("available") is True
                       else "partial")
             return {"sovia_audit": audit, "dbvora": dbvora,
