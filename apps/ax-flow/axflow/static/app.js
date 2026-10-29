@@ -410,7 +410,7 @@ previewButton.addEventListener("click", async () => {
   const submittedKey = JSON.stringify([submittedTask, submittedCsvPath]);
   previewButton.disabled = true;
   approvalInput.checked = false;
-  setMessage("CSV 파일·구조·요청한 변환과 실행 범위를 읽기 전용으�� 검증하고 있습니다…");
+  setMessage("CSV 파일·구조·요청한 변환과 실행 범위를 읽기 전용으로 검증하고 있습니다…");
   previewKey = "";
   previewId = "";
   requiresApproval = true;
