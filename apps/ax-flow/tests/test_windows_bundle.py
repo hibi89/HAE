@@ -64,6 +64,22 @@ class PortableWindowsBundleTests(unittest.TestCase):
             self.assertFalse((data / "runtime.db").exists())
             self.assertFalse((data / "business.db").exists())
 
+            # Full acceptance must run against a private temporary SQLite DB,
+            # NOT against the user's configured HAE data directory.
+            verification = subprocess.run([
+                sys.executable, str(script), "--verify",
+                "--data-dir", str(data),
+            ], cwd=root, env=env, capture_output=True, text=True, timeout=20)
+            self.assertEqual(verification.returncode, 0, verification.stdout + verification.stderr)
+            self.assertIn("7/7 PASS", verification.stdout)
+            self.assertFalse((data / "runtime.db").exists())
+            self.assertFalse((data / "business.db").exists())
+
+            invalid_modes = subprocess.run([
+                sys.executable, str(script), "--smoke", "--verify",
+            ], cwd=root, env=env, capture_output=True, text=True, timeout=10)
+            self.assertNotEqual(invalid_modes.returncode, 0)
+
             # An occupied loopback port must not be mistaken for our own
             # successfully started backend (even when it hosts another HAE).
             with closing(socket.socket()) as occupied:
