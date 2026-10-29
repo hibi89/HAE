@@ -101,6 +101,18 @@ async function main() {
   await elements.get("#refresh-dbvora").listeners.click();
   assert.equal(provenance.textContent, "", "offline refresh must clear previously shown provenance");
   assert.match(elements.get("#dbvora-status").className, /offline/);
+  assert.match(elements.get("#dbvora-status").textContent, /꺼져 있거나 연결할 수 없습니다/);
+
+  payload = {
+    available: false,
+    error_code: "NOT_CONFIGURED",
+    message: "C:\\private\\customer.db must never be displayed",
+  };
+  await elements.get("#refresh-dbvora").listeners.click();
+  assert.match(elements.get("#dbvora-status").textContent, /미설정/);
+  assert.match(elements.get("#dbvora-meta").textContent, /127\.0\.0\.1/);
+  assert.doesNotMatch(elements.get("#dbvora-status").textContent + elements.get("#dbvora-meta").textContent,
+    /customer\.db|private/i);
 
   process.stdout.write("PASS: provenance labels render safely and clear after offline refresh\n");
 }
@@ -109,3 +121,4 @@ main().catch((error) => {
   process.stderr.write(error.stack + "\n");
   process.exitCode = 1;
 });
+

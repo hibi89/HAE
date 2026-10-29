@@ -399,3 +399,9 @@ Limits are enforced and tested: 256 KiB, 1000 data rows, 64 columns, 4096 chars 
 1. Highest-value follow-up after CSV Preview/approval/integration: let a user reopen a completed local run by ID after HAE restart and inspect status, redacted receipt/result summary and SOVIA advisory without raw CSV row payloads.
 2. Current APIs expose `/api/status?run_id=...` and `/api/audit?run_id=...`; the page does not persist a run ID or offer a history/recovery control after reload. Keep this product gap separate from the environmental browser SKIP (WinError 10013 loopback connect restriction).
 3. Keep DBVORA as live read-only inventory and SOVIA as unauthenticated post-execution advisory. Design a privacy-preserving result summary before adding any endpoint/UI state.
+
+
+## Next — read-only run recovery follow-up (2026-10-29)
+1. The UI now accepts and restores a validated run ID, fetches persisted status and SOVIA audit without starting a workflow, exposes only a bounded receipt count summary, and distinguishes DBVORA's live status from the saved SOVIA post-execution advisory.
+2. Recent-run listing was deferred: the runtime `runs` schema has no timestamp; do not infer chronology or change the ledger schema without an explicit contract review. Browser-backed validation remains blocked by Windows loopback WinError 10013, while the new Node UI harness verifies startup restore, redaction and GET-only behavior.
+3. Next independent work: review a safe, bounded run-list ordering contract if timestamp metadata is already available in a future ledger version; otherwise prioritize an approved browser harness/environment or another concrete Blueprint gap. Keep local-only synthetic scope and never describe SOVIA as real-time enforcement.

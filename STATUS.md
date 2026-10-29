@@ -571,3 +571,10 @@ Reconcile docs/ACCEPTANCE_MATRIX.md with executed evidence and keep approval-gat
 - **Blocker:** ordinary sandbox process-to-loopback connections are denied (WinError 10013); no escalation was requested, per task policy. Existing documented API PASS is not counted as browser PASS.
 - **Next priority:** add a safe, read-only local run-history/recovery view that accepts an existing run ID and displays persisted status/receipt plus SOVIA advisory without exposing row payloads; then validate that view with an approved local browser harness. Keep screenshots only when the real UI result is actually observed.
 - Normal `git push` was blocked by github.com DNS. The same documentation evidence was published through GitHub Git-data APIs as a fast-forward update with an expected-head check; the updated branch was then confirmed. The original temporary clone and synthetic/reference material were retained until publication was confirmed.
+
+
+## Run recovery and integration status clarity — 2026-10-29
+- Added a read-only run-ID recovery panel. It stores only the validated run ID in browser localStorage, restores status after reload, and GETs status/audit without calling `/api/run`. The UI separates execution outcome, saved SOVIA post-execution advisory, and current DBVORA availability.
+- Runtime status now exposes only bounded receipt counts; it does not return receipt payload, CSV rows, local paths or user task text. UI errors use safe user guidance instead of raw exception messages.
+- Verification in isolated Windows Python 3.11 checkout: runlog 4/4 PASS, launcher 9/9 PASS, engine 42/42 PASS with 1 SKIP (junction fixture unavailable); UI history and provenance harnesses PASS; compileall and JavaScript syntax PASS. A network-backed adapter test/browser path is SKIP due local loopback connect restriction WinError 10013; no bypass attempted.
+- Recent-run listing is deferred: the runtime ledger has no trusted timestamp field, so adding an ordering/list API would require a schema contract change outside this safe read-only slice. No browser rendering E2E was run.

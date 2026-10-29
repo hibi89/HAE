@@ -27,6 +27,14 @@ const previewDetail = document.querySelector("#preview-detail");
 const backendOutput = document.querySelector("#engine-backend");
 const stepListOutput = document.querySelector("#step-list");
 const soviaResult = document.querySelector("#sovia-result");
+const historyRunId = document.querySelector("#history-run-id");
+const historyLoadButton = document.querySelector("#load-run-history");
+const historyCopyButton = document.querySelector("#copy-run-id");
+const historyState = document.querySelector("#history-state");
+const executionState = document.querySelector("#execution-state");
+
+const LAST_RUN_KEY = "hae.last_run_id";
+const RUN_ID_PATTERN = /^Gui[A-Fa-f0-9]{12}$/;
 
 let previewKey = "";
 let currentRunId = "";
@@ -55,6 +63,7 @@ async function api(path, options = {}) {
   if (!response.ok) {
     const error = new Error(body.error || "요청 실패 (" + response.status + ")");
     error.detail = body;
+    error.status = response.status;
     throw error;
   }
   return body;
@@ -72,28 +81,49 @@ async function fileToBase64(file) {
 function showStatus(status) {
   const integration = status.integration || status;
   const partial = integration.workflow_status === "partial";
-  resultStatus.textContent = partial ? "partial" : status.status;
-  resultTitle.textContent = partial ? "흐름 부분 완료" : status.status === "completed" ? "흐름 실행 완료" :
-    (status.status === "failed" ? "실행 중단" : "실행 상태");
+  resultStatus.textContent = status.status || "unknown";
+  resultTitle.textContent = partial ? "실행 완료 · 통합 일부 확인 불가" : status.status === "completed" ? "흐름 실행 완료" :
+    (status.status === "failed" ? "실행 실패" : status.status === "running" ? "실행 진행 중 또는 중단됨" : "실행 상태");
   resultCopy.textContent = status.error_type
-    ? "마지막 단계에서 " + status.error_type + " 오류가 기록되었습니다. 입력 데이터는 실행 기록에 표시하지 않습니다."
-    : "실행 기록에는 단계 상태와 계획 지문만 표시되며 입력 행 데이터는 포함되지 않습니다.";
+    ? "마지막 단계에서 " + status.error_type + " 오류가 기록되었습니다. 원본 데이터와 내부 오류 내용은 표시하지 않습니다."
+    : "실행 기록에는 단계 상태와 요약만 표시되며 입력 행 데이터는 포함되지 않습니다.";
   runIdOutput.textContent = status.run_id;
   const outcomes = status.step_outcomes || {};
   stepCountOutput.textContent = (outcomes.completed || 0) + " / " + (status.steps_recorded || 0);
+  const summary = status.result_summary;
+  if (summary && Number.isInteger(summary.count)) {
+    rowCountLabel.textContent = summary.kind === "saved" ? "저장 행" :
+      summary.kind === "matched" ? "일치 행" : "처리 행";
+    rowCountOutput.textContent = String(summary.count);
+    if (summary.kind === "saved" && Number.isInteger(summary.duplicate_count)) {
+      resultCopy.textContent += " 저장 " + summary.count + "개 행 · 중복 " + summary.duplicate_count + "개.";
+    }
+  } else {
+    rowCountLabel.textContent = "처리 행";
+    rowCountOutput.textContent = "기록 없음";
+  }
+  executionState.textContent = partial
+    ? "실행 상태와 통합 상태를 분리해 표시합니다. DBVORA는 현재 연결 상태이며 SOVIA는 저장된 사후 자문입니다."
+    : status.status === "running"
+      ? "이 기록이 재시작 후에도 진행 중으로 남아 있습니다. 다시 실행하지 말고 원인을 확인하세요."
+      : "SOVIA 사후 자문과 DBVORA 현재 연결 상태는 아래에서 별도로 표시합니다.";
   resultCard.hidden = false;
-  renderSovia(integration.sovia_audit);
+  renderSovia(integration.sovia_audit, integration.sovia_state);
   if (integration.dbvora) renderDbvora(integration.dbvora);
   if (partial) resultCopy.textContent += " SOVIA 또는 DBVORA 통합 일부를 확인할 수 없어 부분 완료로 표시합니다.";
 }
 
-function renderSovia(report) {
+function renderSovia(report, state = "") {
   if (!report) {
-    soviaResult.textContent = "SOVIA 사후 감사 결과가 이 서버 세션에 없습니다.";
+    soviaResult.textContent = state === "missing"
+      ? "이 실행의 저장된 SOVIA 사후 자문 기록이 없습니다."
+      : state === "unavailable"
+        ? "SOVIA 사후 자문을 조회할 수 없습니다."
+        : "SOVIA 사후 자문 기록을 아직 조회하지 않았습니다.";
     return;
   }
   if (!report.available) {
-    soviaResult.textContent = "SOVIA 사후 감사 미실행: " + (report.error || "로컬 모듈을 사용할 수 없습니다.");
+    soviaResult.textContent = "SOVIA 사후 자문을 생성할 수 없었습니다. 이는 실행 자체와 별개이며 실시간 실행 차단 기능이 아닙니다.";
     return;
   }
   const review = report.review || {};
@@ -103,7 +133,79 @@ function renderSovia(report) {
     (execution.executed_steps || []).length + "개 관측 · 실패 " +
     (execution.failed_steps || []).length + " · 확인 불가 " +
     (execution.unverifiable_steps || []).length + " · 검토 항목 " + findingCount +
-    " · 증거 인증 안 됨 · 실행 차단 기능 아님 (" + (review.schema_version || "contract unknown") + ")";
+    " · 증거 인증 안 됨 · 사후 자문 전용, 실시간 실행 차단 아님 (" +
+    (typeof review.schema_version === "string" ? review.schema_version.slice(0, 64) : "contract unknown") + ")";
+}
+
+function rememberRunId(runId) {
+  if (!RUN_ID_PATTERN.test(runId)) return;
+  currentRunId = runId;
+  historyRunId.value = runId;
+  historyCopyButton.disabled = false;
+  try { localStorage.setItem(LAST_RUN_KEY, runId); } catch { /* Browser storage may be disabled. */ }
+}
+
+function safeFailureMessage(error) {
+  const type = error?.detail?.error_type;
+  if (type === "ApprovalRequired") return "승인이 만료되었거나 누락되었습니다. 미리보기를 다시 실행하고 승인하세요.";
+  if (type === "PlanError" || type === "RequestError") return "요청 또는 CSV 입력을 확인하고 새 미리보기를 실행하세요.";
+  if (["BackendUnavailable", "LightningExecutionError", "StepTimeout", "StepRetryExhausted"].includes(type)) {
+    return "LA 실행을 완료하지 못했습니다. 실행 ID가 있으면 실행 기록을 조회하고 입력을 확인하세요.";
+  }
+  if (error?.status === 404) return "해당 실행 ID의 저장된 실행 기록을 찾을 수 없습니다.";
+  if (error?.status === 400) return "실행 ID 형식이 올바르지 않습니다. HAE에서 표시한 실행 ID를 입력하세요.";
+  return "요청을 완료하지 못했습니다. 입력을 확인하고 미리보기를 다시 실행하세요.";
+}
+
+async function loadRunHistory() {
+  const runId = historyRunId.value.trim();
+  if (!RUN_ID_PATTERN.test(runId)) {
+    historyState.textContent = "실행 ID 형식이 올바르지 않습니다. 예: Gui0123456789ab";
+    historyState.className = "history-state error";
+    historyCopyButton.disabled = true;
+    resultCard.hidden = true;
+    return;
+  }
+  historyLoadButton.disabled = true;
+  historyState.textContent = "저장된 실행 기록을 읽기 전용으로 조회하고 있습니다…";
+  historyState.className = "history-state";
+  try {
+    const status = await api("/api/status?run_id=" + encodeURIComponent(runId));
+    const integration = status.integration && typeof status.integration === "object"
+      ? status.integration : {};
+    try {
+      integration.sovia_audit = await api("/api/audit?run_id=" + encodeURIComponent(runId));
+      integration.sovia_state = "saved";
+    } catch (auditError) {
+      if (auditError.status === 404) {
+        integration.sovia_audit = null;
+        integration.sovia_state = "missing";
+      } else {
+        integration.sovia_audit = null;
+        integration.sovia_state = "unavailable";
+      }
+    }
+    status.integration = integration;
+    rememberRunId(runId);
+    showStatus(status);
+    historyState.textContent = "저장된 실행 결과와 자문 상태를 불러왔습니다. 새 업무 실행이나 데이터 쓰기는 발생하지 않았습니다.";
+    historyState.className = "history-state success";
+  } catch (error) {
+    resultCard.hidden = true;
+    historyState.textContent = safeFailureMessage(error);
+    historyState.className = "history-state error";
+  } finally {
+    historyLoadButton.disabled = false;
+  }
+}
+
+function restoreLastRunId() {
+  let saved = "";
+  try { saved = localStorage.getItem(LAST_RUN_KEY) || ""; } catch { return; }
+  if (!RUN_ID_PATTERN.test(saved)) return;
+  historyRunId.value = saved;
+  historyCopyButton.disabled = false;
+  loadRunHistory();
 }
 
 async function checkConnection() {
@@ -171,11 +273,16 @@ function renderDbvora(result) {
   clearChildren(dbvoraTables);
   clearChildren(dbvoraRelations);
   if (!result.available) {
-    dbvoraStatus.textContent = result.message || "DBVORA 로컬 서비스를 사용할 수 없습니다.";
+    const code = typeof result.error_code === "string" ? result.error_code : "UNKNOWN";
+    dbvoraStatus.textContent = code === "NOT_CONFIGURED" ? "DBVORA 미설정" :
+      code === "UNAVAILABLE" ? "DBVORA 서비스가 꺼져 있거나 연결할 수 없습니다." :
+      "DBVORA 응답 또는 계약 오류 (" + code.slice(0, 40) + ")";
     dbvoraStatus.className = "dbvora-status offline";
-    dbvoraMeta.textContent = result.error_code === "NOT_CONFIGURED"
+    dbvoraMeta.textContent = code === "NOT_CONFIGURED"
       ? "실행 시 --dbvora-url로 127.0.0.1 API 주소를 설정하세요."
-      : "DBVORA API가 실행 중인지 확인한 뒤 새로고침하세요.";
+      : code === "UNAVAILABLE"
+        ? "DBVORA 로컬 서비스를 시작한 뒤 메타데이터를 다시 조회하세요. HAE 실행은 계속 사용할 수 있습니다."
+        : "DBVORA의 읽기 전용 API 응답을 확인한 뒤 메타데이터를 다시 조회하세요.";
     dbvoraProvenance.textContent = "";
     return;
   }
@@ -271,7 +378,7 @@ previewButton.addEventListener("click", async () => {
   } catch (error) {
     planOutput.textContent = "요청을 IR로 변환할 수 없습니다.";
     previewDetail.hidden = true;
-    setMessage(error.message, "error");
+    setMessage(safeFailureMessage(error), "error");
   } finally {
     previewButton.disabled = false;
     updateRunButton();
@@ -322,7 +429,7 @@ csvFileInput.addEventListener("change", async () => {
       "success",
     );
   } catch (error) {
-    setMessage(error.message, "error");
+    setMessage(safeFailureMessage(error), "error");
   } finally {
     previewButton.disabled = false;
     updateRunButton();
@@ -345,7 +452,7 @@ runButton.addEventListener("click", async () => {
         preview_id: previewId, approve_writes: requiresApproval && approvalInput.checked,
       }),
     });
-    currentRunId = response.run_id;
+    rememberRunId(response.run_id);
     showStatus({ ...response.status, integration: {
       sovia_audit: response.sovia_audit, dbvora: response.dbvora,
       workflow_status: response.workflow_status,
@@ -385,11 +492,11 @@ runButton.addEventListener("click", async () => {
     if (!response.dbvora) loadDbvora();
   } catch (error) {
     if (error.detail && error.detail.status && error.detail.run_id) {
-      currentRunId = error.detail.run_id;
+      rememberRunId(error.detail.run_id);
       showStatus(error.detail.status);
-      resultCopy.textContent = error.message + " · 실패 원인을 실행 기록에 저장했습니다.";
+      resultCopy.textContent = safeFailureMessage(error) + " 실행 기록에 내부 오류 유형만 저장했습니다.";
     }
-    setMessage(error.message, "error");
+    setMessage(safeFailureMessage(error), "error");
   } finally {
     updateRunButton();
   }
@@ -397,10 +504,27 @@ runButton.addEventListener("click", async () => {
 
 refreshButton.addEventListener("click", async () => {
   if (!currentRunId) return;
+  historyRunId.value = currentRunId;
+  await loadRunHistory();
+});
+
+historyLoadButton.addEventListener("click", loadRunHistory);
+historyRunId.addEventListener("input", () => {
+  historyCopyButton.disabled = !RUN_ID_PATTERN.test(historyRunId.value.trim());
+});
+historyRunId.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") loadRunHistory();
+});
+historyCopyButton.addEventListener("click", async () => {
+  const runId = historyRunId.value.trim();
+  if (!RUN_ID_PATTERN.test(runId)) return;
   try {
-    showStatus(await api("/api/status?run_id=" + encodeURIComponent(currentRunId)));
-  } catch (error) {
-    setMessage(error.message, "error");
+    await navigator.clipboard.writeText(runId);
+    historyState.textContent = "실행 ID를 복사했습니다.";
+    historyState.className = "history-state success";
+  } catch {
+    historyState.textContent = "실행 ID 복사에 실패했습니다. 화면의 ID를 직접 선택해 복사하세요.";
+    historyState.className = "history-state error";
   }
 });
 
@@ -408,3 +532,5 @@ dbvoraRefreshButton.addEventListener("click", loadDbvora);
 
 checkConnection();
 loadDbvora();
+restoreLastRunId();
+

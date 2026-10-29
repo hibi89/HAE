@@ -80,10 +80,30 @@
         <p id="message" class="message" role="status" aria-live="polite"></p>
       </section>
 
+      <section class="history-card" aria-labelledby="history-title">
+        <div class="section-heading">
+          <div>
+            <div class="step-label">RUN RECOVERY</div>
+            <h2 id="history-title">이전 실행 다시 열기</h2>
+          </div>
+          <span class="scope-tag">읽기 전용 조회</span>
+        </div>
+        <label for="history-run-id">실행 ID</label>
+        <div class="history-controls">
+          <input id="history-run-id" type="text" maxlength="15" autocomplete="off" spellcheck="false"
+                 placeholder="예: Gui0123456789ab" aria-describedby="history-hint">
+          <button id="load-run-history" class="button button-secondary" type="button">결과 조회</button>
+          <button id="copy-run-id" class="text-button" type="button" disabled>ID 복사</button>
+        </div>
+        <p id="history-hint" class="hint">최근 실행 ID는 이 브라우저에만 저장됩니다. 조회는 새 업무 실행이나 SQLite 쓰기를 하지 않습니다.</p>
+        <p id="history-state" class="history-state" role="status" aria-live="polite">저장된 실행 ID가 있으면 자동으로 다시 엽니다.</p>
+      </section>
+
       <section id="result-card" class="result-card" hidden aria-live="polite">
         <div class="result-topline"><span class="step-label">RUN RECEIPT</span><span id="result-status" class="result-status"></span></div>
         <h2 id="result-title">실행 결과</h2>
         <p id="result-copy"></p>
+        <p id="execution-state" class="dbvora-meta" role="status"></p>
         <p id="sovia-result" class="dbvora-meta" role="status" aria-live="polite">SOVIA 사후 감사 대기</p>
         <div class="receipt-grid">
           <div><span>실행 ID</span><b id="run-id">—</b></div>
@@ -114,3 +134,4 @@
     </main>
   </body>
 </html>
+

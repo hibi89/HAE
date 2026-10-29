@@ -717,3 +717,9 @@ Recovery: read this latest appended block before older 21-week historical notes.
 - Screenshot **SKIP**, no file created. Browser restart/status/result/audit **SKIP** because browser session could not start. No workflow ran and no database writes occurred in this attempt.
 - Prior API run/replay and earlier Chrome UI integration evidence remain PASS as recorded above. There is no persistent run-history control in the current UI; next useful feature is a privacy-bounded read-only recovery/history view.
 - Delivery: normal `git push` was blocked by DNS; the documentation evidence was published through GitHub Git-data APIs using an expected-head-checked fast-forward. Remote advancement was confirmed before temporary task data was cleaned.
+
+
+## 2026-10-29 — read-only run recovery delivered
+- A validated existing run ID can now be reopened after page reload; only the ID is retained in localStorage. The status and audit requests are read-only. Run status, bounded redacted receipt counts, SOVIA's saved advisory and DBVORA's live status remain distinct.
+- Test evidence: `test_runlog` 4/4, `test_desktop_launcher` 9/9, `test_engine` 42/42 (one Windows junction fixture SKIP), UI history/provenance Node harnesses PASS, Python compileall and Node syntax PASS. Full network-backed HAE/browser/E2E could not be run because this Windows host denies loopback connect with WinError 10013; this known restriction was not retried or bypassed.
+- Recent-run listing is not implemented because runtime `runs` has no timestamp and safe sorting requires a schema decision. See current NEXT_TASK for follow-up.
