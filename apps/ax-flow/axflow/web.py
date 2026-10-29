@@ -360,6 +360,9 @@ def create_server(
                     prior = inspect_run(state, run_id)
                 except RunLogError:
                     prior = None
+                if prior is not None and prior["plan_sha256"] != plan_sha256:
+                    self.server.invalidate_preview(preview_id)
+                    raise RequestError(409, "run ID already belongs to a different plan; preview again")
                 if (prior is not None and prior["status"] == "completed"
                         and prior["plan_sha256"] == plan_sha256):
                     # A completed run retry returns its durable receipt without
