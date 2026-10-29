@@ -5,7 +5,8 @@ param(
     [string]$DemoRoot = (Join-Path $env:TEMP 'hae-la-synthetic'),
     [int]$Port = 8765,
     [string]$DbvoraUrl = "",
-    [string]$SoviaRoot = ""
+    [string]$SoviaRoot = "",
+    [switch]$Smoke
 )
 $ErrorActionPreference = 'Stop'
 if ($Port -lt 1 -or $Port -gt 65535) { throw 'Port must be 1..65535' }
@@ -49,6 +50,17 @@ $env:PYTHONPATH = "$AppRoot;$LaPackage"
 if ($OldPythonPath) { $env:PYTHONPATH += ";$OldPythonPath" }
 & python -c "from lightning_azent.runtime import LAExecutor; from axflow.web import create_server; print('HAE and Lightning Azent imports OK')"
 if ($LASTEXITCODE -ne 0) { throw 'HAE / Lightning Azent integration import failed; refusing to start.' }
+if ($Smoke) {
+    Push-Location $AppRoot
+    try {
+        & python -m unittest discover -s tests -p test_la_adapter.py -v
+        if ($LASTEXITCODE -ne 0) { throw 'HAE-LA HTTP integration smoke tests failed.' }
+    } finally {
+        Pop-Location
+    }
+    Write-Host 'HAE-LA HTTP integration smoke tests passed.'
+    exit 0
+}
 Write-Host "HAE + Lightning Azent: http://127.0.0.1:$Port/"
 Write-Host "Synthetic CSV: $Sample"
 Write-Host 'Use only synthetic fixtures. SQLite writes require UI approval.'
