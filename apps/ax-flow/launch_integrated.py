@@ -12,6 +12,7 @@ from contextlib import contextmanager
 import json
 import os
 import signal
+import socket
 from pathlib import Path
 import subprocess
 import sys
@@ -110,6 +111,16 @@ def wait_for_backend(origin: str, child: subprocess.Popen, timeout: float = 12.0
     raise LaunchError("Integrated HAE did not become ready on the selected local port.")
 
 
+def require_free_port(port: int) -> None:
+    """Do not confuse an already-running HAE on this port with our new child."""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            probe.bind(("127.0.0.1", port))
+    except OSError as exc:
+        raise LaunchError("Local port " + str(port) +
+                          " is in use. Choose another --port or close the existing server.") from exc
+
+
 def stop(child: subprocess.Popen) -> None:
     if child.poll() is None:
         child.terminate()
@@ -137,6 +148,7 @@ def main(argv: list[str] | None = None) -> int:
         raise LaunchError("Missing offline hae-integrated.pyz beside this launcher.")
     root = data_directory(args.data_dir)
     with single_instance(root / ".hae-bundle.lock"):
+        require_free_port(args.port)
         command = [
             sys.executable, str(package), "serve", "--synthetic",
             "--engine-backend", "lightning-azent",
