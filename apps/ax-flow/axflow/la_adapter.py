@@ -127,9 +127,15 @@ def execute(plan: object, run_id: str, *, state_path: Path, business_path: Path,
         try:
             existing = inspect_run(Path(state_path), run_id)
         except RunLogError as exc:
-            if Path(state_path).is_file():
+            # An initialized ledger normally has no row for the NEXT new run.
+            # Treat only this exact absence (or a not-yet-created ledger) as
+            # new; a malformed/unreadable ledger must still fail closed.
+            if str(exc) == "run_id not found" or (
+                str(exc) == "runtime ledger does not exist" and not Path(state_path).is_file()
+            ):
+                existing = None
+            else:
                 raise BackendUnavailable("existing LA run ledger cannot be verified") from exc
-            existing = None
         if existing is not None:
             from .engine import canonical_json
             expected_hash = hashlib.sha256(canonical_json(plan).encode("utf-8")).hexdigest()
