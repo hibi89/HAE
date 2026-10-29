@@ -11,6 +11,7 @@ import argparse
 from contextlib import contextmanager
 import json
 import os
+import signal
 from pathlib import Path
 import subprocess
 import sys
@@ -146,6 +147,12 @@ def main(argv: list[str] | None = None) -> int:
         env = os.environ.copy()
         env.pop("PYTHONPATH", None)  # prove the zipapp stands alone
         child = subprocess.Popen(command, cwd=root, env=env, stdin=subprocess.DEVNULL)
+        # A closing console or supervisor termination must release the port
+        # and the exclusive lock instead of leaving an orphaned HTTP server.
+        prior_sigterm = signal.getsignal(signal.SIGTERM)
+        def _request_stop(_signum, _frame):
+            raise KeyboardInterrupt
+        signal.signal(signal.SIGTERM, _request_stop)
         try:
             url = "http://127.0.0.1:" + str(args.port) + "/"
             wait_for_backend(url.rstrip("/"), child)
@@ -163,7 +170,10 @@ def main(argv: list[str] | None = None) -> int:
         except KeyboardInterrupt:
             return 0
         finally:
-            stop(child)
+            try:
+                stop(child)
+            finally:
+                signal.signal(signal.SIGTERM, prior_sigterm)
 
 
 if __name__ == "__main__":
