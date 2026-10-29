@@ -208,6 +208,15 @@ print(json.dumps({"status": result["status"]["status"],
                     with self.assertRaises(HTTPError) as unavailable_audit:
                         urlopen(audit_url, timeout=5)
                     self.assertEqual(unavailable_audit.exception.code, 404)
+                with urlopen(origin + "/api/la-audit?run_id=" + outcome["run_id"], timeout=5) as la_response:
+                    la_audit = json.loads(la_response.read().decode("utf-8"))
+                self.assertEqual(la_audit["run_id"], outcome["run_id"])
+                self.assertEqual(la_audit["plan_sha256"], outcome["status"]["plan_sha256"])
+                self.assertGreaterEqual(la_audit["total_events"], 1)
+                self.assertEqual(la_audit["approval_count"] >= 1, approved)
+                self.assertNotIn("Alice", json.dumps(la_audit))
+                self.assertTrue(all(set(item) <= {"event_type", "occurred_at", "step_id"}
+                                    for item in la_audit["events"]))
                 with urlopen(origin + "/api/status?run_id=" + outcome["run_id"], timeout=5) as status_response:
                     saved_status = json.loads(status_response.read().decode("utf-8"))
                 self.assertEqual(saved_status["status"], "completed")
@@ -241,6 +250,10 @@ print(json.dumps({"status": result["status"]["status"],
                         restored = json.loads(response.read().decode("utf-8"))
                     self.assertEqual(restored["status"], "completed")
                     self.assertEqual(restored["integration"]["execution_status"], "completed")
+                    with urlopen(restored_origin + "/api/la-audit?run_id=" + run_id, timeout=5) as response:
+                        restored_audit = json.loads(response.read().decode("utf-8"))
+                    self.assertEqual(restored_audit["run_id"], run_id)
+                    self.assertGreaterEqual(restored_audit["total_events"], 1)
                     self.assertIn(restored["integration"]["workflow_status"], {"completed", "partial"})
                     self.assertEqual(restored["integration"]["sovia_audit"]["run_id"], run_id)
             finally:
