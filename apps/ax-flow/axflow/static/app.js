@@ -607,10 +607,19 @@ runButton.addEventListener("click", async () => {
     if (auditCount) {
       resultCopy.textContent += ` Lightning Azent 감사 기록 ${auditCount}개를 조회했습니다. 기록에는 CSV 행 내용이 없습니다.`;
     }
-    const workflowStatus = response.workflow_status || "completed";
-    setMessage(workflowStatus === "partial"
-      ? "LA 실행은 끝났지만 사후 감사 또는 DBVORA 조회가 완료되지 않았습니다. 부분 완료입니다."
-      : "실행·사후 감사·DBVORA 조회를 완료했습니다.", workflowStatus === "partial" ? "error" : "success");
+    const workflowStatus = response.workflow_status;
+    const isLightning = response.backend?.name === "Lightning Azent";
+    const executionCompleted = response.status?.status === "completed";
+    const message = !executionCompleted
+      ? "실행이 완료되지 않았습니다. 실행 이력을 확인하세요."
+      : !isLightning
+        ? "HAE 로컬 SQLite 실행을 완료했습니다. LA 및 사후 감사 연동은 사용하지 않았습니다."
+        : workflowStatus === "partial"
+          ? "LA 실행은 끝났지만 사후 감사 또는 DBVORA 조회가 완료되지 않았습니다. 부분 완료입니다."
+          : workflowStatus === "completed"
+            ? "LA 실행·사후 감사·DBVORA 조회를 완료했습니다."
+            : "LA 실행은 완료됐지만 사후 통합 상태는 확인되지 않았습니다.";
+    setMessage(message, !executionCompleted || workflowStatus === "partial" ? "error" : "success");
     if (!response.dbvora) loadDbvora();
   } catch (error) {
     if (error.detail && error.detail.status && error.detail.run_id) {
