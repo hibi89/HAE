@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from contextlib import closing
 import sys
 import tempfile
 import threading
@@ -104,14 +105,15 @@ def main() -> None:
             status, second = run(second_preview["preview_id"])
             check(status, second, 200)
             assert second["run_id"] != first_id and second["result"]["imported_rows"] == 2
-            with sqlite3.connect(business) as con:
+            with closing(sqlite3.connect(business)) as con:
                 assert con.execute("SELECT COUNT(*) FROM csv_records").fetchone()[0] == 4
             print("3/6 PASS: second independent LA run on existing SQLite ledger", flush=True)
 
             # Simulated interrupted run after business receipts were committed:
             # recovery must explicitly reapprove the SAME run ID.
-            with sqlite3.connect(state) as con:
-                con.execute("UPDATE runs SET status='failed' WHERE run_id=?", (first_id,))
+            with closing(sqlite3.connect(state)) as con:
+                with con:
+                    con.execute("UPDATE runs SET status='failed' WHERE run_id=?", (first_id,))
             resumed_preview = preview(first_id)
             assert resumed_preview["resumes_run_id"] == first_id
             status, _ = run(resumed_preview["preview_id"], approved=False)
@@ -120,7 +122,7 @@ def main() -> None:
             check(status, resumed, 200)
             assert resumed["run_id"] == first_id
             assert resumed["status"]["status"] == "completed"
-            with sqlite3.connect(business) as con:
+            with closing(sqlite3.connect(business)) as con:
                 assert con.execute(
                     "SELECT COUNT(*) FROM csv_records WHERE run_id=?", (first_id,)
                 ).fetchone()[0] == 2, "resume duplicated SQLite rows"
