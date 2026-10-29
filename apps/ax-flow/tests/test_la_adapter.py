@@ -25,7 +25,7 @@ if LA_PACKAGE.is_dir():
 from axflow.engine import Engine
 from axflow.planner import plan_request
 from axflow.web import create_server
-from axflow.la_adapter import BackendUnavailable, inspect_backend
+from axflow.la_adapter import BackendUnavailable, inspect_backend, read_execution_audit
 from axflow.runlog import list_recent_runs
 
 
@@ -48,6 +48,25 @@ class LightningAzentAdapterTests(unittest.TestCase):
         with patch("axflow.la_adapter.importlib.import_module", return_value=fake_package):
             with self.assertRaisesRegex(BackendUnavailable, "incompatible"):
                 inspect_backend(plan)
+
+    def test_read_only_la_audit_reader_returns_only_bounded_metadata(self):
+        fake_audit = {
+            "run_id": "Gui0123456789ab",
+            "plan_sha256": "a" * 64,
+            "events": [
+                {"event_type": "step_completed", "occurred_at": "2026-10-29T00:00:00Z",
+                 "details": {"step_id": "input", "secret": "MUST_NOT_LEAK", "file_path": "private.csv"}}
+            ],
+            "approval_receipts": [{"scope": {"secret": "HIDDEN"}}],
+        }
+        fake_module = SimpleNamespace(inspect_audit=lambda *_: fake_audit, RunLogError=ValueError)
+        with patch("axflow.la_adapter.importlib.import_module", return_value=fake_module):
+            report = read_execution_audit(Path("not-a-real-db.sqlite"), "Gui0123456789ab")
+        self.assertEqual(report["total_events"], 1)
+        self.assertEqual(report["approval_count"], 1)
+        self.assertEqual(set(report["events"][0]), {"event_type", "occurred_at", "step_id"})
+        self.assertNotIn("MUST_NOT_LEAK", json.dumps(report))
+        self.assertNotIn("HIDDEN", json.dumps(report))
 
     def test_missing_package_fails_closed(self):
         plan = plan_request("Import this CSV into local SQLite", "contacts.csv")
