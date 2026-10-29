@@ -349,6 +349,14 @@ def create_server(
                     raise RequestError(409, "execution backend changed after preview; preview it again")
                 plan_sha256 = hashlib.sha256(canonical_json(plan).encode("utf-8")).hexdigest()
                 try:
+                    csv_snapshot, _ = preflight_csv_plan(plan, root)
+                except PlanError as exc:
+                    self.server.invalidate_preview(preview_id)
+                    raise RequestError(409, "CSV no longer passes the approved preview; preview it again") from exc
+                if csv_snapshot["source_sha256"] != approved_sha256:
+                    self.server.invalidate_preview(preview_id)
+                    raise RequestError(409, "CSV changed after preview; preview it again before execution")
+                try:
                     prior = inspect_run(state, run_id)
                 except RunLogError:
                     prior = None
@@ -361,6 +369,7 @@ def create_server(
                         outcome = execute_lightning(
                             plan, run_id, state_path=state, business_path=business,
                             input_root=root, approve_writes=body["approve_writes"],
+                            csv_snapshot=csv_snapshot, expected_csv_sha256=approved_sha256,
                         )
                         integration = self.server.run_integrations(plan, run_id, plan_sha256, outcome, body["approve_writes"])
                         self._send_json(200, {"run_id": run_id, **outcome, **integration})
@@ -373,14 +382,6 @@ def create_server(
                             "engine_backend": active_backend,
                         })
                     return
-                try:
-                    csv_snapshot, _ = preflight_csv_plan(plan, root)
-                except PlanError as exc:
-                    self.server.invalidate_preview(preview_id)
-                    raise RequestError(409, "CSV no longer passes the approved preview; preview it again") from exc
-                if csv_snapshot["source_sha256"] != approved_sha256:
-                    self.server.invalidate_preview(preview_id)
-                    raise RequestError(409, "CSV changed after preview; preview it again before execution")
                 if engine_backend == "lightning-azent":
                     outcome = execute_lightning(
                         plan, run_id, state_path=state, business_path=business,
