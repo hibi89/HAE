@@ -25,13 +25,12 @@ if (-not $LaCheckout) {
             $RepoRoot = $null
         }
         if ($RepoRoot) {
-            & git -C $RepoRoot rev-parse --verify feature/lightning-azent 2>$null | Out-Null
-            if ($LASTEXITCODE -ne 0) {
-                & git -C $RepoRoot fetch origin feature/lightning-azent:refs/heads/feature/lightning-azent
-                if ($LASTEXITCODE -ne 0) { throw 'Unable to fetch LA branch; provide -LaCheckout.' }
-            }
-            & git -C $RepoRoot worktree add --detach $LaCheckout feature/lightning-azent
-            if ($LASTEXITCODE -ne 0) { throw 'Unable to create local LA worktree; provide -LaCheckout.' }
+            # Fetch the current remote LA commit rather than silently using a stale
+            # local branch. A failed fetch must not be treated as a verified MVP.
+            & git -C $RepoRoot fetch origin feature/lightning-azent
+            if ($LASTEXITCODE -ne 0) { throw 'Unable to fetch current LA branch; pass a verified -LaCheckout.' }
+            & git -C $RepoRoot worktree add --detach $LaCheckout FETCH_HEAD
+            if ($LASTEXITCODE -ne 0) { throw 'Unable to create LA worktree; pass -LaCheckout.' }
         }
         if (-not (Test-Path (Join-Path $LaCheckout 'packages\lightning-azent\lightning_azent\__init__.py') -PathType Leaf)) {
             if (Test-Path $LaCheckout) {
