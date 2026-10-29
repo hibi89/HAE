@@ -334,12 +334,16 @@ async function loadRecentRuns() {
 
 async function checkConnection() {
   try {
-    const response = await fetch("/", { cache: "no-store" });
-    if (!response.ok) throw new Error("offline");
-    connection.textContent = "로컬 서버 연결됨";
+    const response = await fetch("/api/health", { cache: "no-store" });
+    const health = await response.json();
+    if (!response.ok || health.ready !== true) throw new Error("backend not ready");
+    const backend = health.engine_backend || {};
+    connection.textContent = backend.name === "Lightning Azent"
+      ? "로컬 서버·Lightning Azent 준비됨"
+      : "로컬 서버·HAE 엔진 준비됨";
     connection.className = "connection online";
   } catch {
-    connection.textContent = "로컬 서버 연결을 확인할 수 없습니다";
+    connection.textContent = "로컬 서버 또는 실행 엔진을 확인할 수 없습니다";
     connection.className = "connection offline";
   }
 }
