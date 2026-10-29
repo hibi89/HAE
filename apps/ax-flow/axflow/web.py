@@ -523,9 +523,11 @@ def create_server(
                           "error_type": type(exc).__name__}
             # Recover the execution status from LA's durable run ledger after
             # server restart; advisory availability alone cannot prove success.
+            durable_status = "unknown"
             try:
                 durable_run = inspect_run(state, run_id)
-                execution_completed = durable_run.get("status") == "completed"
+                durable_status = durable_run.get("status", "unknown")
+                execution_completed = durable_status == "completed"
                 audit_matches_run = (
                     audit.get("plan_sha256") == durable_run.get("plan_sha256")
                 )
@@ -537,7 +539,7 @@ def create_server(
                       else "partial")
             return {"sovia_audit": audit, "dbvora": dbvora,
                     "audit_persisted": persisted, "workflow_status": status,
-                    "execution_status": durable_run.get("status", "unknown") if execution_completed else "unknown"}
+                    "execution_status": durable_status}
 
         def save_csv_upload(self, content: bytes) -> str:
             with self._upload_lock:
