@@ -28,6 +28,8 @@ const backendOutput = document.querySelector("#engine-backend");
 const stepListOutput = document.querySelector("#step-list");
 const soviaResult = document.querySelector("#sovia-result");
 const laAuditResult = document.querySelector("#la-audit-result");
+const laAuditDetails = document.querySelector("#la-audit-details");
+const laAuditEvents = document.querySelector("#la-audit-events");
 const historyRunId = document.querySelector("#history-run-id");
 const historyLoadButton = document.querySelector("#load-run-history");
 const resumePreviewButton = document.querySelector("#prepare-resume");
@@ -128,6 +130,8 @@ function showStatus(status) {
 }
 
 function renderLaAudit(report, state = "") {
+  clearChildren(laAuditEvents);
+  laAuditDetails.hidden = true;
   if (!report) {
     laAuditResult.textContent = state === "missing"
       ? "이 실행의 LA 감사 기록은 없습니다. HAE 기본 엔진 실행일 수 있습니다."
@@ -140,6 +144,23 @@ function renderLaAudit(report, state = "") {
     : Array.isArray(report.events) ? report.events.length : null;
   const approvals = Number.isInteger(report.approval_count) ? report.approval_count
     : Array.isArray(report.approval_receipts) ? report.approval_receipts.length : 0;
+  // Render only explicit event metadata; never render arbitrary audit details,
+  // receipt payloads, CSV contents, local file paths or executable markup.
+  const events = Array.isArray(report.events) ? report.events.slice(-100) : [];
+  for (const event of events) {
+    if (!event || typeof event !== "object") continue;
+    const name = typeof event.event_type === "string" && /^[a-z0-9_]{1,60}$/.test(event.event_type)
+      ? event.event_type : "unknown";
+    const time = typeof event.occurred_at === "string" &&
+      /^[0-9TZ:+.\-]{10,48}$/.test(event.occurred_at) ? event.occurred_at : "";
+    const step = typeof event.step_id === "string" ? event.step_id
+      : typeof event.details?.step_id === "string" ? event.details.step_id : "";
+    const safeStep = /^[a-zA-Z][a-zA-Z0-9_]{0,31}$/.test(step) ? step : "";
+    const item = document.createElement("li");
+    item.textContent = (time ? time + " · " : "") + name + (safeStep ? " · " + safeStep : "");
+    laAuditEvents.appendChild(item);
+  }
+  laAuditDetails.hidden = laAuditEvents.children.length === 0;
   laAuditResult.textContent = Number.isInteger(total)
     ? "Lightning Azent 실행 감사 · 이벤트 " + total + "건 · 승인 기록 " +
       approvals + "건" + (report.truncated ? " (최근 100건만 반환)" : "")
