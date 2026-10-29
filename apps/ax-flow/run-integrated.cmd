@@ -5,10 +5,5 @@ if errorlevel 1 (
   echo [HAE] Python 3.11+ not found on PATH.
   exit /b 1
 )
-where git >nul 2>nul
-if errorlevel 1 (
-  echo [HAE] Git not found. Install Git or run the PowerShell launcher with -LaCheckout.
-  exit /b 1
-)
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0run-integrated.ps1" %*
 exit /b %ERRORLEVEL%
