@@ -43,6 +43,7 @@ let previewKey = "";
 let currentRunId = "";
 let previewId = "";
 let requiresApproval = true;
+let historyRequestVersion = 0;
 
 function requestKey() {
   return JSON.stringify([taskInput.value, csvInput.value]);
@@ -161,6 +162,7 @@ function safeFailureMessage(error) {
 }
 
 async function loadRunHistory() {
+  const requestVersion = ++historyRequestVersion;
   const runId = historyRunId.value.trim();
   if (!RUN_ID_PATTERN.test(runId)) {
     historyState.textContent = "실행 ID 형식이 올바르지 않습니다. 예: Gui0123456789ab";
@@ -174,6 +176,7 @@ async function loadRunHistory() {
   historyState.className = "history-state";
   try {
     const status = await api("/api/status?run_id=" + encodeURIComponent(runId));
+    if (requestVersion !== historyRequestVersion || historyRunId.value.trim() !== runId) return;
     const integration = status.integration && typeof status.integration === "object"
       ? status.integration : {};
     try {
@@ -188,6 +191,7 @@ async function loadRunHistory() {
         integration.sovia_state = "unavailable";
       }
     }
+    if (requestVersion !== historyRequestVersion || historyRunId.value.trim() !== runId) return;
     status.integration = integration;
     rememberRunId(runId);
     showStatus(status);
@@ -198,7 +202,7 @@ async function loadRunHistory() {
     historyState.textContent = safeFailureMessage(error);
     historyState.className = "history-state error";
   } finally {
-    historyLoadButton.disabled = false;
+    if (requestVersion === historyRequestVersion) historyLoadButton.disabled = false;
   }
 }
 
@@ -580,6 +584,8 @@ refreshButton.addEventListener("click", async () => {
 recentRunsButton.addEventListener("click", loadRecentRuns);
 historyLoadButton.addEventListener("click", loadRunHistory);
 historyRunId.addEventListener("input", () => {
+  historyRequestVersion += 1;
+  historyLoadButton.disabled = false;
   historyCopyButton.disabled = !RUN_ID_PATTERN.test(historyRunId.value.trim());
 });
 historyRunId.addEventListener("keydown", (event) => {
