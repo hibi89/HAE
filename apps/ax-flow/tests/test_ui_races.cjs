@@ -123,6 +123,17 @@ async function testPreviewSupersededByNewRequest() {
   await second;
   assert.equal(ui.get("#preview").disabled, false);
 }
+async function testRunRejectsMissingPreviewToken() {
+  const ui = setup();
+  ui.get("#task").value = "Import CSV into SQLite";
+  ui.get("#csv-path").value = "data.csv";
+  const preview = ui.get("#preview").fire("click");
+  const request = ui.requests.find((r) => r.url === "/api/preview");
+  ui.respond(request, { plan: { steps: [] }, preview_id: "", requires_approval: false, workflow: "csv_lookup" });
+  await preview;
+  await ui.get("#run").fire("click");
+  assert.equal(ui.requests.filter((r) => r.url === "/api/run").length, 0);
+}
 async function testExecutionIsSingleFlightAndNeedsFreshPreview() {
   const ui = setup();
   const task = ui.get("#task");
@@ -175,6 +186,7 @@ async function testDbvoraNewestResponseWins() {
   assert.equal(button.disabled, false);
 }
 (async () => {
+  await testRunRejectsMissingPreviewToken();
   await testDbvoraNewestResponseWins();
   await testPreviewStaleFailure();
   await testExecutionIsSingleFlightAndNeedsFreshPreview();
@@ -182,5 +194,5 @@ async function testDbvoraNewestResponseWins() {
   await testPreviewSupersededByNewRequest();
   await testUploadStaleResponse();
   await testRecentRunsNewestWins();
-  console.log("HAE simulated UI race tests: 7 PASS");
+  console.log("HAE simulated UI race tests: 8 PASS");
 })().catch((error) => { console.error(error); process.exitCode = 1; });
