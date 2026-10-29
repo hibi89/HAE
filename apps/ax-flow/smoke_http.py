@@ -92,6 +92,11 @@ def main() -> None:
             status, first = run(first_preview["preview_id"])
             check(status, first, 200)
             assert first["status"]["status"] == "completed"
+            assert first["workflow_status"] == "completed", (
+                "unconfigured optional advisors must not downgrade a completed LA run", first
+            )
+            assert first["sovia_audit"]["available"] is False
+            assert first["dbvora"]["error_code"] == "NOT_CONFIGURED"
             assert first["result"]["imported_rows"] == 2
             assert first["backend"]["name"] == "Lightning Azent"
             first_id = first["run_id"]
@@ -112,6 +117,7 @@ def main() -> None:
             status, second = run(second_preview["preview_id"])
             check(status, second, 200)
             assert second["run_id"] != first_id and second["result"]["imported_rows"] == 2
+            assert second["workflow_status"] == "completed"
             with closing(sqlite3.connect(business)) as con:
                 assert con.execute("SELECT COUNT(*) FROM csv_records").fetchone()[0] == 4
             print("3/6 PASS: second independent LA run on existing SQLite ledger", flush=True)
@@ -129,6 +135,7 @@ def main() -> None:
             check(status, resumed, 200)
             assert resumed["run_id"] == first_id
             assert resumed["status"]["status"] == "completed"
+            assert resumed["workflow_status"] == "completed"
             with closing(sqlite3.connect(business)) as con:
                 assert con.execute(
                     "SELECT COUNT(*) FROM csv_records WHERE run_id=?", (first_id,)
@@ -148,6 +155,7 @@ def main() -> None:
             status, persisted = request(service.origin, "GET", "/api/status?run_id=" + first_id)
             check(status, persisted, 200)
             assert persisted["status"] == "completed"
+            assert persisted["integration"]["workflow_status"] == "completed"
             status, audit_after_restart = request(service.origin, "GET", audit_path)
             check(status, audit_after_restart, 200)
             assert audit_after_restart["run_id"] == first_id
