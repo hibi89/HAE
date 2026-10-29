@@ -216,13 +216,22 @@ print(json.dumps({"status": result["status"]["status"],
             self.assertEqual(outcomes[1][3]["result"]["imported_rows"], 1)
             self.assertEqual(outcomes[2][3]["result"]["matched_count"], 1)
             retry_task, retry_path, retry_preview, first = outcomes[0]
-            (inputs / "contacts.csv").write_bytes(b"id,name\n99,ChangedAfterSuccess\n")
             status, replay = post_json("/api/run", {
                 "task": retry_task, "csv_path": retry_path,
                 "preview_id": retry_preview, "approve_writes": True,
             })
             self.assertEqual(status, 200, replay)
             self.assertEqual(replay["result"], first["result"])
+            self.assertEqual(replay["status"]["status"], "completed")
+            # A completed run cannot bypass the approved source fingerprint.
+            (inputs / "contacts.csv").write_bytes(b"id,name\n99,ChangedAfterSuccess\n")
+            from urllib.error import HTTPError
+            with self.assertRaises(HTTPError) as rejected:
+                post_json("/api/run", {
+                    "task": retry_task, "csv_path": retry_path,
+                    "preview_id": retry_preview, "approve_writes": True,
+                })
+            self.assertEqual(rejected.exception.code, 409)
             with closing(sqlite3.connect(business)) as con:
                 self.assertEqual(con.execute(
                     "SELECT COUNT(*) FROM csv_records WHERE run_id=?", (first["run_id"],)
