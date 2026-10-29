@@ -142,6 +142,11 @@ async function testExecutionIsSingleFlightAndNeedsFreshPreview() {
   const first = ui.get("#run").fire("click");
   const second = ui.get("#run").fire("click");
   assert.equal(ui.requests.filter((r) => r.url === "/api/run").length, 1, "only one SQLite run may be submitted");
+  const submitted = JSON.parse(ui.requests.find((r) => r.url === "/api/run").options.body);
+  assert.equal(submitted.task, "Import CSV into SQLite");
+  assert.equal(submitted.csv_path, "data.csv");
+  assert.equal(submitted.preview_id, "preview-test");
+  assert.equal(submitted.approve_writes, true);
   assert.equal(ui.get("#run").disabled, true);
   const request = ui.requests.find((r) => r.url === "/api/run");
   ui.respond(request, { error: "synthetic failure" }, 500);
