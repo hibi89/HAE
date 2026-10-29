@@ -54,7 +54,12 @@ if ($Smoke) {
     $RepoRootForTests = (Resolve-Path (Join-Path $AppRoot '..\..')).Path
     $ExpectedLa = Join-Path $RepoRootForTests 'packages\lightning-azent\lightning_azent\__init__.py'
     if (-not (Test-Path $ExpectedLa -PathType Leaf)) {
-        throw 'Smoke tests require LA staged under repo/packages/lightning-azent; refusing to report skipped integration tests as PASS.'
+        $StagedParent = Split-Path (Split-Path $ExpectedLa -Parent) -Parent
+        New-Item -ItemType Directory -Force -Path $StagedParent | Out-Null
+        Copy-Item -Recurse -Force -Path $LaPackage -Destination $StagedParent
+    }
+    if (-not (Test-Path $ExpectedLa -PathType Leaf)) {
+        throw 'Unable to stage LA for integration smoke; refusing skipped tests.'
     }
     Push-Location $AppRoot
     try {
