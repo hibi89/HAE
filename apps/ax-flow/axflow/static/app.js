@@ -27,6 +27,7 @@ const previewDetail = document.querySelector("#preview-detail");
 const backendOutput = document.querySelector("#engine-backend");
 const stepListOutput = document.querySelector("#step-list");
 const soviaResult = document.querySelector("#sovia-result");
+const laAuditResult = document.querySelector("#la-audit-result");
 const historyRunId = document.querySelector("#history-run-id");
 const historyLoadButton = document.querySelector("#load-run-history");
 const historyCopyButton = document.querySelector("#copy-run-id");
@@ -119,9 +120,29 @@ function showStatus(status) {
       ? "이 기록이 재시작 후에도 진행 중으로 남아 있습니다. 다시 실행하지 말고 원인을 확인하세요."
       : "SOVIA 사후 자문과 DBVORA 현재 연결 상태는 아래에서 별도로 표시합니다.";
   resultCard.hidden = false;
+  renderLaAudit(integration.la_audit, integration.la_audit_state);
   renderSovia(integration.sovia_audit, integration.sovia_state);
   if (integration.dbvora) renderDbvora(integration.dbvora);
   if (partial) resultCopy.textContent += " SOVIA 또는 DBVORA 통합 일부를 확인할 수 없어 부분 완료로 표시합니다.";
+}
+
+function renderLaAudit(report, state = "") {
+  if (!report) {
+    laAuditResult.textContent = state === "missing"
+      ? "이 실행의 LA 감사 기록은 없습니다. HAE 기본 엔진 실행일 수 있습니다."
+      : state === "unavailable"
+        ? "LA 감사 기록을 안전하게 조회할 수 없습니다."
+        : "LA 실행 감사 기록은 조회되지 않았습니다.";
+    return;
+  }
+  const total = Number.isInteger(report.total_events) ? report.total_events
+    : Array.isArray(report.events) ? report.events.length : null;
+  const approvals = Number.isInteger(report.approval_count) ? report.approval_count
+    : Array.isArray(report.approval_receipts) ? report.approval_receipts.length : 0;
+  laAuditResult.textContent = Number.isInteger(total)
+    ? "Lightning Azent 실행 감사 · 이벤트 " + total + "건 · 승인 기록 " +
+      approvals + "건" + (report.truncated ? " (최근 100건만 반환)" : "")
+    : "LA 감사 이벤트 수를 확인할 수 없습니다.";
 }
 
 function renderSovia(report, state = "") {
@@ -197,6 +218,14 @@ async function loadRunHistory() {
         integration.sovia_audit = null;
         integration.sovia_state = "unavailable";
       }
+    }
+    if (requestVersion !== historyRequestVersion || historyRunId.value.trim() !== runId) return;
+    try {
+      integration.la_audit = await api("/api/la-audit?run_id=" + encodeURIComponent(runId));
+      integration.la_audit_state = "saved";
+    } catch (laError) {
+      integration.la_audit = null;
+      integration.la_audit_state = laError.status === 404 ? "missing" : "unavailable";
     }
     if (requestVersion !== historyRequestVersion || historyRunId.value.trim() !== runId) return;
     status.integration = integration;
@@ -578,8 +607,8 @@ runButton.addEventListener("click", async () => {
     });
     rememberRunId(response.run_id);
     const integration = response.backend?.name === "Lightning Azent"
-      ? { sovia_audit: response.sovia_audit, dbvora: response.dbvora,
-          workflow_status: response.workflow_status,
+      ? { la_audit: response.audit, sovia_audit: response.sovia_audit,
+          dbvora: response.dbvora, workflow_status: response.workflow_status,
           execution_status: response.execution_status }
       : {};
     showStatus({ ...response.status, integration });
