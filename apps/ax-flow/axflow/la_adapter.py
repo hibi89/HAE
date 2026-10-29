@@ -131,6 +131,10 @@ def execute(plan: object, run_id: str, *, state_path: Path, business_path: Path,
                 raise BackendUnavailable("existing LA run ledger cannot be verified") from exc
             existing = None
         if existing is not None:
+            from .engine import canonical_json
+            expected_hash = hashlib.sha256(canonical_json(plan).encode("utf-8")).hexdigest()
+            if existing.get("plan_sha256") != expected_hash:
+                raise BackendUnavailable("existing LA run has a different approved plan")
             resume_existing = True
         elif resume_existing:
             raise BackendUnavailable("LA run to resume is missing from durable ledger")
