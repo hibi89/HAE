@@ -365,6 +365,14 @@ def create_server(
                             raise RequestError(409, "recovery plan differs from the original run")
                         if previous["status"] not in {"failed", "running"}:
                             raise RequestError(409, "only incomplete LA runs can be resumed")
+                        # A matching generic HAE ledger is not proof of LA
+                        # ownership: require LA's own durable audit identity.
+                        try:
+                            original_audit = read_execution_audit(state, resume_run_id)
+                        except (LookupError, BackendUnavailable) as exc:
+                            raise RequestError(409, "recovery requires a verified LA execution audit") from exc
+                        if original_audit["plan_sha256"] != plan_hash:
+                            raise RequestError(409, "recovery audit differs from the approved plan")
                     run_id = resume_run_id or "Gui" + uuid.uuid4().hex[:12]
                     preview_id = self.server.save_preview(
                         body["task"], body["csv_path"], run_id,
