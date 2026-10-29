@@ -123,11 +123,38 @@ async function testPreviewSupersededByNewRequest() {
   await second;
   assert.equal(ui.get("#preview").disabled, false);
 }
+async function testExecutionIsSingleFlightAndNeedsFreshPreview() {
+  const ui = setup();
+  const task = ui.get("#task");
+  const csv = ui.get("#csv-path");
+  task.value = "Import CSV into SQLite";
+  csv.value = "data.csv";
+  const preview = ui.get("#preview").fire("click");
+  const previewRequest = ui.requests.find((r) => r.url === "/api/preview");
+  ui.respond(previewRequest, {
+    plan: { steps: [] }, engine_backend: { name: "HAE" },
+    preview_id: "preview-test", requires_approval: true,
+    workflow: "csv_to_sqlite", input: { row_count: 1, headers: ["id"], size_bytes: 5 },
+  });
+  await preview;
+  ui.get("#approval").checked = true;
+  await ui.get("#approval").fire("change");
+  const first = ui.get("#run").fire("click");
+  const second = ui.get("#run").fire("click");
+  assert.equal(ui.requests.filter((r) => r.url === "/api/run").length, 1, "only one SQLite run may be submitted");
+  assert.equal(ui.get("#run").disabled, true);
+  const request = ui.requests.find((r) => r.url === "/api/run");
+  ui.respond(request, { error: "synthetic failure" }, 500);
+  await Promise.all([first, second]);
+  assert.equal(ui.get("#run").disabled, true, "new preview required after run attempt");
+  assert.equal(ui.get("#approval").checked, false);
+}
 (async () => {
   await testPreviewStaleFailure();
+  await testExecutionIsSingleFlightAndNeedsFreshPreview();
   await testHistoryStaleFailure();
   await testPreviewSupersededByNewRequest();
   await testUploadStaleResponse();
   await testRecentRunsNewestWins();
-  console.log("HAE simulated UI race tests: 5 PASS");
+  console.log("HAE simulated UI race tests: 6 PASS");
 })().catch((error) => { console.error(error); process.exitCode = 1; });
