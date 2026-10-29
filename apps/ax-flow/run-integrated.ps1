@@ -1,5 +1,6 @@
-# HAE + Lightning Azent local synthetic integration launcher.
-# Run from an HAE checkout: powershell -ExecutionPolicy Bypass -File .\apps\ax-flow\run-integrated.ps1 -LaCheckout C:\path\to\HAE-LA
+# HAE + Lightning Azent: local synthetic-only Windows launcher.
+# From repository root: .\apps\ax-flow\run-integrated.ps1 -Smoke
+# Or: .\apps\ax-flow\run-integrated.ps1 -LaCheckout C:\path\to\LA-worktree
 param(
     [string]$LaCheckout = "",
     [string]$DemoRoot = (Join-Path $env:TEMP 'hae-la-synthetic'),
@@ -9,146 +10,108 @@ param(
     [switch]$Smoke
 )
 $ErrorActionPreference = 'Stop'
-if ($Port -lt 1 -or $Port -gt 65535) { throw 'Port must be 1..65535' }
-$AppRoot = (Resolve-Path (Join-Path $PSScriptRoot '.')).Path
-if (-not $LaCheckout) {
-    # Prefer an already staged LA package (CI or an offline source bundle).
-    # It is a real supported backend and needs neither Git nor a network call.
-    $BundledLa = Join-Path (Resolve-Path (Join-Path $AppRoot '..\..')).Path 'packages\lightning-azent'
-    if (Test-Path (Join-Path $BundledLa 'lightning_azent\__init__.py') -PathType Leaf) {
-        $LaCheckout = (Resolve-Path (Join-Path $AppRoot '..\..')).Path
-    } else {
-        $LaCheckout = Join-Path $DemoRoot 'lightning-source'
-    if (-not (Test-Path (Join-Path $LaCheckout 'packages\lightning-azent\lightning_azent\__init__.py') -PathType Leaf)) {
-        if (-not (Get-Command git -ErrorAction SilentlyContinue)) { throw 'Git is required to fetch Lightning Azent. Install Git or pass -LaCheckout.' }
+if ($Port -lt 1 -or $Port -gt 65535) { throw 'Port must be in 1..65535.' }
+
+$AppRoot = (Resolve-Path -LiteralPath $PSScriptRoot).Path
+$RepoRoot = (Resolve-Path -LiteralPath (Join-Path $AppRoot '..\..')).Path
+$BundledLa = Join-Path $RepoRoot 'packages\lightning-azent'
+$LaMarker = 'packages\lightning-azent\lightning_azent\__init__.py'
+$ExplicitCheckout = -not [string]::IsNullOrWhiteSpace($LaCheckout)
+if ($ExplicitCheckout) {
+    if (-not (Test-Path -LiteralPath $LaCheckout -PathType Container)) {
+        throw 'The supplied Lightning Azent checkout directory does not exist.'
+    }
+    $LaCheckout = (Resolve-Path -LiteralPath $LaCheckout).Path
+} elseif (Test-Path -LiteralPath (Join-Path $BundledLa 'lightning_azent\__init__.py') -PathType Leaf) {
+    # Offline/CI staged LA package: do not call Git or touch the network.
+    $LaCheckout = $RepoRoot
+} else {
+    $LaCheckout = Join-Path $DemoRoot 'lightning-source'
+    if (-not (Test-Path -LiteralPath (Join-Path $LaCheckout $LaMarker) -PathType Leaf)) {
+        if (Test-Path -LiteralPath $LaCheckout) {
+            throw 'An incomplete LA worktree already exists. Supply a valid -LaCheckout.'
+        }
+        if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+            throw 'LA is not staged. Install Git or supply an existing -LaCheckout.'
+        }
         New-Item -ItemType Directory -Force -Path $DemoRoot | Out-Null
-        $RepoRoot = $null
+        $GitRepo = $null
         try {
-            $RepoRoot = (& git -C $PSScriptRoot rev-parse --show-toplevel 2>$null)
-            if ($LASTEXITCODE -ne 0) { $RepoRoot = $null }
+            $GitRepo = (& git -C $RepoRoot rev-parse --show-toplevel 2>$null)
+            if ($LASTEXITCODE -ne 0) { $GitRepo = $null }
         } catch {
-            # Source ZIPs are valid inputs: use the remote LA checkout below.
-            $RepoRoot = $null
+            $GitRepo = $null  # Source ZIP: clone instead of creating a worktree.
         }
-        if ($RepoRoot) {
-            # Pin the LA worktree to the fetched remote commit, not to a
-            # mutable branch or FETCH_HEAD shared by concurrent processes.
+        if ($GitRepo) {
             & git -C $RepoRoot fetch origin '+refs/heads/feature/lightning-azent:refs/remotes/origin/feature/lightning-azent'
-            if ($LASTEXITCODE -ne 0) { throw 'Unable to fetch current LA branch; pass a verified -LaCheckout.' }
-            $LaCommit = (& git -C $RepoRoot rev-parse refs/remotes/origin/feature/lightning-azent)
-            if ($LASTEXITCODE -ne 0 -or $LaCommit -notmatch '^[a-f0-9]{40}
-        if (-not (Test-Path (Join-Path $LaCheckout 'packages\lightning-azent\lightning_azent\__init__.py') -PathType Leaf)) {
-            if (Test-Path $LaCheckout) {
-                throw 'LA checkout incomplete. Remove the incomplete lightning-source folder or pass -LaCheckout.'
+            if ($LASTEXITCODE -ne 0) { throw 'LA branch fetch failed; supply -LaCheckout.' }
+            $LaCommit = ((& git -C $RepoRoot rev-parse 'refs/remotes/origin/feature/lightning-azent') | Out-String).Trim()
+            if ($LASTEXITCODE -ne 0 -or $LaCommit -notmatch '^[a-fA-F0-9]{40}$') {
+                throw 'LA branch commit could not be verified.'
             }
-            & git clone --quiet --single-branch --branch feature/lightning-azent https://github.com/hibi89/HAE.git $LaCheckout
-            if ($LASTEXITCODE -ne 0) { throw 'Could not fetch Lightning Azent. Pass an existing checkout with -LaCheckout.' }
-        }
-    }
-    }
-}
-$LaPackage = Join-Path $LaCheckout 'packages\lightning-azent'
-if (-not (Test-Path (Join-Path $LaPackage 'lightning_azent\__init__.py') -PathType Leaf)) {
-    throw 'Lightning Azent source not found. Pass a checkout of feature/lightning-azent using -LaCheckout.'
-}
-$InputRoot = Join-Path $DemoRoot 'input'
-New-Item -ItemType Directory -Force -Path $InputRoot | Out-Null
-$Sample = Join-Path $InputRoot 'contacts.csv'
-if (-not (Test-Path $Sample)) {
-    [System.IO.File]::WriteAllText($Sample, "id,name`n11,Alice`n12,Bob`n", (New-Object System.Text.UTF8Encoding($false)))
-}
-$OldPythonPath = $env:PYTHONPATH
-$env:PYTHONPATH = "$AppRoot;$LaPackage"
-if ($OldPythonPath) { $env:PYTHONPATH += ";$OldPythonPath" }
-& python -c "from axflow.planner import plan_request; from axflow.la_adapter import inspect_backend; from axflow.web import create_server; p=plan_request('Import this CSV into local SQLite', 'contacts.csv'); b=inspect_backend(p); assert b['api_version']=='azent.api.v0'; assert b['preflight']['executes_workflow'] is False; print('HAE-LA plan-only compatibility preflight OK')"
-if ($LASTEXITCODE -ne 0) { throw 'HAE / Lightning Azent plan-only compatibility check failed; refusing to start.' }
-if ($Smoke) {
-    $RepoRootForTests = (Resolve-Path (Join-Path $AppRoot '..\..')).Path
-    $ExpectedLa = Join-Path $RepoRootForTests 'packages\lightning-azent\lightning_azent\__init__.py'
-    if (-not (Test-Path $ExpectedLa -PathType Leaf)) {
-        $StagedParent = Join-Path $RepoRootForTests 'packages'
-        New-Item -ItemType Directory -Force -Path $StagedParent | Out-Null
-        if ((Resolve-Path $LaPackage).Path -ne (Join-Path $StagedParent 'lightning-azent')) {
-            Copy-Item -Recurse -Force -Path $LaPackage -Destination $StagedParent
-        }
-    }
-    if (-not (Test-Path $ExpectedLa -PathType Leaf)) {
-        throw 'Unable to stage LA for integration smoke; refusing skipped tests.'
-    }
-    Push-Location $AppRoot
-    try {
-        & python -m unittest discover -s tests -p test_la_adapter.py -v
-        if ($LASTEXITCODE -ne 0) { throw 'HAE-LA HTTP integration smoke tests failed.' }
-    } finally {
-        Pop-Location
-    }
-    Write-Host 'HAE-LA HTTP integration smoke tests passed.'
-    exit 0
-}
-Write-Host "HAE + Lightning Azent: http://127.0.0.1:$Port/"
-Write-Host "Synthetic CSV: $Sample"
-Write-Host 'Use only synthetic fixtures. SQLite writes require UI approval.'
-$LaunchArgs = @('serve', '--input-root', $InputRoot, '--state', (Join-Path $DemoRoot 'state.db'), '--data', (Join-Path $DemoRoot 'business.db'), '--synthetic', '--engine-backend', 'lightning-azent', '--port', "$Port")
-if ($DbvoraUrl) { $LaunchArgs += @('--dbvora-url', $DbvoraUrl) }
-if ($SoviaRoot) { $LaunchArgs += @('--sovia-root', $SoviaRoot) }
-& python -m axflow @LaunchArgs
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-) { throw 'Unable to resolve LA commit.' }
             & git -C $RepoRoot worktree add --detach $LaCheckout $LaCommit
-            if ($LASTEXITCODE -ne 0) { throw 'Unable to create LA worktree; pass -LaCheckout.' }
-        }
-        if (-not (Test-Path (Join-Path $LaCheckout 'packages\lightning-azent\lightning_azent\__init__.py') -PathType Leaf)) {
-            if (Test-Path $LaCheckout) {
-                throw 'LA checkout incomplete. Remove the incomplete lightning-source folder or pass -LaCheckout.'
-            }
-            & git clone --quiet --single-branch --branch feature/lightning-azent https://github.com/hibi89/HAE.git $LaCheckout
-            if ($LASTEXITCODE -ne 0) { throw 'Could not fetch Lightning Azent. Pass an existing checkout with -LaCheckout.' }
+            if ($LASTEXITCODE -ne 0) { throw 'LA worktree creation failed; supply -LaCheckout.' }
+        } else {
+            & git clone --quiet --single-branch --branch feature/lightning-azent 'https://github.com/hibi89/HAE.git' $LaCheckout
+            if ($LASTEXITCODE -ne 0) { throw 'LA clone failed; supply a local -LaCheckout.' }
         }
     }
 }
 $LaPackage = Join-Path $LaCheckout 'packages\lightning-azent'
-if (-not (Test-Path (Join-Path $LaPackage 'lightning_azent\__init__.py') -PathType Leaf)) {
-    throw 'Lightning Azent source not found. Pass a checkout of feature/lightning-azent using -LaCheckout.'
+if (-not (Test-Path -LiteralPath (Join-Path $LaPackage 'lightning_azent\__init__.py') -PathType Leaf)) {
+    throw 'Lightning Azent package missing in checkout (expected packages/lightning-azent).'
 }
+
 $InputRoot = Join-Path $DemoRoot 'input'
 New-Item -ItemType Directory -Force -Path $InputRoot | Out-Null
 $Sample = Join-Path $InputRoot 'contacts.csv'
-if (-not (Test-Path $Sample)) {
+if (-not (Test-Path -LiteralPath $Sample)) {
     [System.IO.File]::WriteAllText($Sample, "id,name`n11,Alice`n12,Bob`n", (New-Object System.Text.UTF8Encoding($false)))
 }
 $OldPythonPath = $env:PYTHONPATH
-$env:PYTHONPATH = "$AppRoot;$LaPackage"
-if ($OldPythonPath) { $env:PYTHONPATH += ";$OldPythonPath" }
-& python -c "from axflow.planner import plan_request; from axflow.la_adapter import inspect_backend; from axflow.web import create_server; p=plan_request('Import this CSV into local SQLite', 'contacts.csv'); b=inspect_backend(p); assert b['api_version']=='azent.api.v0'; assert b['preflight']['executes_workflow'] is False; print('HAE-LA plan-only compatibility preflight OK')"
-if ($LASTEXITCODE -ne 0) { throw 'HAE / Lightning Azent plan-only compatibility check failed; refusing to start.' }
-if ($Smoke) {
-    $RepoRootForTests = (Resolve-Path (Join-Path $AppRoot '..\..')).Path
-    $ExpectedLa = Join-Path $RepoRootForTests 'packages\lightning-azent\lightning_azent\__init__.py'
-    if (-not (Test-Path $ExpectedLa -PathType Leaf)) {
-        $StagedParent = Join-Path $RepoRootForTests 'packages'
-        New-Item -ItemType Directory -Force -Path $StagedParent | Out-Null
-        if ((Resolve-Path $LaPackage).Path -ne (Join-Path $StagedParent 'lightning-azent')) {
-            Copy-Item -Recurse -Force -Path $LaPackage -Destination $StagedParent
+try {
+    $env:PYTHONPATH = "$AppRoot;$LaPackage"
+    if ($OldPythonPath) { $env:PYTHONPATH += ";$OldPythonPath" }
+
+    # This checks the real LA package handshake without touching SQLite.
+    & python -c "from axflow.planner import plan_request; from axflow.la_adapter import inspect_backend; p=plan_request('Import this CSV into local SQLite', 'contacts.csv'); b=inspect_backend(p); assert b['api_version']=='azent.api.v0' and b['preflight']['executes_workflow'] is False; print('HAE-LA preflight OK')"
+    if ($LASTEXITCODE -ne 0) { throw 'HAE-LA compatibility preflight failed; refusing to start.' }
+
+    if ($Smoke) {
+        # The real integration test imports LA from the repo's packages path.
+        $ExpectedLa = Join-Path $BundledLa 'lightning_azent\__init__.py'
+        if (-not (Test-Path -LiteralPath $ExpectedLa -PathType Leaf)) {
+            New-Item -ItemType Directory -Force -Path (Join-Path $RepoRoot 'packages') | Out-Null
+            if (([System.IO.Path]::GetFullPath($LaPackage)) -ne ([System.IO.Path]::GetFullPath($BundledLa))) {
+                Copy-Item -LiteralPath $LaPackage -Destination $BundledLa -Recurse -Force
+            }
         }
+        if (-not (Test-Path -LiteralPath $ExpectedLa -PathType Leaf)) {
+            throw 'Cannot stage LA; integration tests must not be skipped.'
+        }
+        Push-Location $AppRoot
+        try {
+            & python -m unittest discover -s tests -p test_la_adapter.py -v
+            if ($LASTEXITCODE -ne 0) { throw 'HAE-LA integration smoke failed.' }
+        } finally {
+            Pop-Location
+        }
+        Write-Host 'HAE-LA HTTP integration smoke passed.'
+    } else {
+        Write-Host "HAE + Lightning Azent: http://127.0.0.1:$Port/"
+        Write-Host "Synthetic CSV: $Sample"
+        Write-Host 'Synthetic fixtures only. SQLite writes require explicit UI approval.'
+        $LaunchArgs = @(
+            'serve', '--input-root', $InputRoot,
+            '--state', (Join-Path $DemoRoot 'state.db'),
+            '--data', (Join-Path $DemoRoot 'business.db'),
+            '--synthetic', '--engine-backend', 'lightning-azent', '--port', "$Port"
+        )
+        if ($DbvoraUrl) { $LaunchArgs += @('--dbvora-url', $DbvoraUrl) }
+        if ($SoviaRoot) { $LaunchArgs += @('--sovia-root', $SoviaRoot) }
+        & python -m axflow @LaunchArgs
+        if ($LASTEXITCODE -ne 0) { throw 'HAE-LA server exited unsuccessfully.' }
     }
-    if (-not (Test-Path $ExpectedLa -PathType Leaf)) {
-        throw 'Unable to stage LA for integration smoke; refusing skipped tests.'
-    }
-    Push-Location $AppRoot
-    try {
-        & python -m unittest discover -s tests -p test_la_adapter.py -v
-        if ($LASTEXITCODE -ne 0) { throw 'HAE-LA HTTP integration smoke tests failed.' }
-    } finally {
-        Pop-Location
-    }
-    Write-Host 'HAE-LA HTTP integration smoke tests passed.'
-    exit 0
+} finally {
+    $env:PYTHONPATH = $OldPythonPath
 }
-Write-Host "HAE + Lightning Azent: http://127.0.0.1:$Port/"
-Write-Host "Synthetic CSV: $Sample"
-Write-Host 'Use only synthetic fixtures. SQLite writes require UI approval.'
-$LaunchArgs = @('serve', '--input-root', $InputRoot, '--state', (Join-Path $DemoRoot 'state.db'), '--data', (Join-Path $DemoRoot 'business.db'), '--synthetic', '--engine-backend', 'lightning-azent', '--port', "$Port")
-if ($DbvoraUrl) { $LaunchArgs += @('--dbvora-url', $DbvoraUrl) }
-if ($SoviaRoot) { $LaunchArgs += @('--sovia-root', $SoviaRoot) }
-& python -m axflow @LaunchArgs
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
