@@ -35,7 +35,7 @@ class PortableWindowsBundleTests(unittest.TestCase):
     def test_portable_launcher_smoke_lock_and_termination(self):
         with tempfile.TemporaryDirectory(prefix="hae-bundle-acceptance-") as directory:
             root = Path(directory)
-            bundle = root / "HAE Windows Offline"
+            bundle = root / "HAE 한글 Windows Offline"
             built = subprocess.run([
                 sys.executable, str(REPO / "tools" / "build_hae_windows_bundle.py"),
                 "--la-package", str(LA_PACKAGE), "--output-dir", str(bundle),
@@ -50,7 +50,7 @@ class PortableWindowsBundleTests(unittest.TestCase):
             ], cwd=root, capture_output=True, text=True, timeout=10)
             self.assertNotEqual(duplicate.returncode, 0, "bundle builder must not overwrite output")
 
-            data = root / "local user data"
+            data = root / "로컬 사용자 데이터"
             env = os.environ.copy()
             env.pop("PYTHONPATH", None)
             script = bundle / "launch_integrated.py"
