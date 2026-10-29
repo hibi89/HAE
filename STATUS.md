@@ -1,3 +1,11 @@
+## feature/axflow-mvp fast-forward 통합 후보 검증 — 2026-10-29 KST
+- **HEAD 비교:** feature base `d0507968009909cafb245ce55469be3e979e9aad`; source development `feat/windows-ux-followup` HEAD `33adacf2d098305e60e1f10a99f6104b05cf71f2`. Merge-base equals feature base; 5 commits are linear descendants, no divergent edits. Candidate is a fast-forward; source history preserved.
+- **Integrated candidate:** local isolated branch `integrate/windows-ux-into-mvp`, candidate SHA `33adacf2d098305e60e1f10a99f6104b05cf71f2`.
+- **Revalidation on integrated SHA:** Windows `HAE-Start.cmd --verify` 7/7 PASS; `apps/ax-flow/VERIFY-WINDOWS.cmd --no-pause` 4/4 PASS (real E2E + 3 NTFS gates); Python full suite 148 PASS / 11 SKIP; Node CJS regressions all PASS including UI race 14 assertions; `git diff --check` PASS.
+- **Command note:** first NTFS invocation used repo root where the script does not exist; reran from `apps/ax-flow`, where all gates passed. No product failure.
+- **Preservation:** only synthetic tests in isolated `work/hae-merge`; no original user database/configuration changed. `main` untouched. Full HAE readiness remains separate; Production N/A.
+- **Identity:** configured Git author/committer `이해인 <haein5898@naver.com>` differs from connected profile `hibi89 <godls5898@gmail.com>`; identity was not overridden. Current feature push pending final ref check.
+
 ## Windows + браузерная проверка HAE — 2026-10-29 KST
 - **База/ветка:** `hibi89/HAE`, исходная remote feature branch HEAD `d0507968009909cafb245ce55469be3e979e9aad`; изолированная проверочная ветка `test/windows-browser-20261029`. Python 3.11.9 x64, Node v24.21.0, Windows/NTFS, браузер Codex IAB. `py -3` не обнаруживает установленную Python; fallback `python` работает.
 - **Реальный дефект Windows:** старый port probe пытался подключиться к незанятому loopback порту и мог получить timeout/Winsock ограничения, блокируя запуск; проверка замена на bind probe (серверный bind остаётся финальной проверкой). Smoke и штатный сервер прошли на 18765.
