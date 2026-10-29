@@ -66,6 +66,16 @@ class WebUITests(unittest.TestCase):
         status, response_headers, raw = self.request(path, payload=payload, headers=headers, method="POST")
         return status, response_headers, json.loads(raw.decode("utf-8"))
 
+    def test_health_reports_backend_without_opening_sqlite(self):
+        status, _, body = self.request("/api/health")
+        self.assertEqual(status, 200)
+        health = json.loads(body.decode("utf-8"))
+        self.assertEqual(health["service"], "HAE")
+        self.assertTrue(health["ready"])
+        self.assertEqual(health["engine_backend"]["name"], "HAE local engine")
+        self.assertFalse(self.state.exists())
+        self.assertFalse(self.business.exists())
+
     def test_local_page_and_assets_have_no_external_dependencies(self):
         status, headers, body = self.request("/")
         self.assertEqual(status, 200)
