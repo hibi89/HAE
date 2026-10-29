@@ -215,6 +215,30 @@ print(json.dumps({"status": result["status"]["status"],
             self.assertEqual(outcomes[0][3]["result"]["imported_rows"], 2)
             self.assertEqual(outcomes[1][3]["result"]["imported_rows"], 1)
             self.assertEqual(outcomes[2][3]["result"]["matched_count"], 1)
+            # A fresh HTTP server must reconstruct run status and audit
+            # integration from durable SQLite without the original UI cache.
+            restarted = create_server(
+                inputs, state, business, port=0, engine_backend="lightning-azent",
+            )
+            restarted_thread = threading.Thread(
+                target=restarted.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True,
+            )
+            restarted_thread.start()
+            try:
+                restored_origin = f"http://127.0.0.1:{restarted.server_port}"
+                for _, _, _, completed in outcomes:
+                    run_id = completed["run_id"]
+                    with urlopen(restored_origin + "/api/status?run_id=" + run_id, timeout=5) as response:
+                        restored = json.loads(response.read().decode("utf-8"))
+                    self.assertEqual(restored["status"], "completed")
+                    self.assertEqual(restored["integration"]["execution_status"], "completed")
+                    self.assertIn(restored["integration"]["workflow_status"], {"completed", "partial"})
+                    self.assertEqual(restored["integration"]["sovia_audit"]["run_id"], run_id)
+            finally:
+                restarted.shutdown()
+                restarted.server_close()
+                restarted_thread.join(timeout=3)
+
             retry_task, retry_path, retry_preview, first = outcomes[0]
             status, replay = post_json("/api/run", {
                 "task": retry_task, "csv_path": retry_path,
