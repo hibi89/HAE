@@ -65,6 +65,10 @@ jobs:
       - name: Verify synthetic end-to-end Python suite
         working-directory: apps/ax-flow
         run: python -m unittest discover -s tests -v
+      - name: Require native Windows LA and NTFS acceptance (no skipped gates)
+        if: runner.os == 'Windows'
+        working-directory: apps/ax-flow
+        run: python windows_acceptance.py
       - name: Publish offline Windows bundle
         if: runner.os == 'Windows'
         uses: actions/upload-artifact@v4
