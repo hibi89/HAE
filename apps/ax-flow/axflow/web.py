@@ -235,7 +235,12 @@ def create_server(
                     self._send_json(200, report)
                 return
             if parsed.path == "/api/dbvora":
-                self._send_json(200, self.server.dbvora_client.fetch_inventory())
+                try:
+                    inventory = self.server.dbvora_client.fetch_inventory()
+                except Exception as exc:
+                    inventory = {"available": False, "error": "DBVORA inventory unavailable",
+                                 "error_type": type(exc).__name__}
+                self._send_json(200, inventory)
                 return
             self._send_json(404, {"error": "route not found"})
 
