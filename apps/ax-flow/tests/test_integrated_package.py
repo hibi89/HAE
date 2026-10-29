@@ -131,11 +131,24 @@ class IntegratedOfflineZipappTests(unittest.TestCase):
                 self.assertGreaterEqual(audit["approval_count"], 1)
                 self.assertNotIn("SyntheticAlice", json.dumps(audit))
 
+                # Packaged LA must support a second independent run against the
+                # already-initialized runtime/business ledgers.
+                code, next_preview = request(origin, "POST", "/api/preview", args)
+                self.assertEqual(code, 200, next_preview)
+                code, second = request(origin, "POST", "/api/run", {
+                    **args, "preview_id": next_preview["preview_id"],
+                    "approve_writes": True,
+                })
+                self.assertEqual(code, 200, second)
+                self.assertNotEqual(second["run_id"], run_id)
+                self.assertEqual(second["status"]["status"], "completed")
+                self.assertEqual(second["result"]["imported_rows"], 2)
+
                 stop()
                 with closing(sqlite3.connect(business)) as connection:
                     self.assertEqual(connection.execute(
                         "SELECT COUNT(*) FROM csv_records"
-                    ).fetchone()[0], 2)
+                    ).fetchone()[0], 4)
 
                 origin = start()
                 code, after_restart = request(origin, "GET", "/api/status?run_id=" + run_id)
