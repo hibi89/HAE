@@ -60,6 +60,10 @@ class HaeStartTests(unittest.TestCase):
         self.assertEqual(self.select(explicit_native)[2], "legacy")
         self.assertEqual(self.select(explicit_la)[2], "integrated")
 
+    def test_explicit_lightning_without_bundle_fails_closed(self):
+        with self.assertRaisesRegex(launcher.StartError, "explicitly required"):
+            self.select(dict(self.env, HAE_ENGINE_BACKEND="lightning-azent"))
+
     def test_missing_bundle_retains_native_fallback(self):
         cmd, env, selected = self.select()
         self.assertEqual(selected, "legacy")

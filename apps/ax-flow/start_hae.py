@@ -25,6 +25,8 @@ def launch_command(root: Path, environment: dict[str, str], python: str) -> tupl
     launch = app / "launch_integrated.py"
     package = app / "hae-integrated.pyz"
     present = launch.exists() or launch.is_symlink() or package.exists() or package.is_symlink()
+    if preference == "lightning-azent" and not present:
+        raise StartError("Lightning Azent was explicitly required but the offline bundle is missing")
     if preference != "axflow" and present:
         if (not launch.is_file() or launch.is_symlink()
                 or not package.is_file() or package.is_symlink()):
