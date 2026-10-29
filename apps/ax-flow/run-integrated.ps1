@@ -17,7 +17,13 @@ if (-not $LaCheckout) {
         New-Item -ItemType Directory -Force -Path $DemoRoot | Out-Null
         $RepoRoot = (& git -C $PSScriptRoot rev-parse --show-toplevel 2>$null)
         if ($LASTEXITCODE -eq 0 -and $RepoRoot) {
-            & git -C $RepoRoot worktree add --detach $LaCheckout feature/lightning-azent 2>$null
+            & git -C $RepoRoot rev-parse --verify feature/lightning-azent 2>$null | Out-Null
+            if ($LASTEXITCODE -ne 0) {
+                & git -C $RepoRoot fetch origin feature/lightning-azent:refs/heads/feature/lightning-azent
+                if ($LASTEXITCODE -ne 0) { throw 'Unable to fetch LA branch; provide -LaCheckout.' }
+            }
+            & git -C $RepoRoot worktree add --detach $LaCheckout feature/lightning-azent
+            if ($LASTEXITCODE -ne 0) { throw 'Unable to create local LA worktree; provide -LaCheckout.' }
         }
         if (-not (Test-Path (Join-Path $LaCheckout 'packages\lightning-azent\lightning_azent\__init__.py') -PathType Leaf)) {
             if (Test-Path $LaCheckout) {
@@ -48,6 +54,6 @@ Write-Host "Synthetic CSV: $Sample"
 Write-Host 'Use only synthetic fixtures. SQLite writes require UI approval.'
 $LaunchArgs = @('serve', '--input-root', $InputRoot, '--state', (Join-Path $DemoRoot 'state.db'), '--data', (Join-Path $DemoRoot 'business.db'), '--synthetic', '--engine-backend', 'lightning-azent', '--port', "$Port")
 if ($DbvoraUrl) { $LaunchArgs += @('--dbvora-url', $DbvoraUrl) }
-if ($SoviaRoot) { $Args += @('--sovia-root', $SoviaRoot) }
+if ($SoviaRoot) { $LaunchArgs += @('--sovia-root', $SoviaRoot) }
 & python -m axflow @LaunchArgs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
