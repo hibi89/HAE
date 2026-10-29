@@ -204,6 +204,25 @@ def create_server(
                     return
                 self._send_bytes(200, body, content_type)
                 return
+            if parsed.path == "/api/health":
+                if parsed.query:
+                    self._send_json(400, {"error": "health does not accept query parameters"})
+                    return
+                try:
+                    # Plan-only LA handshake: no CSV read or SQLite initialization.
+                    probe = plan_request("Import this CSV into local SQLite", "contacts.csv")
+                    backend = backend_info(probe)
+                    self._send_json(200, {
+                        "service": "HAE", "ready": True,
+                        "engine_backend": {key: value for key, value in backend.items()
+                                           if key in {"name", "api_version", "package_version"}},
+                    })
+                except (BackendUnavailable, PlanError):
+                    self._send_json(503, {
+                        "service": "HAE", "ready": False,
+                        "error": "selected workflow backend is not ready",
+                    })
+                return
             if parsed.path == "/api/runs":
                 status_code, payload = _recent_runs_payload(state, parsed.query)
                 self._send_json(status_code, payload)
