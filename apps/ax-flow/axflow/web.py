@@ -326,12 +326,29 @@ def create_server(
                     self._send_json(201, {"csv_path": csv_path, "size_bytes": len(content)})
                     return
                 if route == "/api/preview":
-                    self._require_fields(body, {"task", "csv_path"})
+                    if set(body) not in ({"task", "csv_path"}, {"task", "csv_path", "resume_run_id"}):
+                        raise RequestError(400, "preview request fields are missing or unsupported")
                     plan = plan_request(body["task"], body["csv_path"])
                     active_backend = backend_info(plan)
                     csv_snapshot, csv_summary = preflight_csv_plan(plan, root)
+                    resume_run_id = body.get("resume_run_id")
+                    if resume_run_id is not None:
+                        if not isinstance(resume_run_id, str) or not _RUN_ID.fullmatch(resume_run_id):
+                            raise RequestError(400, "a valid run ID is required for recovery")
+                        if engine_backend != "lightning-azent":
+                            raise RequestError(409, "durable resume requires Lightning Azent")
+                        try:
+                            previous = inspect_run(state, resume_run_id)
+                        except RunLogError as exc:
+                            raise RequestError(404, "run to resume does not exist") from exc
+                        plan_hash = hashlib.sha256(canonical_json(plan).encode("utf-8")).hexdigest()
+                        if previous["plan_sha256"] != plan_hash:
+                            raise RequestError(409, "recovery plan differs from the original run")
+                        if previous["status"] not in {"failed", "running"}:
+                            raise RequestError(409, "only incomplete LA runs can be resumed")
+                    run_id = resume_run_id or "Gui" + uuid.uuid4().hex[:12]
                     preview_id = self.server.save_preview(
-                        body["task"], body["csv_path"], "Gui" + uuid.uuid4().hex[:12],
+                        body["task"], body["csv_path"], run_id,
                         csv_snapshot["source_sha256"],
                         str(active_backend["capability_fingerprint"]),
                     )
@@ -342,6 +359,7 @@ def create_server(
                         "planner": "bounded local rules",
                         "engine_backend": active_backend,
                         "preview_id": preview_id,
+                        "resumes_run_id": resume_run_id,
                         "plan": plan,
                         "input": {key: value for key, value in csv_summary.items() if key != "source_sha256"},
                     })
