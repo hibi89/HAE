@@ -47,6 +47,134 @@ def _same_file_identity(left: os.stat_result, right: os.stat_result) -> bool:
 
 
 @contextmanager
+def _open_csv_readonly(path: Path, input_root: Path):
+    """Open a stable CSV handle and reject Windows path redirection outside its snapshot path."""
+    if os.name != "nt":
+        descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_BINARY", 0) |
+                             getattr(os, "O_NOFOLLOW", 0))
+        try:
+            stream = os.fdopen(descriptor, "rb")
+        except Exception:
+            os.close(descriptor)
+            raise
+        with stream:
+            yield stream
+        return
+
+    import ctypes
+    import msvcrt
+    from ctypes import wintypes
+    import ntpath
+
+    class FileInformation(ctypes.Structure):
+        _fields_ = [
+            ("attributes", wintypes.DWORD),
+            ("creation_low", wintypes.DWORD), ("creation_high", wintypes.DWORD),
+            ("access_low", wintypes.DWORD), ("access_high", wintypes.DWORD),
+            ("write_low", wintypes.DWORD), ("write_high", wintypes.DWORD),
+            ("volume_serial", wintypes.DWORD),
+            ("size_high", wintypes.DWORD), ("size_low", wintypes.DWORD),
+            ("links", wintypes.DWORD),
+            ("index_high", wintypes.DWORD), ("index_low", wintypes.DWORD),
+        ]
+
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel.CreateFileW.argtypes = (
+        wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, wintypes.LPVOID,
+        wintypes.DWORD, wintypes.DWORD, wintypes.HANDLE,
+    )
+    kernel.CreateFileW.restype = wintypes.HANDLE
+    kernel.GetFileInformationByHandle.argtypes = (wintypes.HANDLE, ctypes.POINTER(FileInformation))
+    kernel.GetFileInformationByHandle.restype = wintypes.BOOL
+    kernel.GetFinalPathNameByHandleW.argtypes = (
+        wintypes.HANDLE, wintypes.LPWSTR, wintypes.DWORD, wintypes.DWORD,
+    )
+    kernel.GetFinalPathNameByHandleW.restype = wintypes.DWORD
+
+    invalid_handle = ctypes.c_void_p(-1).value
+    share_read_write_delete = 0x1 | 0x2 | 0x4
+    open_existing = 3
+    open_reparse_point = 0x00200000
+    backup_semantics = 0x02000000
+    sequential_scan = 0x08000000
+    file_attribute_directory = 0x10
+    file_attribute_reparse_point = 0x400
+
+    def open_handle(target: Path, *, directory: bool, share: int):
+        flags = open_reparse_point | (backup_semantics if directory else sequential_scan)
+        handle = kernel.CreateFileW(
+            str(target), 0x80 if directory else 0x80000000 | 0x80,
+            share, None, open_existing, flags, None,
+        )
+        if not handle or handle == invalid_handle:
+            raise OSError(ctypes.get_last_error(), "CSV path could not be opened safely")
+        return handle
+
+    def handle_info(handle):
+        info = FileInformation()
+        if not kernel.GetFileInformationByHandle(handle, ctypes.byref(info)):
+            raise OSError(ctypes.get_last_error(), "CSV handle information is unavailable")
+        return info
+
+    def final_path(handle):
+        buffer = ctypes.create_unicode_buffer(32768)
+        length = kernel.GetFinalPathNameByHandleW(handle, buffer, len(buffer), 0)
+        if not length or length >= len(buffer):
+            raise OSError(ctypes.get_last_error(), "CSV final path is unavailable")
+        value = buffer.value
+        if value.startswith("\\\\?\\UNC\\"):
+            value = "\\\\" + value[8:]
+        elif value.startswith("\\\\?\\"):
+            value = value[4:]
+        return ntpath.normcase(ntpath.normpath(value))
+
+    root_handle = open_handle(input_root, directory=True, share=share_read_write_delete)
+    csv_handle = None
+    descriptor = None
+    try:
+        root_info = handle_info(root_handle)
+        if (not root_info.attributes & file_attribute_directory or
+                root_info.attributes & file_attribute_reparse_point):
+            raise PlanError("CSV input root must not be a reparse point")
+        root_final = final_path(root_handle)
+        expected_root = ntpath.normcase(ntpath.normpath(str(input_root)))
+        if root_final != expected_root:
+            raise PlanError("CSV input root changed while it was being opened")
+
+        # Sharing read-only denies a writer or deleter while preview hashes and parses
+        # the bytes. OPEN_REPARSE_POINT prevents following a swapped final component.
+        csv_handle = open_handle(path, directory=False, share=0x1)
+        csv_info = handle_info(csv_handle)
+        if csv_info.attributes & file_attribute_reparse_point:
+            raise PlanError("CSV input must not traverse symbolic links or reparse points")
+        if csv_info.attributes & file_attribute_directory:
+            raise PlanError("CSV input must be a regular .csv file")
+        file_final = final_path(csv_handle)
+        expected_file = ntpath.normcase(ntpath.normpath(str(path)))
+        if file_final != expected_file:
+            raise PlanError("CSV input changed or resolved outside --input-root")
+        try:
+            if ntpath.commonpath((root_final, file_final)) != root_final:
+                raise PlanError("CSV input resolved outside --input-root")
+        except ValueError as exc:
+            raise PlanError("CSV input resolved outside --input-root") from exc
+
+        descriptor = msvcrt.open_osfhandle(
+            int(csv_handle), os.O_RDONLY | getattr(os, "O_BINARY", 0),
+        )
+        csv_handle = None  # ownership transferred to the CRT descriptor
+        with os.fdopen(descriptor, "rb") as stream:
+            descriptor = None
+            yield stream
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+        if csv_handle is not None:
+            kernel.CloseHandle(csv_handle)
+        kernel.CloseHandle(root_handle)
+
+
+@contextmanager
 def _cross_process_run_lock(state_path: Path, run_id: str):
     """Acquire a crash-releasing, per-run OS lock without deleting lock artifacts."""
     identity = os.path.normcase(str(state_path.resolve())) + "\0" + run_id
@@ -771,7 +899,7 @@ class Engine:
             before_open = resolved.stat()
             if before_open.st_size > MAX_CSV_BYTES:
                 raise PlanError("CSV input exceeds 256 KiB")
-            with resolved.open("rb") as stream:
+            with _open_csv_readonly(resolved, self.input_root) as stream:
                 opened = os.fstat(stream.fileno())
                 if not _same_file_identity(before_open, opened):
                     raise PlanError("CSV input changed while it was being opened")

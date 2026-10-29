@@ -1,7 +1,7 @@
 ## Next after CSV preflight completion — 2026-10-29 KST
 
-1. Review native Windows file-opening behavior for symlinks/reparse points and close remaining path-swap exposure where feasible without weakening CSV limits or approval binding.
-2. Cross-process same-run coordination is implemented with a per-run OS mutex/flock and durable SQLite receipts. Same-run replay, hard-exit recovery, and independent-run parallel entry now have Windows subprocess coverage; do not replace it with a database-wide lock without new evidence that the keyed lock is insufficient.
+1. Run the real synthetic four-system HAE → Lightning Azent → SOVIA → DBVORA integration E2E using pinned, read-only reference source checkouts. Record exact versions and distinguish partial/unavailable contracts from a successful integration.
+2. Windows CSV path hardening now uses native handle checks and read-only sharing, with tests for writer denial, parent junction swap outside the input root, and replacement between stat/open. Cross-process run coordination uses per-run OS locks and durable SQLite receipts; do not replace it with a database-wide lock without new evidence that the keyed lock is insufficient.
 3. Keep the validated scope explicit: UTF-8 CSV, 256 KiB, 1,000 rows, 64 columns, 4,096 characters/cell. Preview stays SQLite-free; raw values must not leak into responses/logs.
 4. Synthetic validation does not imply customer readiness or clear separate HAE product acceptance, security, installer, backup/restore or release gates. The four-system integrated E2E remains unverified until the separate LA/SOVIA/DBVORA roots are configured.
 ## Next after draft Azent fixtures (2026-10-27 KST)

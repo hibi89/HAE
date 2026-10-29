@@ -9,7 +9,7 @@ import threading
 import time
 import unittest
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import closing
+from contextlib import closing, contextmanager
 from pathlib import Path
 from unittest.mock import patch
 
@@ -525,20 +525,94 @@ raise SystemExit(main())
             path: (path.read_bytes(), path.stat().st_mtime_ns)
             for path in (self.root / "state.db", self.root / "business.db")
         }
-        original_open = Path.open
+        from axflow.engine import _open_csv_readonly
 
-        def replace_before_open(path, *args, **kwargs):
-            if path == source and args and args[0] == "rb":
+        @contextmanager
+        def replace_before_open(path, root):
+            if path == source:
                 replacement.replace(source)
-            return original_open(path, *args, **kwargs)
+            with _open_csv_readonly(path, root) as stream:
+                yield stream
 
-        with patch.object(Path, "open", replace_before_open):
+        with patch("axflow.engine._open_csv_readonly", replace_before_open):
             with self.assertRaisesRegex(PlanError, "changed while it was being opened"):
                 preflight_csv_plan(plan, input_root)
         self.assertEqual(db_before, {
             path: (path.read_bytes(), path.stat().st_mtime_ns)
             for path in (self.root / "state.db", self.root / "business.db")
         })
+
+    @unittest.skipUnless(os.name == "nt", "Windows share-mode behavior is platform-specific")
+    def test_csv_snapshot_handle_denies_concurrent_writer(self):
+        input_root = self.root / "csv-share-lock"
+        input_root.mkdir()
+        source = input_root / "contacts.csv"
+        source.write_bytes(b"id\n1\n")
+        engine = Engine(self.root / "share-state.db", self.root / "share-business.db", input_root)
+        from axflow.engine import _open_csv_readonly
+        writer_denied = []
+
+        @contextmanager
+        def check_writer_denied(path, root):
+            with _open_csv_readonly(path, root) as stream:
+                try:
+                    writer = open(path, "r+b")
+                except OSError:
+                    writer_denied.append(True)
+                else:
+                    writer_denied.append(False)
+                    writer.close()
+                yield stream
+
+        with patch("axflow.engine._open_csv_readonly", check_writer_denied):
+            snapshot = engine._read_csv("contacts.csv")
+        self.assertEqual(snapshot["row_count"], 1)
+        self.assertEqual(writer_denied, [True])
+
+    @unittest.skipUnless(os.name == "nt", "Windows junction race is platform-specific")
+    def test_csv_open_rejects_parent_junction_swap_outside_input_root(self):
+        input_root = self.root / "csv-junction-race"
+        nested = input_root / "nested"
+        outside = self.root / "outside-csv"
+        nested.mkdir(parents=True)
+        outside.mkdir()
+        (nested / "contacts.csv").write_bytes(b"id\n1\n")
+        (outside / "contacts.csv").write_bytes(b"id\n2\n")
+        saved = input_root / "nested-original"
+        junction = input_root / "nested"
+        junction_created = False
+        engine = Engine(self.root / "junction-state.db", self.root / "junction-business.db", input_root)
+        from axflow.engine import _open_csv_readonly
+        original_open = _open_csv_readonly
+        plan = {"version": "axflow.ir.v0", "steps": [
+            {"id": "source", "op": "csv_read", "path": "nested/contacts.csv"},
+        ]}
+
+        @contextmanager
+        def swap_parent_then_open(path, root):
+            nonlocal junction_created
+            if path == junction / "contacts.csv":
+                junction.rename(saved)
+                created = subprocess.run(
+                    ["cmd.exe", "/c", "mklink", "/J", str(junction), str(outside)],
+                    capture_output=True, text=True, timeout=5,
+                )
+                if created.returncode != 0:
+                    saved.rename(junction)
+                    self.skipTest("Windows junction creation is unavailable in this environment")
+                junction_created = True
+            with original_open(path, root) as stream:
+                yield stream
+
+        try:
+            with patch("axflow.engine._open_csv_readonly", swap_parent_then_open):
+                with self.assertRaisesRegex(PlanError, "outside --input-root"):
+                    preflight_csv_plan(plan, input_root)
+        finally:
+            if junction_created:
+                junction.rmdir()
+            if saved.exists():
+                saved.rename(junction)
 
     def test_csv_input_limits_and_path_allowlist_fail_before_business_writes(self):
         input_root = self.root / "invalid-csv"
