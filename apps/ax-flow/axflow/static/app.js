@@ -45,6 +45,7 @@ let previewId = "";
 let requiresApproval = true;
 let historyRequestVersion = 0;
 let uploadRequestVersion = 0;
+let recentRunsRequestVersion = 0;
 
 function requestKey() {
   return JSON.stringify([taskInput.value, csvInput.value]);
@@ -231,12 +232,14 @@ function runTimestampLabel(value) {
 }
 
 async function loadRecentRuns() {
+  const requestVersion = ++recentRunsRequestVersion;
   recentRunsButton.disabled = true;
   recentRunsState.textContent = "최근 실행 목록을 읽기 전용으로 조회하고 있습니다…";
   recentRunsState.className = "history-state";
   clearChildren(recentRunsList);
   try {
     const response = await api("/api/runs?limit=10");
+    if (requestVersion !== recentRunsRequestVersion) return;
     const runs = Array.isArray(response.runs) ? response.runs.slice(0, 20) : [];
     if (!runs.length) {
       recentRunsState.textContent = "표시할 최근 실행이 없습니다. 날짜 정보가 없는 이전 기록은 실행 ID를 직접 입력해 열 수 있습니다.";
@@ -265,10 +268,11 @@ async function loadRecentRuns() {
       : "표시할 수 있는 실행 ID가 없습니다.";
     recentRunsState.className = "history-state";
   } catch {
+    if (requestVersion !== recentRunsRequestVersion) return;
     recentRunsState.textContent = "실행 목록을 불러올 수 없습니다. 로컬 HAE 서비스 상태를 확인하세요.";
     recentRunsState.className = "history-state error";
   } finally {
-    recentRunsButton.disabled = false;
+    if (requestVersion === recentRunsRequestVersion) recentRunsButton.disabled = false;
   }
 }
 
