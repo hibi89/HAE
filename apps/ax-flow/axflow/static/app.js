@@ -62,7 +62,7 @@ function setMessage(text, state = "") {
 
 function updateRunButton() {
   approvalSection.hidden = !requiresApproval;
-  runButton.disabled = executionInProgress || !previewKey || previewKey !== requestKey() || (requiresApproval && !approvalInput.checked);
+  runButton.disabled = executionInProgress || uploadInProgress || !previewKey || previewKey !== requestKey() || (requiresApproval && !approvalInput.checked);
 }
 
 async function api(path, options = {}) {
@@ -482,7 +482,7 @@ for (const input of [taskInput, csvInput]) {
     uploadRequestVersion += 1;
     previewRequestVersion += 1;
     uploadInProgress = false;
-    previewButton.disabled = false;
+    previewButton.disabled = executionInProgress;
     previewKey = "";
     previewId = "";
     requiresApproval = true;
@@ -496,9 +496,13 @@ csvFileInput.addEventListener("change", async () => {
   const uploadVersion = ++uploadRequestVersion;
   previewRequestVersion += 1;
   uploadInProgress = false;
-  previewButton.disabled = false;
+  previewButton.disabled = executionInProgress;
   const file = csvFileInput.files?.[0];
   if (!file) return;
+  if (executionInProgress) {
+    setMessage("실행이 끝난 뒤 CSV를 변경하고 다시 미리보기하세요.", "error");
+    return;
+  }
   previewKey = "";
   previewId = "";
   requiresApproval = true;
@@ -539,7 +543,7 @@ csvFileInput.addEventListener("change", async () => {
   } finally {
     if (uploadVersion === uploadRequestVersion) {
       uploadInProgress = false;
-      previewButton.disabled = false;
+      previewButton.disabled = executionInProgress;
     }
     updateRunButton();
   }
