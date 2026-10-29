@@ -22,7 +22,7 @@ from .engine import (
 )
 from .la_adapter import (
     BackendUnavailable, LightningExecutionError, execute as execute_lightning,
-    inspect_backend,
+    inspect_backend, read_execution_audit,
 )
 from .dbvora_client import DbvoraClient
 from .sovia_adapter import SOVIAUnavailable, reconcile as reconcile_sovia
@@ -220,6 +220,23 @@ def create_server(
                     self._send_json(200, status)
                 except RunLogError as exc:
                     self._send_json(404, {"error": str(exc)})
+                return
+            if parsed.path == "/api/la-audit":
+                query = parse_qs(parsed.query, keep_blank_values=True)
+                run_ids = query.get("run_id", [])
+                if set(query) != {"run_id"} or len(run_ids) != 1 or not _RUN_ID.fullmatch(run_ids[0]):
+                    self._send_json(400, {"error": "a run ID from this UI is required"})
+                    return
+                if engine_backend != "lightning-azent":
+                    self._send_json(404, {"error": "LA execution audit is not enabled for this engine"})
+                    return
+                try:
+                    report = read_execution_audit(state, run_ids[0])
+                    self._send_json(200, report)
+                except LookupError:
+                    self._send_json(404, {"error": "LA audit for this run does not exist"})
+                except BackendUnavailable:
+                    self._send_json(503, {"error": "LA audit ledger could not be read safely"})
                 return
             if parsed.path == "/api/audit":
                 query = parse_qs(parsed.query, keep_blank_values=True)
