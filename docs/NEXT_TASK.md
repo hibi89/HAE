@@ -389,3 +389,8 @@ Limits are enforced and tested: 256 KiB, 1000 data rows, 64 columns, 4096 chars 
 2. Latest full Windows HAE suite at base `3d09c3a6`: 112/112 PASS with local loopback permission; four-system synthetic API E2E PASS; launcher restart status/audit PASS. Manual browser E2E was interrupted by the user's Escape input and remains unverified.
 3. Next priority: obtain a full manual browser path under an authorized interaction window, including Preview, explicit approval, result/audit/inventory, and restart. Preserve SOVIA as advisory post-execution only and treat absent DBVORA service as unavailable.
 4. Keep LA/SOVIA/DBVORA references read-only and use synthetic data only.
+
+## Browser UX evidence — 2026-10-29
+1. Existing HAE launcher user path is now verified in Chrome through Preview, explicit approval, Lightning Azent import, SOVIA post-execution audit and DBVORA inventory. Synthetic run `Gui3c712726b35c` completed with 2 stored rows; Preview left the empty business DB SHA unchanged.
+2. Keep SOVIA explicitly advisory/unauthenticated. The UI says execution completed because all three local integrations returned successfully; this is not a production/security acceptance.
+3. Follow-up if needed: capture a browser screenshot and verify the same UI's persisted status after restarting the just-tested profile. Computer Use stopped when Windows URL confidence could not be established. Prior API-based launcher restart/audit persistence test passed.
