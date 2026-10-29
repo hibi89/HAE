@@ -429,7 +429,8 @@ previewButton.addEventListener("click", async () => {
       method: "POST",
       body: JSON.stringify({ task: submittedTask, csv_path: submittedCsvPath }),
     });
-    if (requestVersion !== previewRequestVersion || submittedKey !== requestKey()) {
+    if (requestVersion !== previewRequestVersion) return;
+    if (submittedKey !== requestKey()) {
       setMessage("미리보기 중 입력이 변경되었습니다. 현재 입력으로 다시 미리보기를 실행하세요.", "error");
       return;
     }
@@ -455,7 +456,8 @@ previewButton.addEventListener("click", async () => {
       : "";
     setMessage((descriptions[response.workflow] || "지원되는 CSV 흐름입니다.") + csvSummary, "success");
   } catch (error) {
-    if (requestVersion !== previewRequestVersion || submittedKey !== requestKey()) {
+    if (requestVersion !== previewRequestVersion) return;
+    if (submittedKey !== requestKey()) {
       setMessage("미리보기 중 입력이 변경되었습니다. 현재 입력으로 다시 미리보기를 실행하세요.", "error");
       return;
     }
