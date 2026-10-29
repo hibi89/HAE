@@ -132,6 +132,41 @@ class PortableWindowsBundleTests(unittest.TestCase):
                         server.kill()
                         server.wait(timeout=6)
 
+            # A Windows console can be closed without delivering Python
+            # SIGTERM. The server must live in the same process, not survive
+            # as an orphaned child still occupying the listening port.
+            abrupt_port = free_port()
+            abruptly_killed = subprocess.Popen([
+                sys.executable, str(script), "--data-dir", str(data),
+                "--port", str(abrupt_port), "--no-browser",
+            ], cwd=root, env=env, stdin=subprocess.DEVNULL,
+               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            try:
+                for _ in range(120):
+                    self.assertIsNone(abruptly_killed.poll())
+                    try:
+                        with urlopen(f"http://127.0.0.1:{abrupt_port}/api/health", timeout=0.5) as response:
+                            if json.load(response).get("ready"):
+                                break
+                    except (OSError, ValueError, URLError):
+                        time.sleep(0.04)
+                else:
+                    self.fail("bundle supervisor did not open its localhost port")
+                abruptly_killed.kill()  # TerminateProcess on Windows; SIGKILL on Linux
+                abruptly_killed.wait(timeout=5)
+                for _ in range(40):
+                    try:
+                        with closing(socket.create_connection(("127.0.0.1", abrupt_port), timeout=0.2)):
+                            time.sleep(0.05)
+                    except OSError:
+                        break
+                else:
+                    self.fail("killing the bundle launcher orphaned an HTTP server")
+            finally:
+                if abruptly_killed.poll() is None:
+                    abruptly_killed.kill()
+                    abruptly_killed.wait(timeout=5)
+
             # The previous shutdown must release both port and lock.
             recovered = subprocess.run([
                 sys.executable, str(script), "--data-dir", str(data),
