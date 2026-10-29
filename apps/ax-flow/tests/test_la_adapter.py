@@ -290,6 +290,18 @@ print(json.dumps({"status": result["status"]["status"],
             with closing(sqlite3.connect(state)) as con:
                 with con:
                     con.execute("UPDATE runs SET status='failed' WHERE run_id=?", (first["run_id"],))
+            with self.assertRaises(HTTPError) as changed_plan:
+                post_json("/api/preview", {
+                    "task": "Find rows in this CSV where id equals 11",
+                    "csv_path": retry_path, "resume_run_id": first["run_id"],
+                })
+            self.assertEqual(changed_plan.exception.code, 409)
+            with self.assertRaises(HTTPError) as missing_run:
+                post_json("/api/preview", {
+                    "task": retry_task, "csv_path": retry_path,
+                    "resume_run_id": "Gui000000000000",
+                })
+            self.assertEqual(missing_run.exception.code, 404)
             status, resume_preview = post_json("/api/preview", {
                 "task": retry_task, "csv_path": retry_path,
                 "resume_run_id": first["run_id"],
