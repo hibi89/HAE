@@ -54,7 +54,7 @@ if ($Smoke) {
     $RepoRootForTests = (Resolve-Path (Join-Path $AppRoot '..\..')).Path
     $ExpectedLa = Join-Path $RepoRootForTests 'packages\lightning-azent\lightning_azent\__init__.py'
     if (-not (Test-Path $ExpectedLa -PathType Leaf)) {
-        $StagedParent = Split-Path (Split-Path $ExpectedLa -Parent) -Parent
+        $StagedParent = Join-Path $RepoRootForTests 'packages'
         New-Item -ItemType Directory -Force -Path $StagedParent | Out-Null
         Copy-Item -Recurse -Force -Path $LaPackage -Destination $StagedParent
     }
