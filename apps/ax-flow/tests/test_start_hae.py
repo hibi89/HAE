@@ -99,6 +99,18 @@ class HaeStartTests(unittest.TestCase):
         with patch.object(launcher, "__file__", str(self.app / "start_hae.py")), patch.dict(os.environ, self.env, clear=True):
             self.assertEqual(launcher.main(["--verify"]), 2)
 
+    def test_verify_uses_integrated_bundle_even_with_legacy_ledger(self):
+        self.ship()
+        data = self.root / "local" / "HAE"
+        data.mkdir(parents=True)
+        (data / "state.sqlite").write_bytes(b"EXISTING-USER-DATA")
+        captured = []
+        with patch.object(launcher, "__file__", str(self.app / "start_hae.py")), patch.dict(os.environ, self.env, clear=True), patch.object(launcher.subprocess, "call", side_effect=lambda cmd, **kwargs: captured.append(cmd) or 0):
+            self.assertEqual(launcher.main(["--verify"]), 0)
+        self.assertEqual(captured[0][-1], "--verify")
+        self.assertEqual(Path(captured[0][1]).name, "launch_integrated.py")
+        self.assertEqual((data / "state.sqlite").read_bytes(), b"EXISTING-USER-DATA")
+
     def test_unknown_arguments_rejected(self):
         with patch.object(launcher, "__file__", str(self.app / "start_hae.py")), patch.dict(os.environ, self.env, clear=True):
             self.assertEqual(launcher.main(["--unknown"]), 2)

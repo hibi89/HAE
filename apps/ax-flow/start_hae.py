@@ -69,7 +69,12 @@ def main(argv: list[str] | None = None) -> int:
         requested = sys.argv[1:] if argv is None else argv
         if requested not in ([], ["--verify"]):
             raise StartError("Only --verify is supported as a startup argument")
-        cmd, env, selected = launch_command(root, os.environ, sys.executable)
+        # Verification is isolated from all customer ledgers. Prefer the
+        # complete offline bundle even when auto startup preserves legacy data.
+        selected_env = dict(os.environ)
+        if requested and selected_env.get("HAE_ENGINE_BACKEND", "auto").strip().lower() == "auto":
+            selected_env["HAE_ENGINE_BACKEND"] = "lightning-azent"
+        cmd, env, selected = launch_command(root, selected_env, sys.executable)
         if requested:
             if selected != "integrated":
                 raise StartError("Offline verification requires the bundled Lightning Azent engine")
