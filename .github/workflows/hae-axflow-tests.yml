@@ -44,6 +44,10 @@ jobs:
       - name: Verify real HAE to Lightning Azent HTTP integration
         working-directory: apps/ax-flow
         run: python -m unittest discover -s tests -p test_la_adapter.py -v
+      - name: Smoke Windows integrated launcher against real LA backend
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./apps/ax-flow/run-integrated.ps1 -LaCheckout ./la-source -Smoke
       - name: Verify synthetic end-to-end Python suite
         working-directory: apps/ax-flow
         run: python -m unittest discover -s tests -v
