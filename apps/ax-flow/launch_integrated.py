@@ -12,11 +12,10 @@ import errno
 from contextlib import contextmanager
 import json
 import os
-import signal
 import socket
 from pathlib import Path
-import subprocess
 import sys
+import threading
 import time
 from typing import Iterator
 from urllib.error import HTTPError, URLError
@@ -93,11 +92,11 @@ def data_directory(configured: str | None) -> Path:
     return root
 
 
-def wait_for_backend(origin: str, child: subprocess.Popen, timeout: float = 12.0) -> None:
+def wait_for_backend(origin: str, server_thread: threading.Thread, timeout: float = 12.0) -> None:
     opener = build_opener(ProxyHandler({}))
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        if child.poll() is not None:
+        if not server_thread.is_alive():
             raise LaunchError("Integrated HAE exited before the local API became ready.")
         try:
             with opener.open(Request(origin + "/api/health", headers={"Accept": "application/json"}),
@@ -128,16 +127,6 @@ def require_free_port(port: int) -> None:
                               " is available.") from exc
 
 
-def stop(child: subprocess.Popen) -> None:
-    if child.poll() is None:
-        child.terminate()
-        try:
-            child.wait(timeout=4)
-        except subprocess.TimeoutExpired:
-            child.kill()
-            child.wait(timeout=4)
-
-
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data-dir", help="private local data directory (default: LOCALAPPDATA/HAE)")
@@ -156,25 +145,29 @@ def main(argv: list[str] | None = None) -> int:
     root = data_directory(args.data_dir)
     with single_instance(root / ".hae-bundle.lock"):
         require_free_port(args.port)
-        command = [
-            sys.executable, str(package), "serve", "--synthetic",
-            "--engine-backend", "lightning-azent",
-            "--input-root", str(root / "input"),
-            "--state", str(root / "runtime.db"), "--data", str(root / "business.db"),
-            "--port", str(args.port),
-        ]
-        env = os.environ.copy()
-        env.pop("PYTHONPATH", None)  # prove the zipapp stands alone
-        child = subprocess.Popen(command, cwd=root, env=env, stdin=subprocess.DEVNULL)
-        # A closing console or supervisor termination must release the port
-        # and the exclusive lock instead of leaving an orphaned HTTP server.
-        prior_sigterm = signal.getsignal(signal.SIGTERM)
-        def _request_stop(_signum, _frame):
-            raise KeyboardInterrupt
-        signal.signal(signal.SIGTERM, _request_stop)
+        # Import both packages from the verified offline zipapp itself.
+        # Run the server in THIS process: an abrupt console/parent termination
+        # cannot leave a detached LA HTTP worker behind on Windows.
+        sys.path.insert(0, str(package))
+        from axflow.web import create_server
+
+        try:
+            server = create_server(
+                root / "input", root / "runtime.db", root / "business.db",
+                port=args.port, engine_backend="lightning-azent",
+            )
+        except OSError as exc:
+            raise LaunchError("Could not bind HAE to the selected local port.") from exc
+        server_thread = threading.Thread(
+            target=server.serve_forever,
+            kwargs={"poll_interval": 0.1},
+            name="HAE-local-HTTP",
+            daemon=True,
+        )
+        server_thread.start()
         try:
             url = "http://127.0.0.1:" + str(args.port) + "/"
-            wait_for_backend(url.rstrip("/"), child)
+            wait_for_backend(url.rstrip("/"), server_thread)
             print("HAE + Lightning Azent ready: " + url, flush=True)
             print("Synthetic CSV: " + str(root / "input" / "contacts.csv"), flush=True)
             if args.smoke:
@@ -182,18 +175,15 @@ def main(argv: list[str] | None = None) -> int:
                 return 0
             if not args.no_browser:
                 webbrowser.open(url)
-            returncode = child.wait()
-            if returncode != 0:
-                raise LaunchError("The integrated HAE server exited unsuccessfully.")
-            return 0
+            while server_thread.is_alive():
+                server_thread.join(timeout=0.2)
+            raise LaunchError("Integrated HAE local server exited unexpectedly.")
         except KeyboardInterrupt:
             return 0
         finally:
-            try:
-                stop(child)
-            finally:
-                signal.signal(signal.SIGTERM, prior_sigterm)
-
+            server.shutdown()
+            server_thread.join(timeout=5)
+            server.server_close()
 
 if __name__ == "__main__":
     try:
