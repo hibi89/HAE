@@ -91,6 +91,10 @@ try {
         }
         Push-Location $AppRoot
         try {
+            # Direct HTTP acceptance (not mocks): two writes, LA receipts,
+            # recovery with fresh approval and restart durability.
+            & python smoke_http.py
+            if ($LASTEXITCODE -ne 0) { throw 'HAE-LA direct HTTP acceptance smoke failed.' }
             & python -m unittest discover -s tests -p test_la_adapter.py -v
             if ($LASTEXITCODE -ne 0) { throw 'HAE-LA integration smoke failed.' }
         } finally {
