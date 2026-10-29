@@ -93,9 +93,10 @@
           <input id="history-run-id" type="text" maxlength="15" autocomplete="off" spellcheck="false"
                  placeholder="예: Gui0123456789ab" aria-describedby="history-hint">
           <button id="load-run-history" class="button button-secondary" type="button">결과 조회</button>
+          <button id="prepare-resume" class="button button-secondary" type="button">미완료 작업 재개 준비</button>
           <button id="copy-run-id" class="text-button" type="button" disabled>ID 복사</button>
         </div>
-        <p id="history-hint" class="hint">최근 실행 ID는 이 브라우저에만 저장됩니다. 조회는 새 업무 실행이나 SQLite 쓰기를 하지 않습니다.</p>
+        <p id="history-hint" class="hint">실행 ID로 결과를 조회할 수 있습니다. 미완료 작업 재개 준비는 위에 입력한 원래 작업 설명·CSV 경로가 일치할 때만 새 미리보기를 만들며, SQLite 쓰기는 재승인 후에만 실행됩니다.</p>
         <p id="history-state" class="history-state" role="status" aria-live="polite">저장된 실행 ID가 있으면 자동으로 다시 엽니다.</p>
         <div class="recent-runs-heading"><h3>최근 실행</h3><button id="refresh-run-list" class="text-button" type="button">목록 새로고침</button></div>
         <p id="recent-runs-state" class="history-state" role="status" aria-live="polite">실행 목록을 읽기 전용으로 불러오는 중…</p>
