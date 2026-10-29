@@ -1,9 +1,9 @@
 ## Next after CSV preflight completion — 2026-10-29 KST
 
 1. Review native Windows file-opening behavior for symlinks/reparse points and close remaining path-swap exposure where feasible without weakening CSV limits or approval binding.
-2. Decide whether same-run coordination must span processes; if required, add a SQLite-backed claim/lock and crash/recovery tests while preserving completed-run idempotency.
+2. Cross-process same-run coordination is implemented with a per-run OS mutex/flock and durable SQLite receipts. Same-run replay, hard-exit recovery, and independent-run parallel entry now have Windows subprocess coverage; do not replace it with a database-wide lock without new evidence that the keyed lock is insufficient.
 3. Keep the validated scope explicit: UTF-8 CSV, 256 KiB, 1,000 rows, 64 columns, 4,096 characters/cell. Preview stays SQLite-free; raw values must not leak into responses/logs.
-4. Synthetic validation does not imply customer readiness or clear separate HAE product acceptance, security, installer, backup/restore or release gates.
+4. Synthetic validation does not imply customer readiness or clear separate HAE product acceptance, security, installer, backup/restore or release gates. The four-system integrated E2E remains unverified until the separate LA/SOVIA/DBVORA roots are configured.
 ## Next after draft Azent fixtures (2026-10-27 KST)
 1. **Gate R first:** verify `REA_APP@33f6d345f8d4577194248eed4543d602819d3192` in authorized connected runner (Python unittest full+targeted P23/P24, Node parser pinned tests) and record source SHAs/OS/counts and Windows-specific SKIP. Do not equate file inspection with PASS.
 2. Draft original generic contracts and runnable-shape fixtures exist at `docs/lightning-azent/FUNCTIONAL_CONTRACTS_DRAFT.md` and `docs/lightning-azent/fixtures/`. The three plans are in **legacy `axflow.ir.v0` only**, not an Azent implementation or validated integration. Do not advance Gate N/L from JSON parsing.

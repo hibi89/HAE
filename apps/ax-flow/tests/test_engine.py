@@ -1140,6 +1140,69 @@ raise SystemExit(main())
             )
         self.assertEqual(inspect_run(self.root / "state.db", "SharedProcessRun")["status"], "completed")
 
+    def test_cross_process_independent_runs_enter_execution_concurrently(self):
+        # The barrier is inside _execute_steps, after each run has acquired its
+        # run-identity lock. A global process lock would prevent either worker
+        # from observing the other's marker and this test would fail closed.
+        plan = json.loads(json.dumps(self.plan))
+        for step in plan["steps"]:
+            if step["op"] in {"sqlite_put", "sqlite_get"}:
+                step.update(max_attempts=3, timeout_ms=5000)
+        plan_file = self.root / "parallel-process-plan.json"
+        plan_file.write_text(json.dumps(plan), encoding="utf-8")
+        worker = r'''
+import json, sys, time
+from pathlib import Path
+from axflow.engine import Engine
+data = json.loads(sys.argv[1])
+engine = Engine(data["state"], data["business"])
+original = engine._execute_steps
+def synchronized(*args, **kwargs):
+    marker = Path(data["root"], "entered-" + data["run_id"])
+    marker.touch()
+    deadline = time.monotonic() + 10
+    while not all(Path(data["root"], "entered-" + run).exists()
+                  for run in data["run_ids"]):
+        if time.monotonic() >= deadline:
+            raise RuntimeError("independent run was blocked by another run lock")
+        time.sleep(0.01)
+    return original(*args, **kwargs)
+engine._execute_steps = synchronized
+result = engine.execute(data["plan"], data["run_id"], approve_writes=True)
+print(json.dumps(result))
+'''
+        cwd = Path(__file__).resolve().parents[1]
+        run_ids = ("ProcessParallelA", "ProcessParallelB")
+        payloads = [json.dumps({
+            "root": str(self.root), "state": str(self.root / "state.db"),
+            "business": str(self.root / "business.db"), "plan": plan,
+            "run_id": run_id, "run_ids": run_ids,
+        }) for run_id in run_ids]
+        processes = [subprocess.Popen(
+            [sys.executable, "-c", worker, payload], cwd=cwd,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+        ) for payload in payloads]
+        outputs = []
+        try:
+            for process in processes:
+                stdout, stderr = process.communicate(timeout=20)
+                self.assertEqual(process.returncode, 0, stderr)
+                outputs.append(json.loads(stdout))
+        finally:
+            for process in processes:
+                if process.poll() is None:
+                    process.kill()
+                    process.communicate()
+        self.assertEqual(outputs, [{"count": 2, "name": "fixture"}] * 2)
+        with closing(sqlite3.connect(self.root / "business.db")) as con:
+            self.assertEqual(con.execute(
+                "SELECT COUNT(*) FROM records WHERE run_id IN (?, ?)", run_ids
+            ).fetchone()[0], 2)
+        with closing(sqlite3.connect(self.root / "state.db")) as con:
+            self.assertEqual(con.execute(
+                "SELECT COUNT(*) FROM runs WHERE run_id IN (?, ?)", run_ids
+            ).fetchone()[0], 2)
+
     def test_engine_rejects_path_like_run_ids_and_unsafe_database_paths(self):
         with self.assertRaises(PlanError):
             self.engine.execute(self.plan, "../escape", approve_writes=True)
