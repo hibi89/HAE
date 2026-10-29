@@ -19,6 +19,7 @@ from zipfile import ZipFile
 
 ROOT = Path(__file__).resolve().parents[3]
 PACKAGE = ROOT / "apps" / "ax-flow" / "hae-integrated.pyz"
+RELEASE_ZIP = ROOT / "apps" / "ax-flow" / "HAE-Windows-offline.zip"
 LA = ROOT / "packages" / "lightning-azent" / "lightning_azent"
 HAE = ROOT / "apps" / "ax-flow" / "axflow"
 
@@ -60,6 +61,34 @@ class ShippedOfflinePackageTests(unittest.TestCase):
             self.assertEqual(names - {"__main__.py"}, set(expected))
             for name, source in expected.items():
                 self.assertEqual(archive.read(name), source, "outdated zipapp source: " + name)
+
+    @unittest.skipUnless(RELEASE_ZIP.is_file(), "standalone Windows release ZIP is absent")
+    def test_release_zip_matches_shipped_sources_and_executes_real_la_e2e(self):
+        expected_files = {
+            "run-bundled.cmd": (ROOT / "apps" / "ax-flow" / "run-bundled.cmd").read_bytes(),
+            "launch_integrated.py": (ROOT / "apps" / "ax-flow" / "launch_integrated.py").read_bytes(),
+            "hae-integrated.pyz": PACKAGE.read_bytes(),
+        }
+        with ZipFile(RELEASE_ZIP) as z:
+            names = {name for name in z.namelist() if not name.endswith("/")}
+            self.assertEqual(names, {
+                "HAE-Windows/" + name for name in (*expected_files, "README.txt")
+            })
+            for name, source in expected_files.items():
+                self.assertEqual(z.read("HAE-Windows/" + name), source, "stale release ZIP: " + name)
+            with tempfile.TemporaryDirectory(prefix="hae-release-extract-") as temporary:
+                root = Path(temporary)
+                z.extractall(root)
+                untouched = root / "existing-user-data-must-not-appear"
+                env = os.environ.copy()
+                env.pop("PYTHONPATH", None)
+                verified = subprocess.run([
+                    sys.executable, str(root / "HAE-Windows" / "launch_integrated.py"),
+                    "--verify", "--data-dir", str(untouched),
+                ], cwd=root, env=env, capture_output=True, text=True, timeout=30)
+                self.assertEqual(verified.returncode, 0, verified.stdout + verified.stderr)
+                self.assertIn("7/7 PASS", verified.stdout)
+                self.assertFalse(untouched.exists(), "release E2E must isolate user files")
 
     def test_shipped_zipapp_starts_real_la_without_checkout_or_network(self):
         with tempfile.TemporaryDirectory(prefix="hae-shipped-check-") as temporary:
