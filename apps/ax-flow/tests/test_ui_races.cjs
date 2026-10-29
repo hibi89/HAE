@@ -236,6 +236,35 @@ async function testInvalidatedPreviewNeverRetried() {
   await ui.get("#approval").fire("change");
   assert.equal(ui.get("#run").disabled, true, "input invalidation must require a new preview");
 }
+async function testResumePreviewRequiresMatchingRunAndReapproval() {
+  const ui = setup();
+  ui.get("#task").value = "Import CSV into SQLite";
+  ui.get("#csv-path").value = "data.csv";
+  ui.get("#history-run-id").value = "Gui0123456789ab";
+  const pending = ui.get("#prepare-resume").fire("click");
+  const req = ui.requests.find((r) => r.url === "/api/preview");
+  assert.ok(req, "resume preview must reach the preview API, not execute writes");
+  assert.equal(JSON.parse(req.options.body).resume_run_id, "Gui0123456789ab");
+  assert.equal(ui.requests.filter((r) => r.url === "/api/run").length, 0);
+  ui.respond(req, {
+    plan: { steps: [] }, engine_backend: { name: "Lightning Azent" },
+    preview_id: "restart-recovery-preview", resumes_run_id: "Gui0123456789ab",
+    requires_approval: true, workflow: "csv_to_sqlite",
+    input: { row_count: 2, headers: ["id"], size_bytes: 6 },
+  });
+  await pending;
+  assert.equal(ui.get("#run").disabled, true, "recovery cannot reuse a prior write approval");
+  ui.get("#approval").checked = true;
+  await ui.get("#approval").fire("change");
+  assert.equal(ui.get("#run").disabled, false, "fresh approval enables resumed run");
+}
+async function testResumePreviewRejectsInvalidRunIdWithoutRequest() {
+  const ui = setup();
+  ui.get("#history-run-id").value = "bad-run-id";
+  await ui.get("#prepare-resume").fire("click");
+  assert.equal(ui.requests.filter((r) => r.url === "/api/preview").length, 0);
+  assert.equal(ui.requests.filter((r) => r.url === "/api/run").length, 0);
+}
 async function testDbvoraNewestResponseWins() {
   const ui = setup();
   const button = ui.get("#refresh-dbvora");
@@ -261,5 +290,7 @@ async function testDbvoraNewestResponseWins() {
   await testRecentRunsNewestWins();
   await testFailedDurableRunCanRetryWithSamePreviewAfterReapproval();
   await testInvalidatedPreviewNeverRetried();
-  console.log("HAE simulated UI race tests: 10 PASS");
+  await testResumePreviewRequiresMatchingRunAndReapproval();
+  await testResumePreviewRejectsInvalidRunIdWithoutRequest();
+  console.log("HAE simulated UI race tests: 12 PASS");
 })().catch((error) => { console.error(error); process.exitCode = 1; });
