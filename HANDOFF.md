@@ -1,3 +1,15 @@
+## HAE zipapp no-clobber handoff — 2026-10-29 KST
+1. **Goal/tech:** Safeguard local offline HAE+LA Python zipapp publication against existing-user-artifact overwrite; use Python stdlib on same-volume temporary staging.
+2. **Completed/decision:** `tools/package_hae_integrated.py` checks dangling symlinks and publishes on POSIX via atomic hard-link (Windows continues no-overwrite rename). Added independent `apps/ax-flow/tests/test_package_no_clobber.py`. Prefer atomic same-filesystem publish to retrying the non-atomic exists→rename check.
+3. **Tests:** Isolated copy of actual builder with synthetic HAE + LA fixture and no networking, Python 3.13.5: two safety cases FAIL on original code, three tests PASS after fix, compileall PASS. Production HAE and LA runtime integration **NOT RERUN** here; full repository suite and Windows path **UNVERIFIED** on new SHA.
+4. **State:** Zipapp build no-clobber safety verified on POSIX fixture. Synthetic MVP runtime accepted on prior source SHA only; native Windows release remains UNVERIFIED; customer product remains NOT READY.
+5. **Failure/recovery:** Original `Path.exists()` returned false for dangling symlink and `Path.rename()` replaced concurrently created output on POSIX. Corrected and verified; original source recoverable by Git revert. Do not force push or rerun pre-run-blocked Actions without useful environment change.
+6. **Repo/branch/SHA/paths:** Private `hibi89/HAE` `feature/axflow-mvp`; parent `c9742bc797fbb9dc8223e6c7c6847217943c248b`; changed `tools/package_hae_integrated.py`, added `apps/ax-flow/tests/test_package_no_clobber.py`, docs updated. Exact final SHA to be confirmed.
+7. **Production:** Local Python 3.11+ synthetic runtime; no Vercel/Production URL (N/A), no customer deployment, no Windows host available here.
+8. **Originals/security:** Shipped `hae-integrated.pyz` and `HAE-Windows-offline.zip` untouched, source databases untouched, no credentials/permissions changed, Git history retained for revert.
+9. **Next acceptance:** Run new regression on actual authenticated checkout/same SHA; run Windows `VERIFY-WINDOWS.cmd` after ZIP extraction, Python+Node full suite and browser; separate customer OAuth, external integration, DBVORA source restore and pilot gates remain unresolved.
+10. **Time/evidence:** 2026-10-29 KST, source inspection + isolated real packaging fixture, baseline failure reproduction then corrected test. Do not equate packaging PASS with native release certification.
+
 ## HAE Windows builder defect regression handoff — 2026-10-29 KST
 1. **Goal/tech:** Prevent malformed human-facing README in newly generated offline Windows bundles; Python stdlib builder only.
 2. **Change/decision:** Replace six literal backslash-n sequences with real newlines in `tools/build_hae_windows_bundle.py`; add independent deterministic no-LA-checkout regression `apps/ax-flow/tests/test_bundle_readme.py`. Minimal compatible fix rather than repackaging validated released binary.

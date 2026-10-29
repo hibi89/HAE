@@ -12,6 +12,7 @@ Then:
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import tempfile
 import zipapp
@@ -36,7 +37,7 @@ def build_integrated_zipapp(output: Path, la_package: Path) -> Path:
         raise ValueError("output must end in .pyz")
     if not target.parent.is_dir():
         raise FileNotFoundError("output parent directory must already exist")
-    if target.exists():
+    if target.exists() or target.is_symlink():
         raise FileExistsError("refusing to overwrite an existing artifact")
     if any(target == src or src in target.parents for src in (hae, la)):
         raise ValueError("output must be outside package sources")
@@ -51,9 +52,18 @@ def build_integrated_zipapp(output: Path, la_package: Path) -> Path:
         try:
             zipapp.create_archive(stage, target=archive, main="axflow.__main__:zipapp_main",
                                   compressed=True)
-            if target.exists():
+            if target.exists() or target.is_symlink():
                 raise FileExistsError("refusing to overwrite an existing artifact")
-            archive.rename(target)
+            # POSIX rename() overwrites an existing target. Create the final
+            # hard link atomically instead; on Windows rename() refuses an
+            # existing target. Archive and target live on the same filesystem.
+            try:
+                if os.name == "nt":
+                    archive.rename(target)
+                else:
+                    os.link(archive, target)
+            except FileExistsError as exc:
+                raise FileExistsError("refusing to overwrite an existing artifact") from exc
         finally:
             archive.unlink(missing_ok=True)
     return target
