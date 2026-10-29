@@ -12,7 +12,13 @@ $ErrorActionPreference = 'Stop'
 if ($Port -lt 1 -or $Port -gt 65535) { throw 'Port must be 1..65535' }
 $AppRoot = (Resolve-Path (Join-Path $PSScriptRoot '.')).Path
 if (-not $LaCheckout) {
-    $LaCheckout = Join-Path $DemoRoot 'lightning-source'
+    # Prefer an already staged LA package (CI or an offline source bundle).
+    # It is a real supported backend and needs neither Git nor a network call.
+    $BundledLa = Join-Path (Resolve-Path (Join-Path $AppRoot '..\..')).Path 'packages\lightning-azent'
+    if (Test-Path (Join-Path $BundledLa 'lightning_azent\__init__.py') -PathType Leaf) {
+        $LaCheckout = (Resolve-Path (Join-Path $AppRoot '..\..')).Path
+    } else {
+        $LaCheckout = Join-Path $DemoRoot 'lightning-source'
     if (-not (Test-Path (Join-Path $LaCheckout 'packages\lightning-azent\lightning_azent\__init__.py') -PathType Leaf)) {
         if (-not (Get-Command git -ErrorAction SilentlyContinue)) { throw 'Git is required to fetch Lightning Azent. Install Git or pass -LaCheckout.' }
         New-Item -ItemType Directory -Force -Path $DemoRoot | Out-Null
@@ -38,6 +44,7 @@ if (-not $LaCheckout) {
             & git clone --quiet --single-branch --branch feature/lightning-azent https://github.com/hibi89/HAE.git $LaCheckout
             if ($LASTEXITCODE -ne 0) { throw 'Could not fetch Lightning Azent. Pass an existing checkout with -LaCheckout.' }
         }
+    }
     }
 }
 $LaPackage = Join-Path $LaCheckout 'packages\lightning-azent'
