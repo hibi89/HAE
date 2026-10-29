@@ -429,9 +429,11 @@ class WebUITests(unittest.TestCase):
         self.assertNotIn("Synthetic", json.dumps(body["status"]))
         (self.inputs / "contacts.csv").write_text("id,name\n99,PostRunChange\n", encoding="utf-8")
         replay_code, _, replay = self.post_json("/api/run", payload)
-        self.assertEqual(replay_code, 200)
+        # A changed source invalidates the original preview even for completed
+        # runs; the immutable durable receipt and business rows remain intact.
+        self.assertEqual(replay_code, 409)
+        self.assertEqual(replay["error_type"], "RequestError")
         self.assertEqual(replay["run_id"], run_id)
-        self.assertEqual(replay["result"], body["result"])
         with closing(sqlite3.connect(self.business)) as con:
             self.assertEqual(con.execute(
                 "SELECT payload_json FROM csv_records WHERE run_id=? AND row_number=1", (run_id,)
