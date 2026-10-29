@@ -1,3 +1,10 @@
+## HAE stale history error regression — 2026-10-29 KST
+- Added **Node VM race regression** `apps/ax-flow/tests/test_history_stale_error.cjs`, file commit `b2413ae1dfff00dbe1e11412b2d6b473362a7610` on `feature/axflow-mvp`. It asserts stale failed status lookups cannot erase a newer successful result, while current lookup failures still show an error.
+- Latest `app.js` already contained the matching guard from a separate concurrent source commit; preserved it without duplicate reapplication.
+- **TESTED:** exact committed test source evaluated with a V8 Node-module/DOM/fetch shim against current GitHub `app.js` (1/1 scripted scenario PASS). **NOT VERIFIED:** native Node `node --test`, full Python regression, Windows/browser, CI and production. Prior Windows 111 PASS / 1 SKIP is a different baseline.
+- Two attempted Git-tree commits failed at GitHub ref-update while other writers advanced the branch; neither was pushed. Switched to non-overwriting Contents API file-create; verified resulting file blob. No force push or source rollback.
+- Next: run native `node --test tests/test_history_stale_error.cjs tests/test_history_race.cjs` and full-suite at identical SHA; then Windows long-path fixture/loopback acceptance, preserving original product gates.
+
 ## HAE CSV read-only preflight — 2026-10-29 KST
 - **Branch/current checkout:** hibi89/HAE:feature/axflow-mvp; starting SHA 337508b65d7356e4e7d6efe43aae82a21ad331b6, verified from remote before work.
 - **Implemented:** Windows CSV open now uses `CreateFileW` with final-component reparse-point opening and read-only sharing; validates the opened handle's normalized final path against the resolved input path and input root. POSIX uses `O_NOFOLLOW` when available. CSV size/parse rules, approval SHA binding and 256 KiB cap are unchanged.
