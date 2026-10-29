@@ -64,6 +64,19 @@ class PortableWindowsBundleTests(unittest.TestCase):
             self.assertFalse((data / "runtime.db").exists())
             self.assertFalse((data / "business.db").exists())
 
+            # An occupied loopback port must not be mistaken for our own
+            # successfully started backend (even when it hosts another HAE).
+            with closing(socket.socket()) as occupied:
+                occupied.bind(("127.0.0.1", 0))
+                held_port = occupied.getsockname()[1]
+                unavailable = subprocess.run([
+                    sys.executable, str(script), "--data-dir", str(data),
+                    "--port", str(held_port), "--smoke",
+                ], cwd=root, env=env, capture_output=True, text=True, timeout=10)
+                self.assertNotEqual(unavailable.returncode, 0)
+                self.assertIn("is in use", unavailable.stderr)
+                self.assertFalse((data / "business.db").exists())
+
             port = free_port()
             origin = f"http://127.0.0.1:{port}"
             with (root / "server.log").open("w", encoding="utf-8") as log:
