@@ -401,6 +401,9 @@ async function loadDbvora() {
 }
 
 previewButton.addEventListener("click", async () => {
+  const submittedTask = taskInput.value;
+  const submittedCsvPath = csvInput.value;
+  const submittedKey = JSON.stringify([submittedTask, submittedCsvPath]);
   previewButton.disabled = true;
   approvalInput.checked = false;
   setMessage("CSV 파일·구조·요청한 변환과 실행 범위를 읽기 전용으�� 검증하고 있습니다…");
@@ -411,15 +414,19 @@ previewButton.addEventListener("click", async () => {
   try {
     const response = await api("/api/preview", {
       method: "POST",
-      body: JSON.stringify({ task: taskInput.value, csv_path: csvInput.value }),
+      body: JSON.stringify({ task: submittedTask, csv_path: submittedCsvPath }),
     });
+    if (submittedKey !== requestKey()) {
+      setMessage("미리보기 중 입력이 변경되었습니다. 현재 입력으로 다시 미리보기를 실행하세요.", "error");
+      return;
+    }
     planOutput.textContent = JSON.stringify(response.plan, null, 2);
     renderPreviewSteps(response.plan);
     const backend = response.engine_backend || {};
     backendOutput.textContent = backend.name === "Lightning Azent"
       ? `실행 엔진: Lightning Azent ${backend.package_version} · 개발 모드 · 계약 확인 완료`
       : "실행 엔진: HAE 기본 엔진";
-    previewKey = requestKey();
+    previewKey = submittedKey;
     previewId = response.preview_id;
     requiresApproval = response.requires_approval;
     const descriptions = {
