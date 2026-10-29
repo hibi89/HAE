@@ -1,0 +1,130 @@
+"""Distribution acceptance: build and run the portable Windows bundle without the source tree.
+
+The .cmd entrypoint requires a real Windows CI runner; Python supervision and
+all bundled LA/SQLite contracts run on both Windows and Linux.
+"""
+from __future__ import annotations
+
+import json
+import os
+from pathlib import Path
+import socket
+import subprocess
+import sys
+import tempfile
+import time
+import unittest
+from contextlib import closing
+from urllib.error import URLError
+from urllib.request import Request, urlopen
+
+
+REPO = Path(__file__).resolve().parents[3]
+LA_PACKAGE = REPO / "packages" / "lightning-azent"
+LA_MARKER = LA_PACKAGE / "lightning_azent" / "__init__.py"
+
+
+def free_port() -> int:
+    with closing(socket.socket()) as sock:
+        sock.bind(("127.0.0.1", 0))
+        return sock.getsockname()[1]
+
+
+@unittest.skipUnless(LA_MARKER.is_file(), "real LA source has not been staged")
+class PortableWindowsBundleTests(unittest.TestCase):
+    def test_portable_launcher_smoke_lock_and_termination(self):
+        with tempfile.TemporaryDirectory(prefix="hae-bundle-acceptance-") as directory:
+            root = Path(directory)
+            bundle = root / "HAE Windows Offline"
+            built = subprocess.run([
+                sys.executable, str(REPO / "tools" / "build_hae_windows_bundle.py"),
+                "--la-package", str(LA_PACKAGE), "--output-dir", str(bundle),
+            ], cwd=root, capture_output=True, text=True, timeout=20)
+            self.assertEqual(built.returncode, 0, built.stderr)
+            self.assertEqual({name.name for name in bundle.iterdir()}, {
+                "run-bundled.cmd", "launch_integrated.py", "hae-integrated.pyz",
+            })
+            duplicate = subprocess.run([
+                sys.executable, str(REPO / "tools" / "build_hae_windows_bundle.py"),
+                "--la-package", str(LA_PACKAGE), "--output-dir", str(bundle),
+            ], cwd=root, capture_output=True, text=True, timeout=10)
+            self.assertNotEqual(duplicate.returncode, 0, "bundle builder must not overwrite output")
+
+            data = root / "local user data"
+            env = os.environ.copy()
+            env.pop("PYTHONPATH", None)
+            script = bundle / "launch_integrated.py"
+            smoke = subprocess.run([
+                sys.executable, str(script), "--data-dir", str(data),
+                "--port", str(free_port()), "--smoke",
+            ], cwd=root, env=env, capture_output=True, text=True, timeout=20)
+            self.assertEqual(smoke.returncode, 0, smoke.stdout + smoke.stderr)
+            self.assertIn("readiness: PASS", smoke.stdout)
+            self.assertTrue((data / "input" / "contacts.csv").is_file())
+            self.assertFalse((data / "runtime.db").exists())
+            self.assertFalse((data / "business.db").exists())
+
+            port = free_port()
+            origin = f"http://127.0.0.1:{port}"
+            with (root / "server.log").open("w", encoding="utf-8") as log:
+                server = subprocess.Popen([
+                    sys.executable, str(script), "--data-dir", str(data),
+                    "--port", str(port), "--no-browser",
+                ], cwd=root, env=env, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT)
+                try:
+                    for attempt in range(120):
+                        self.assertIsNone(server.poll(), "portable launcher exited unexpectedly")
+                        try:
+                            with urlopen(origin + "/api/health", timeout=0.5) as response:
+                                status = json.load(response)
+                            if status["ready"] and status["engine_backend"]["name"] == "Lightning Azent":
+                                break
+                        except (OSError, ValueError, URLError):
+                            time.sleep(0.04)
+                    else:
+                        self.fail("bundled integrated backend did not become ready")
+
+                    conflict = subprocess.run([
+                        sys.executable, str(script), "--data-dir", str(data),
+                        "--port", str(free_port()), "--smoke",
+                    ], cwd=root, env=env, capture_output=True, text=True, timeout=10)
+                    self.assertNotEqual(conflict.returncode, 0)
+                    self.assertIn("already running", conflict.stderr)
+
+                    payload = {"task": "Import this CSV into local SQLite", "csv_path": "contacts.csv"}
+                    def post(path: str, body: dict):
+                        req = Request(origin + path, data=json.dumps(body).encode("utf-8"),
+                                      headers={"Origin": origin, "Content-Type": "application/json"},
+                                      method="POST")
+                        with urlopen(req, timeout=10) as response:
+                            return json.load(response)
+
+                    preview = post("/api/preview", payload)
+                    result = post("/api/run", {
+                        **payload, "preview_id": preview["preview_id"],
+                        "approve_writes": True,
+                    })
+                    self.assertEqual(result["status"]["status"], "completed")
+                    self.assertEqual(result["result"]["imported_rows"], 2)
+                    with urlopen(origin + "/api/la-audit?run_id=" + result["run_id"], timeout=5) as response:
+                        audit = json.load(response)
+                    self.assertGreaterEqual(audit["approval_count"], 1)
+                finally:
+                    if server.poll() is None:
+                        server.terminate()
+                    try:
+                        server.wait(timeout=6)
+                    except subprocess.TimeoutExpired:
+                        server.kill()
+                        server.wait(timeout=6)
+
+            # The previous shutdown must release both port and lock.
+            recovered = subprocess.run([
+                sys.executable, str(script), "--data-dir", str(data),
+                "--port", str(port), "--smoke",
+            ], cwd=root, env=env, capture_output=True, text=True, timeout=20)
+            self.assertEqual(recovered.returncode, 0, recovered.stdout + recovered.stderr)
+
+
+if __name__ == "__main__":
+    unittest.main()
