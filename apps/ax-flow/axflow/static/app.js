@@ -419,6 +419,7 @@ async function loadDbvora() {
 }
 
 previewButton.addEventListener("click", async () => {
+  if (executionInProgress || uploadInProgress) return;
   const submittedTask = taskInput.value;
   const submittedCsvPath = csvInput.value;
   const submittedKey = JSON.stringify([submittedTask, submittedCsvPath]);
@@ -549,6 +550,8 @@ approvalInput.addEventListener("change", updateRunButton);
 runButton.addEventListener("click", async () => {
   if (executionInProgress || !previewKey || (requiresApproval && !approvalInput.checked) || previewKey !== requestKey()) return;
   executionInProgress = true;
+  previewRequestVersion += 1;
+  previewButton.disabled = true;
   const approvedTask = taskInput.value;
   const approvedCsvPath = csvInput.value;
   const approvedPreviewId = previewId;
@@ -612,6 +615,7 @@ runButton.addEventListener("click", async () => {
     setMessage(safeFailureMessage(error), "error");
   } finally {
     executionInProgress = false;
+    previewButton.disabled = uploadInProgress;
     previewKey = "";
     previewId = "";
     approvalInput.checked = false;
