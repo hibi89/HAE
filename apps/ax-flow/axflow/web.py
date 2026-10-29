@@ -454,6 +454,13 @@ def create_server(
                 report = {"available": False, "mode": "post_execution_advisory",
                           "run_id": run_id, "plan_sha256": plan_sha256,
                           "error": str(exc), "execution_gate": False}
+            except Exception as exc:
+                # SOVIA runs after execution and must never mask a durable
+                # SQLite result or its LA audit receipt.
+                report = {"available": False, "mode": "post_execution_advisory",
+                          "run_id": run_id, "plan_sha256": plan_sha256,
+                          "error": "SOVIA advisory failed",
+                          "error_type": type(exc).__name__, "execution_gate": False}
             try:
                 dbvora = self.dbvora_client.fetch_inventory()
             except Exception as exc:
