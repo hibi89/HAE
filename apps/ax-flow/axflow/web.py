@@ -492,7 +492,8 @@ def create_server(
                       and persisted
                       else "partial")
             integration = {"sovia_audit": report, "dbvora": dbvora,
-                           "audit_persisted": persisted, "workflow_status": status}
+                           "audit_persisted": persisted, "workflow_status": status,
+                           "execution_status": outcome.get("status", {}).get("status", "unknown")}
             with self._sovia_lock:
                 self._sovia_reports[run_id] = integration
                 self._sovia_reports.move_to_end(run_id)
@@ -535,7 +536,8 @@ def create_server(
                       and audit.get("available") is True and dbvora.get("available") is True
                       else "partial")
             return {"sovia_audit": audit, "dbvora": dbvora,
-                    "audit_persisted": persisted, "workflow_status": status}
+                    "audit_persisted": persisted, "workflow_status": status,
+                    "execution_status": durable_run.get("status", "unknown") if execution_completed else "unknown"}
 
         def save_csv_upload(self, content: bytes) -> str:
             with self._upload_lock:
