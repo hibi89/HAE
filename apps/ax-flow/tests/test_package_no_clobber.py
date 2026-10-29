@@ -27,7 +27,7 @@ class PackageNoClobberTests(unittest.TestCase):
         self.la = self.root / "la"
         module = self.la / "lightning_azent" / "__init__.py"
         module.parent.mkdir(parents=True)
-        module.write_text("# synthetic LA packaging fixture\n", encoding="utf-8")
+        module.write_bytes(b"# synthetic LA packaging fixture\n")
 
     def test_valid_fresh_zipapp_builds_and_original_hae_is_untouched(self):
         path = self.root / "new.pyz"

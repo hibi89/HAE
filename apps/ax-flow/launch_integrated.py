@@ -8,7 +8,6 @@ synthetic example rows; business SQLite writes require explicit UI approval.
 from __future__ import annotations
 
 import argparse
-import errno
 from contextlib import contextmanager
 import json
 import os
@@ -115,19 +114,13 @@ def wait_for_backend(origin: str, server_thread: threading.Thread, timeout: floa
 
 
 def require_free_port(port: int) -> None:
-    """Detect an active loopback listener, not harmless TCP TIME_WAIT sockets.
-
-    Immediately rebinding an exclusive probe socket after HTTP shutdown can
-    falsely reject a healthy server restart on Windows and Linux.
-    """
+    """Check whether loopback can bind; the server bind remains authoritative."""
     try:
-        with socket.create_connection(("127.0.0.1", port), timeout=0.35):
-            raise LaunchError("Local port " + str(port) +
-                              " is in use. Choose another --port or close the existing server.")
+        with socket.socket() as probe:
+            probe.bind(("127.0.0.1", port))
     except OSError as exc:
-        if exc.errno not in (errno.ECONNREFUSED, 10061):
-            raise LaunchError("Cannot verify that local port " + str(port) +
-                              " is available.") from exc
+        raise LaunchError("Local port " + str(port) +
+                          " is unavailable. Choose another --port or close the existing server.") from exc
 
 
 def verify_bundle(package: Path) -> None:

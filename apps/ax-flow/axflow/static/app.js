@@ -569,6 +569,7 @@ for (const input of [taskInput, csvInput]) {
     updateRunButton();
     resultCard.hidden = true;
     previewDetail.hidden = true;
+    setMessage("입력이 변경되었습니다. 현재 입력으로 다시 미리보기를 실행하세요.", "error");
   });
 }
 csvFileInput.addEventListener("change", async () => {

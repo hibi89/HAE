@@ -16,9 +16,15 @@ sys.path.insert(0, str(LA_PACKAGE))
 from axflow.la_adapter import execute as execute_through_hae
 from axflow.planner import plan_request
 from axflow.runlog import list_recent_runs
-from lightning_azent import LAExecutor
+try:
+    from lightning_azent import LAExecutor
+except ModuleNotFoundError as exc:
+    if exc.name != "lightning_azent":
+        raise
+    LAExecutor = None
 
 
+@unittest.skipUnless(LAExecutor is not None, "Lightning Azent sibling package is not present in this checkout")
 class LAHistoryRecoveryTests(unittest.TestCase):
     def test_replay_recovers_history_stamp_after_exit_between_la_commit_and_hae_stamp(self):
         with tempfile.TemporaryDirectory(prefix="hae-la-history-recovery-") as folder:

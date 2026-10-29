@@ -132,8 +132,7 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="hae-win-release-") as temp:
         untouched = Path(temp) / "must-not-create-user-data"
         verify = subprocess.run(
-            ["cmd.exe", "/d", "/c",
-             'call "' + str(CMD) + '" --verify --data-dir "' + str(untouched) + '"'],
+            'cmd.exe /d /c call "' + str(CMD) + '" --verify --data-dir "' + str(untouched) + '"',
             cwd=HERE, capture_output=True, text=True, errors="replace", timeout=60,
         )
         print(verify.stdout.strip())
