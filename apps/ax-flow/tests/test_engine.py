@@ -154,6 +154,9 @@ raise SystemExit(main())
                 process.stdin.write("GO\n")
                 process.stdin.flush()
                 process.stdin.close()
+                # Python 3.11 communicate() tries to flush any non-None stdin,
+                # even after it was explicitly closed to release both workers.
+                process.stdin = None
             outcomes = []
             for process in processes:
                 stdout, stderr = process.communicate(timeout=30)
