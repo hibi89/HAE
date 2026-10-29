@@ -1065,6 +1065,7 @@ def preflight_csv_plan(plan: object, input_root: Path) -> tuple[dict[str, object
     results: dict[str, object] = {}
     outcomes: dict[str, str] = {}
     source: dict[str, object] | None = None
+    planned_imports: list[dict[str, object]] = []
     allowed = {"csv_read", "csv_normalize", "csv_filter", "condition", "branch", "literal", "sqlite_import_csv"}
 
     for step in plan["steps"]:
@@ -1074,6 +1075,11 @@ def preflight_csv_plan(plan: object, input_root: Path) -> tuple[dict[str, object
         guard = step.get("when")
         if guard is not None and results[guard["condition"]] is not guard["equals"]:
             results[sid], outcomes[sid] = None, "skipped"
+            if op == "sqlite_import_csv":
+                planned_imports.append({
+                    "step_id": sid, "imported_rows": 0, "duplicate_count": 0,
+                    "skipped_by_condition": True,
+                })
             continue
         if op == "sqlite_import_csv":
             imported = results.get(step["from"])
@@ -1106,6 +1112,10 @@ def preflight_csv_plan(plan: object, input_root: Path) -> tuple[dict[str, object
                     seen.add(fingerprint)
             value = {"imported_rows": len(rows), "duplicate_count": len(duplicates),
                      "duplicate_row_numbers": duplicates, "source_sha256": imported["source_sha256"]}
+            planned_imports.append({
+                "step_id": sid, "imported_rows": len(rows),
+                "duplicate_count": len(duplicates), "skipped_by_condition": False,
+            })
         else:
             value = checker._evaluate_step(step, results, outcomes, "PreflightOnly", False)
         results[sid], outcomes[sid] = value, "completed"
@@ -1115,4 +1125,5 @@ def preflight_csv_plan(plan: object, input_root: Path) -> tuple[dict[str, object
     if not isinstance(source, dict):
         raise PlanError("CSV workflow has no validated input")
     summary = {key: source[key] for key in ("source_path", "size_bytes", "headers", "row_count", "source_sha256")}
+    summary["planned_imports"] = planned_imports
     return source, summary

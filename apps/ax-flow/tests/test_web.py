@@ -253,6 +253,10 @@ class WebUITests(unittest.TestCase):
         self.assertEqual(body["plan"]["steps"][0]["path"], "contacts.csv")
         self.assertEqual(body["input"]["row_count"], 1)
         self.assertEqual(body["input"]["headers"], ["id", "name"])
+        self.assertEqual(body["input"]["planned_imports"], [{
+            "step_id": "imported", "imported_rows": 1,
+            "duplicate_count": 0, "skipped_by_condition": False,
+        }])
         self.assertFalse(self.state.exists(), "preview must not create a database")
         self.assertFalse(self.business.exists(), "preview must not create a business database")
 
@@ -459,6 +463,7 @@ class WebUITests(unittest.TestCase):
         self.assertTrue(preview["requires_approval"])
         self.assertEqual([step["op"] for step in preview["plan"]["steps"]],
                          ["csv_read", "csv_filter", "sqlite_import_csv"])
+        self.assertEqual(preview["input"]["planned_imports"][0]["imported_rows"], 2)
         code, _, filtered = self.post_json("/api/run", {
             "task": filtered_task, "csv_path": "sales.csv",
             "preview_id": preview["preview_id"], "approve_writes": True,
@@ -473,6 +478,7 @@ class WebUITests(unittest.TestCase):
         self.assertEqual(code, 200, preview)
         self.assertEqual(preview["workflow"], "csv_lookup")
         self.assertFalse(preview["requires_approval"])
+        self.assertEqual(preview["input"]["planned_imports"], [])
         code, _, lookup = self.post_json("/api/run", {
             "task": lookup_task, "csv_path": "people.csv",
             "preview_id": preview["preview_id"], "approve_writes": False,
@@ -490,6 +496,7 @@ class WebUITests(unittest.TestCase):
         self.assertEqual(preview["workflow"], "csv_conditional_import")
         self.assertTrue(preview["requires_approval"])
         self.assertIn("condition", [step["op"] for step in preview["plan"]["steps"]])
+        self.assertEqual(preview["input"]["planned_imports"][0]["imported_rows"], 2)
         code, _, conditional = self.post_json("/api/run", {
             "task": conditional_task, "csv_path": "sales.csv",
             "preview_id": preview["preview_id"], "approve_writes": True,

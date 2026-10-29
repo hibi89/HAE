@@ -24,6 +24,8 @@ const dbvoraTables = document.querySelector("#dbvora-tables");
 const dbvoraRelations = document.querySelector("#dbvora-relations");
 const dbvoraRefreshButton = document.querySelector("#refresh-dbvora");
 const previewDetail = document.querySelector("#preview-detail");
+const previewImpact = document.querySelector("#preview-impact");
+const approvalImpact = document.querySelector("#approval-impact");
 const backendOutput = document.querySelector("#engine-backend");
 const stepListOutput = document.querySelector("#step-list");
 const soviaResult = document.querySelector("#sovia-result");
@@ -372,6 +374,23 @@ function renderPreviewSteps(plan) {
   previewDetail.hidden = false;
 }
 
+function renderPreviewImpact(input, requiresApproval) {
+  const headers = Array.isArray(input?.headers) ? input.headers : [];
+  const imports = Array.isArray(input?.planned_imports) ? input.planned_imports : [];
+  const expectedRows = imports.reduce((total, item) =>
+    total + (Number.isInteger(item?.imported_rows) ? item.imported_rows : 0), 0);
+  const duplicateRows = imports.reduce((total, item) =>
+    total + (Number.isInteger(item?.duplicate_count) ? item.duplicate_count : 0), 0);
+  const path = csvInput.value.trim() || "선택한 CSV";
+  const summary = requiresApproval
+    ? `예상 변경: business SQLite의 csv_records에 ${expectedRows}행 저장${duplicateRows ? ` · 중복 내용 ${duplicateRows}행도 원본 행으로 별도 저장` : ""}`
+    : "예상 변경: 읽기 전용 조회 · SQLite 쓰기 없음";
+  previewImpact.textContent = `입력: ${path} · ${Number(input?.row_count || 0)}행 · ${headers.length}열 (${headers.join(", ") || "열 정보 없음"}) · ${Number(input?.size_bytes || 0).toLocaleString()} bytes. 대상: 선택된 로컬 business SQLite. ${summary}.`;
+  approvalImpact.textContent = requiresApproval
+    ? `대상과 예상 변경을 확인하세요. 승인하면 위 예상 행 수만큼 기록합니다. 실제 고객 데이터는 사용하지 마세요.`
+    : "이 작업은 읽기 전용이며 SQLite를 변경하지 않습니다.";
+}
+
 function describeDbvoraProvenance(result) {
   const parts = [];
   const dbId = typeof result.db_id === "string" && /^[a-f0-9]{24}$/.test(result.db_id)
@@ -513,6 +532,7 @@ async function submitPreview(resumeRunId = null) {
     previewKey = submittedKey;
     previewId = response.preview_id;
     requiresApproval = response.requires_approval;
+    renderPreviewImpact(response.input, requiresApproval);
     const descriptions = {
       csv_to_sqlite: "CSV 전체를 로컬 SQLite에 저장하는 흐름입니다.",
       csv_normalize_import: "지정한 CSV 열을 정규화하고 중복 행을 보고한 뒤 로컬 SQLite에 저장합니다.",
@@ -536,6 +556,8 @@ async function submitPreview(resumeRunId = null) {
     }
     planOutput.textContent = "요청을 IR로 변환할 수 없습니다.";
     previewDetail.hidden = true;
+    previewImpact.textContent = "";
+    approvalImpact.textContent = "미리보기를 먼저 확인하세요. 실제 고객 데이터는 이 MVP에서 사용하지 마세요.";
     setMessage(safeFailureMessage(error), "error");
   } finally {
     if (requestVersion === previewRequestVersion) {
@@ -569,6 +591,8 @@ for (const input of [taskInput, csvInput]) {
     updateRunButton();
     resultCard.hidden = true;
     previewDetail.hidden = true;
+    previewImpact.textContent = "";
+    approvalImpact.textContent = "미리보기를 먼저 확인하세요. 실제 고객 데이터는 이 MVP에서 사용하지 마세요.";
     setMessage("입력이 변경되었습니다. 현재 입력으로 다시 미리보기를 실행하세요.", "error");
   });
 }
@@ -588,6 +612,9 @@ csvFileInput.addEventListener("change", async () => {
   requiresApproval = true;
   approvalInput.checked = false;
   resultCard.hidden = true;
+  previewDetail.hidden = true;
+  previewImpact.textContent = "";
+  approvalImpact.textContent = "CSV 파일을 바꿨습니다. 새 파일을 미리보기한 뒤 승인하세요.";
   csvInput.value = "";
   updateRunButton();
   if (!file.name.toLowerCase().endsWith(".csv")) {

@@ -59,6 +59,7 @@
         </details>
         <div id="preview-detail" class="preview-detail" aria-live="polite" hidden>
           <p id="engine-backend" class="engine-backend"></p>
+          <section id="preview-impact" class="preview-impact" aria-label="예상 실행 영향"></section>
           <h3>실행 단계</h3>
           <ol id="step-list" aria-label="검증된 실행 단계"></ol>
         </div>
@@ -74,7 +75,7 @@
         </div>
         <label id="approval-section" class="approval" for="approval">
           <input id="approval" type="checkbox">
-          <span><b>합성 데이터임을 확인하고 로컬 SQLite 쓰기를 승인합니다.</b><small>실제 고객 데이터는 이 MVP에서 사용하지 마세요.</small></span>
+          <span><b>위 미리보기에 표시된 합성 데이터 변경을 승인합니다.</b><small id="approval-impact">미리보기를 먼저 확인하세요. 실제 고객 데이터는 이 MVP에서 사용하지 마세요.</small></span>
         </label>
         <button id="run" class="button button-primary" type="button" disabled>검증 후 실행</button>
         <p id="message" class="message" role="status" aria-live="polite"></p>

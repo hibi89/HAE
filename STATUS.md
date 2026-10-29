@@ -8,6 +8,17 @@
 - **Границы:** ядро synthetic MVP прежнее; эти проверки не утверждают готовность коммерческого HAE. Production/публичное развёртывание неприменимо. OAuth/внешние коннекторы/DBVORA restore и customer пилоты остаются вне текущей проверки.
 - **Текущая стадия:** код и артефакты готовы к commit; документация, commit/push и remote SHA readback ещё ожидаются. 커밋 Author/Committer는 `이해인 <haein5898@naver.com>`이며, 연결 GitHub 프로필 `hibi89 <godls5898@gmail.com>`과 이메일이 다릅니다. 신원을 덮어쓰지 않았고, 커밋은 이미 푸시됐으므로 다음 작업에서 사용자 연결을 확인해야 합니다.
 
+## 승인 전 변경 영향 명시 — 2026-10-29 KST
+- **기준/검증/개발 refs:** `feature/axflow-mvp` HEAD `d0507968009909cafb245ce55469be3e979e9aad`; 검증 브랜치 HEAD `59841e9f532f47bd0d001741a9411c50900a168d`; 현재 개발 브랜치 `feat/windows-ux-followup`은 검증 브랜치에서 분기.
+- **사용자 동작 개선:** Preview에서 선택 CSV 상대 경로, 행/열 수, 헤더, 크기, SQLite 대상 테이블 `csv_records`, 사전 평가된 예상 저장 행을 명시한다. 조건부 분기가 거짓이면 예상 쓰기 0행으로 표현한다. 동일 내용의 행도 각 원본 행으로 저장된다는 중복 의미를 승인 전에 설명한다. 승인 문구는 미리보기의 변경사항을 승인한다고 구체화했다.
+- **실제 버그 수정:** 사용자가 파일 선택으로 CSV를 바꿀 때 기존 Preview 영향 요약이 화면에 남는 문제를 수정했다. 새 CSV 선택 즉시 기존 Preview/예상 영향 제거, 승인은 해제, 재Preview 전 실행 비활성 상태를 유지한다.
+- **검증:** `python -m unittest discover -s tests -p test_web.py -q`: 28 PASS; 전체 Python `python -m unittest discover -s tests -q`: 148 PASS / 11 SKIP. Node `tests/*.cjs`: all PASS (UI race 14 assertions 포함). Windows `VERIFY-WINDOWS.cmd --no-pause`: 4/4 PASS, 핵심 package E2E 7/7 PASS. `test_shipped_package.py`: 2 PASS / 2 SKIP. `git diff --check`: PASS.
+- **실제 브라우저:** Windows 로컬 browser에서 preview가 `contacts.csv`, 2행, 2열, 42 bytes, business SQLite `csv_records` 2행 저장으로 표시됨. 명시 승인 후 business DB 2행, runtime approval receipt 1건, LA 감사 5건과 화면 일치. Browser console errors/warnings 0.
+- **배포 아티팩트:** 기존 `hae-integrated.pyz` 패키징 절차 및 `repack_hae_windows_release.py`로 모두 갱신; Windows release checker PASS.
+- **보존/경계:** 작업 트리는 `work/hae-product` 임시 clone이며 사용자 로컬 프로젝트/SQLite를 수정하지 않음. 실제 외부 연동·OAuth·고객 데이터 없음. Production 미적용. 핵심 synthetic MVP 완료 판정은 기존 범위대로 유지; 전체 상용 제품 완성을 의미하지 않음.
+- **Git 신원:** 설정 및 이번 커밋 author/committer가 `이해인 <haein5898@naver.com>`이고 연결 프로필은 `hibi89 <godls5898@gmail.com>`으로 이메일 불일치. 신원을 임의로 변경하지 않음; 저장소 push 권한과 커밋 author 표시가 연결됐다고 주장하지 말 것.
+- **현재 상태:** 구현 및 검증 완료. 문서화/commit/push, remote SHA readback가 남음.
+
 ## 2026-10-29 HAE–LA 핵심 통합 실행 성공 / 해총 보고
 - **실제 Linux Python 3.13 실행으로 검증:** 동일 GitHub 배포 바이너리로 HAE + LA HTTP/SQLite E2E **7/7 PASS**, launcher regression **13/13 PASS**, backend smoke PASS. 검증 코드 SHA `dc252b22266ad4e5d95f7a16c0cddfac2371ef58`; 증빙 `apps/ax-flow/ACCEPTANCE-EVIDENCE-20261029.md`.
 - **97% 병목 해소:** GitHub 바이너리 UTF-8 decode 실패 → `fetch_file(encoding=base64)` → 무결성 확인 후 로컬 실행. CI 러너 미할당은 테스트 실패가 아니었고, 반복적인 주변 수정 대신 E2E 실행을 우선함.

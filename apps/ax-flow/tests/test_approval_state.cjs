@@ -40,7 +40,8 @@ async function main() {
       if (deferredPreview) return deferredPreview;
       return { ok: true, status: 200, json: async () => ({
         plan: { steps: [] }, workflow: "csv_to_sqlite", requires_approval: true,
-        preview_id: "preview-token", input: { row_count: 1, headers: ["id"], size_bytes: 7 },
+        preview_id: "preview-token", input: { row_count: 1, headers: ["id"], size_bytes: 7,
+          planned_imports: [{ step_id: "import", imported_rows: 1, duplicate_count: 0 }] },
       }) };
     }
     throw new Error("unexpected request: " + url);
@@ -60,6 +61,9 @@ async function main() {
   await preview.listeners.click();
   assert.equal(approval.checked, false);
   assert.equal(run.disabled, true, "a new write preview requires a fresh explicit approval");
+  assert.match(elements.get("#preview-impact").textContent, /1행 저장/);
+  assert.match(elements.get("#preview-impact").textContent, /business SQLite/);
+  assert.match(elements.get("#approval-impact").textContent, /예상 행 수/);
   approval.checked = true;
   approval.listeners.change();
   assert.equal(run.disabled, false);
@@ -83,6 +87,8 @@ async function main() {
   await csvFile.listeners.change();
   assert.equal(approval.checked, false, "selecting a new CSV clears the prior approval checkbox");
   assert.equal(run.disabled, true, "selecting a new CSV leaves execution disabled until re-preview and approval");
+  assert.equal(elements.get("#preview-detail").hidden, true, "a replacement CSV hides the old preview immediately");
+  assert.equal(elements.get("#preview-impact").textContent, "", "a replacement CSV clears old write-impact details");
 
   let finishPreview;
   deferredPreview = new Promise((resolve) => { finishPreview = resolve; });

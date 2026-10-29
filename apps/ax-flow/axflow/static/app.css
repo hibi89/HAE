@@ -63,6 +63,9 @@ textarea:focus, input[type="text"]:focus { border-color: #6d98ff; box-shadow: 0 
 .preview-detail { margin-top: 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 9px; background: #f8fafb; }
 .preview-detail:empty { display: none; }
 .engine-backend { margin: 0 0 8px; color: #335b74; font-size: 11px; font-weight: 700; }
+.preview-impact { display: grid; gap: 4px; margin: 0 0 12px; padding: 10px 12px; border-left: 3px solid var(--blue); background: #eef4ff; color: #29445a; font-size: 12px; }
+.preview-impact:empty { display: none; }
+.preview-impact b { color: var(--navy); }
 .preview-detail h3 { margin: 0 0 5px; color: #526979; font-size: 11px; }
 .preview-detail ol { margin: 0; padding-left: 20px; color: #526979; font-size: 12px; }
 .preview-detail li { margin: 3px 0; }
