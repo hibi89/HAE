@@ -46,6 +46,8 @@ let requiresApproval = true;
 let historyRequestVersion = 0;
 let uploadRequestVersion = 0;
 let recentRunsRequestVersion = 0;
+let previewRequestVersion = 0;
+let uploadInProgress = false;
 
 function requestKey() {
   return JSON.stringify([taskInput.value, csvInput.value]);
@@ -414,6 +416,7 @@ previewButton.addEventListener("click", async () => {
   const submittedTask = taskInput.value;
   const submittedCsvPath = csvInput.value;
   const submittedKey = JSON.stringify([submittedTask, submittedCsvPath]);
+  const requestVersion = ++previewRequestVersion;
   previewButton.disabled = true;
   approvalInput.checked = false;
   setMessage("CSV 파일·구조·요청한 변환과 실행 범위를 읽기 전용으로 검증하고 있습니다…");
@@ -426,7 +429,7 @@ previewButton.addEventListener("click", async () => {
       method: "POST",
       body: JSON.stringify({ task: submittedTask, csv_path: submittedCsvPath }),
     });
-    if (submittedKey !== requestKey()) {
+    if (requestVersion !== previewRequestVersion || submittedKey !== requestKey()) {
       setMessage("미리보기 중 입력이 변경되었습니다. 현재 입력으로 다시 미리보기를 실행하세요.", "error");
       return;
     }
@@ -452,7 +455,7 @@ previewButton.addEventListener("click", async () => {
       : "";
     setMessage((descriptions[response.workflow] || "지원되는 CSV 흐름입니다.") + csvSummary, "success");
   } catch (error) {
-    if (submittedKey !== requestKey()) {
+    if (requestVersion !== previewRequestVersion || submittedKey !== requestKey()) {
       setMessage("미리보기 중 입력이 변경되었습니다. 현재 입력으로 다시 미리보기를 실행하세요.", "error");
       return;
     }
@@ -460,7 +463,7 @@ previewButton.addEventListener("click", async () => {
     previewDetail.hidden = true;
     setMessage(safeFailureMessage(error), "error");
   } finally {
-    previewButton.disabled = false;
+    if (requestVersion === previewRequestVersion) previewButton.disabled = uploadInProgress;
     updateRunButton();
   }
 });
@@ -468,6 +471,9 @@ previewButton.addEventListener("click", async () => {
 for (const input of [taskInput, csvInput]) {
   input.addEventListener("input", () => {
     uploadRequestVersion += 1;
+    previewRequestVersion += 1;
+    uploadInProgress = false;
+    previewButton.disabled = false;
     previewKey = "";
     previewId = "";
     requiresApproval = true;
@@ -479,6 +485,9 @@ for (const input of [taskInput, csvInput]) {
 }
 csvFileInput.addEventListener("change", async () => {
   const uploadVersion = ++uploadRequestVersion;
+  previewRequestVersion += 1;
+  uploadInProgress = false;
+  previewButton.disabled = false;
   const file = csvFileInput.files?.[0];
   if (!file) return;
   previewKey = "";
@@ -496,6 +505,7 @@ csvFileInput.addEventListener("change", async () => {
     setMessage("CSV 파일은 비어 있지 않아야 하며 256 KiB 이하여야 합니다.", "error");
     return;
   }
+  uploadInProgress = true;
   previewButton.disabled = true;
   setMessage("CSV를 이 PC의 임시 폴더에 복사하고 있습니다…");
   try {
@@ -518,7 +528,10 @@ csvFileInput.addEventListener("change", async () => {
       setMessage(safeFailureMessage(error), "error");
     }
   } finally {
-    if (uploadVersion === uploadRequestVersion) previewButton.disabled = false;
+    if (uploadVersion === uploadRequestVersion) {
+      uploadInProgress = false;
+      previewButton.disabled = false;
+    }
     updateRunButton();
   }
 });
