@@ -9,9 +9,11 @@ import hashlib
 import importlib
 import tempfile
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 
 from .engine import VERSION as HAE_IR_VERSION, _exclusive_run, canonical_json
+from .runlog import RunLogError, record_run_started_at
 
 
 class BackendUnavailable(RuntimeError):
@@ -123,6 +125,7 @@ def execute(plan: object, run_id: str, *, state_path: Path, business_path: Path,
             executor_type, Path(state_path), Path(business_path), Path(input_root),
             csv_snapshot, expected_csv_sha256,
         ) as executor:
+            started_at = datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
             try:
                 result = executor.execute(plan, run_id, approve_writes=approve_writes)
             except Exception as cause:
@@ -137,7 +140,15 @@ def execute(plan: object, run_id: str, *, state_path: Path, business_path: Path,
                         or status.get("run_id") != run_id or audit.get("run_id") != run_id
                         or status.get("plan_sha256") != audit.get("plan_sha256")):
                     raise cause
+                try:
+                    record_run_started_at(Path(state_path), run_id, started_at)
+                except (RunLogError, OSError):
+                    pass  # Optional history metadata must not replace LA's durable failure result.
                 raise LightningExecutionError(cause, status, audit) from cause
             status = executor.status(run_id)
             audit = executor.audit(run_id)
+            try:
+                record_run_started_at(Path(state_path), run_id, started_at)
+            except (RunLogError, OSError):
+                pass  # A history index failure must not turn a committed workflow into a reported failure.
     return {"result": result, "status": status, "audit": audit, "backend": backend}

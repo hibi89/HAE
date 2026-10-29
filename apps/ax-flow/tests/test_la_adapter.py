@@ -26,6 +26,7 @@ from axflow.engine import Engine
 from axflow.planner import plan_request
 from axflow.web import create_server
 from axflow.la_adapter import BackendUnavailable, inspect_backend
+from axflow.runlog import list_recent_runs
 
 
 class LightningAzentAdapterTests(unittest.TestCase):
@@ -70,7 +71,7 @@ class LightningAzentAdapterTests(unittest.TestCase):
                 "input_root": str(inputs),
                 "state_path": str(state),
                 "business_path": str(business),
-                "run_id": "ConcurrentLA",
+                "run_id": "Gui0123456789ab",
                 "gate": str(gate),
                 "ready_dir": str(root),
             })
@@ -125,8 +126,12 @@ print(json.dumps({"status": result["status"]["status"],
             self.assertTrue(any("run_replayed" in output["events"] for output in outputs))
             with closing(sqlite3.connect(business)) as con:
                 self.assertEqual(con.execute(
-                    "SELECT COUNT(*) FROM csv_records WHERE run_id=?", ("ConcurrentLA",)
+                    "SELECT COUNT(*) FROM csv_records WHERE run_id=?", ("Gui0123456789ab",)
                 ).fetchone()[0], 2)
+            recent = list_recent_runs(state)
+            self.assertEqual([item["run_id"] for item in recent], ["Gui0123456789ab"])
+            self.assertEqual(recent[0]["status"], "completed")
+            self.assertTrue(recent[0]["created_at"].endswith("Z"))
 
     @unittest.skipUnless(LA_PACKAGE.is_dir(), "Lightning Azent sibling package is not present in this checkout")
     def test_http_flow_uses_real_lightning_backend_and_matches_axflow(self):

@@ -46,6 +46,15 @@ async function scenario({ auditAvailable }) {
     calls.push(url);
     if (url === "/") return { ok: true, status: 200, json: async () => ({}) };
     if (url === "/api/dbvora") return { ok: true, status: 200, json: async () => integration.dbvora };
+    if (url === "/api/runs?limit=10") return {
+      ok: true, status: 200,
+      json: async () => ({ runs: [
+        { run_id: "Gui0123456789ab", status: "completed", created_at: "2026-10-29T02:03:04.000Z",
+          steps_recorded: 3, step_outcomes: { completed: 3 } },
+        { run_id: "Guiabcdef123456", status: "hostile path marker", created_at: null,
+          steps_recorded: 1, step_outcomes: { completed: 0 } },
+      ] }),
+    };
     if (url.startsWith("/api/status?")) return {
       ok: true, status: 200,
       json: async () => ({
@@ -75,13 +84,17 @@ async function scenario({ auditAvailable }) {
   assert.equal(elements.get("#result-card").hidden, false);
   assert.equal(elements.get("#run-id").textContent, "Gui0123456789ab");
   assert.equal(elements.get("#row-count").textContent, "2");
+  assert.equal(elements.get("#recent-runs-list").children.length, 2);
+  assert.match(elements.get("#recent-runs-list").children[0].children[0].textContent, /완료.*단계 3\/3/);
+  assert.match(elements.get("#recent-runs-list").children[1].children[0].textContent, /상태 확인 필요.*시각 정보 없음/);
   assert.match(elements.get("#history-state").textContent, /데이터 쓰기는 발생하지 않았습니다/);
   assert.match(elements.get("#dbvora-status").textContent, /미설정/);
   assert.doesNotMatch([...elements.values()].map((el) => el.textContent).join(" "), /ignored untrusted text|payload|customer data/i);
   assert.equal(stored.size, 1, "browser storage must contain only the execution ID");
   assert(calls.some((url) => url.startsWith("/api/status?run_id=")));
   assert(calls.some((url) => url.startsWith("/api/audit?run_id=")));
-  assert(!calls.some((url) => url.startsWith("/api/run")), "recovery must never execute a workflow");
+  assert(calls.includes("/api/runs?limit=10"));
+  assert(!calls.some((url) => url === "/api/run" || url.startsWith("/api/run?")), "recovery must never execute a workflow");
   if (auditAvailable) {
     assert.match(elements.get("#sovia-result").textContent, /실시간 실행 차단 아님/);
   } else {
@@ -93,6 +106,9 @@ async function scenario({ auditAvailable }) {
   await elements.get("#load-run-history").listeners.click();
   assert.equal(calls.length, previousCalls, "invalid IDs must be rejected before any request");
   assert.match(elements.get("#history-state").textContent, /형식이 올바르지 않습니다/);
+  await elements.get("#recent-runs-list").children[1].children[0].listeners.click();
+  assert.equal(elements.get("#history-run-id").value, "Guiabcdef123456");
+  assert(!calls.some((url) => url === "/api/run" || url.startsWith("/api/run?")), "selecting history must remain read-only");
 }
 
 Promise.all([scenario({ auditAvailable: true }), scenario({ auditAvailable: false })])

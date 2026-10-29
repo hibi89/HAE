@@ -487,6 +487,8 @@ class Engine:
             columns = {row[1] for row in con.execute("PRAGMA table_info(runs)")}
             if "error_type" not in columns:
                 con.execute("ALTER TABLE runs ADD COLUMN error_type TEXT")
+            if "created_at" not in columns:
+                con.execute("ALTER TABLE runs ADD COLUMN created_at TEXT")
             con.execute("CREATE TABLE IF NOT EXISTS steps (run_id TEXT NOT NULL, step_id TEXT NOT NULL, output_json TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'completed', error_type TEXT, PRIMARY KEY(run_id,step_id))")
             step_columns = {row[1] for row in con.execute("PRAGMA table_info(steps)")}
             if "status" not in step_columns:
@@ -495,6 +497,9 @@ class Engine:
                 con.execute("ALTER TABLE steps ADD COLUMN error_type TEXT")
             if "attempt_count" not in step_columns:
                 con.execute("ALTER TABLE steps ADD COLUMN attempt_count INTEGER NOT NULL DEFAULT 1")
+        from .runlog import ensure_run_timestamp_capture
+
+        ensure_run_timestamp_capture(self.state_path)
         with self._business() as con:
             con.execute("CREATE TABLE IF NOT EXISTS records (run_id TEXT NOT NULL, step_id TEXT NOT NULL, payload_json TEXT NOT NULL, PRIMARY KEY(run_id,step_id))")
             con.execute(

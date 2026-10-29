@@ -97,6 +97,9 @@
         </div>
         <p id="history-hint" class="hint">최근 실행 ID는 이 브라우저에만 저장됩니다. 조회는 새 업무 실행이나 SQLite 쓰기를 하지 않습니다.</p>
         <p id="history-state" class="history-state" role="status" aria-live="polite">저장된 실행 ID가 있으면 자동으로 다시 엽니다.</p>
+        <div class="recent-runs-heading"><h3>최근 실행</h3><button id="refresh-run-list" class="text-button" type="button">목록 새로고침</button></div>
+        <p id="recent-runs-state" class="history-state" role="status" aria-live="polite">실행 목록을 읽기 전용으로 불러오는 중…</p>
+        <ul id="recent-runs-list" class="recent-runs-list" aria-label="최근 실행 목록"></ul>
       </section>
 
       <section id="result-card" class="result-card" hidden aria-live="polite">

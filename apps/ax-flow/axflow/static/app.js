@@ -31,6 +31,9 @@ const historyRunId = document.querySelector("#history-run-id");
 const historyLoadButton = document.querySelector("#load-run-history");
 const historyCopyButton = document.querySelector("#copy-run-id");
 const historyState = document.querySelector("#history-state");
+const recentRunsButton = document.querySelector("#refresh-run-list");
+const recentRunsState = document.querySelector("#recent-runs-state");
+const recentRunsList = document.querySelector("#recent-runs-list");
 const executionState = document.querySelector("#execution-state");
 
 const LAST_RUN_KEY = "hae.last_run_id";
@@ -206,6 +209,61 @@ function restoreLastRunId() {
   historyRunId.value = saved;
   historyCopyButton.disabled = false;
   loadRunHistory();
+}
+
+function runStatusLabel(value) {
+  return value === "completed" ? "완료" : value === "failed" ? "실패" :
+    value === "running" ? "진행 중 또는 중단 확인 필요" : "상태 확인 필요";
+}
+
+function runTimestampLabel(value) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)) {
+    return "시각 정보 없음";
+  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "시각 정보 없음" : date.toLocaleString();
+}
+
+async function loadRecentRuns() {
+  recentRunsButton.disabled = true;
+  recentRunsState.textContent = "최근 실행 목록을 읽기 전용으로 조회하고 있습니다…";
+  recentRunsState.className = "history-state";
+  clearChildren(recentRunsList);
+  try {
+    const response = await api("/api/runs?limit=10");
+    const runs = Array.isArray(response.runs) ? response.runs.slice(0, 20) : [];
+    if (!runs.length) {
+      recentRunsState.textContent = "표시할 최근 실행이 없습니다. 날짜 정보가 없는 이전 기록은 실행 ID를 직접 입력해 열 수 있습니다.";
+      return;
+    }
+    for (const run of runs) {
+      if (!run || typeof run.run_id !== "string" || !RUN_ID_PATTERN.test(run.run_id)) continue;
+      const item = document.createElement("li");
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "recent-run-button";
+      const outcomes = run.step_outcomes && typeof run.step_outcomes === "object" ? run.step_outcomes : {};
+      const stepTotal = Number.isInteger(run.steps_recorded) ? Math.max(0, Math.min(32, run.steps_recorded)) : 0;
+      const completed = Number.isInteger(outcomes.completed) ? Math.max(0, Math.min(stepTotal, outcomes.completed)) : 0;
+      button.textContent = run.run_id + " · " + runStatusLabel(run.status) + " · " +
+        runTimestampLabel(run.created_at) + " · 단계 " + completed + "/" + stepTotal;
+      button.addEventListener("click", () => {
+        historyRunId.value = run.run_id;
+        loadRunHistory();
+      });
+      item.appendChild(button);
+      recentRunsList.appendChild(item);
+    }
+    recentRunsState.textContent = recentRunsList.children.length
+      ? "최근 실행 최대 10건입니다. 항목을 선택하면 저장된 상태와 자문을 읽습니다."
+      : "표시할 수 있는 실행 ID가 없습니다.";
+    recentRunsState.className = "history-state";
+  } catch {
+    recentRunsState.textContent = "실행 목록을 불러올 수 없습니다. 로컬 HAE 서비스 상태를 확인하세요.";
+    recentRunsState.className = "history-state error";
+  } finally {
+    recentRunsButton.disabled = false;
+  }
 }
 
 async function checkConnection() {
@@ -499,6 +557,7 @@ runButton.addEventListener("click", async () => {
     setMessage(safeFailureMessage(error), "error");
   } finally {
     updateRunButton();
+    loadRecentRuns();
   }
 });
 
@@ -508,6 +567,7 @@ refreshButton.addEventListener("click", async () => {
   await loadRunHistory();
 });
 
+recentRunsButton.addEventListener("click", loadRecentRuns);
 historyLoadButton.addEventListener("click", loadRunHistory);
 historyRunId.addEventListener("input", () => {
   historyCopyButton.disabled = !RUN_ID_PATTERN.test(historyRunId.value.trim());
@@ -532,5 +592,6 @@ dbvoraRefreshButton.addEventListener("click", loadDbvora);
 
 checkConnection();
 loadDbvora();
+loadRecentRuns();
 restoreLastRunId();
 

@@ -84,6 +84,12 @@ pre { overflow-x: auto; margin: 12px 0 2px; padding: 14px; border-radius: 9px; b
 .history-state { min-height: 20px; margin: 8px 0 0; color: var(--muted); font-size: 12px; }
 .history-state.error { color: #b3313b; }
 .history-state.success { color: var(--green); }
+.recent-runs-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 18px; }
+.recent-runs-heading h3 { margin: 0; color: var(--ink); font-size: 13px; }
+.recent-runs-list { display: grid; gap: 6px; margin: 8px 0 0; padding: 0; list-style: none; }
+.recent-runs-list:empty { display: none; }
+.recent-run-button { width: 100%; min-height: 38px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; color: var(--ink); background: #f8fafb; font: inherit; font-size: 12px; text-align: left; overflow-wrap: anywhere; cursor: pointer; }
+.recent-run-button:hover { background: #edf3f7; }
 button:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 3px solid #7aa8ff; outline-offset: 2px; }
 .result-card { margin-top: 18px; border-color: #cee8da; }
 .result-topline { display: flex; align-items: center; justify-content: space-between; }

@@ -28,11 +28,27 @@ from .dbvora_client import DbvoraClient
 from .sovia_adapter import SOVIAUnavailable, reconcile as reconcile_sovia
 from .sovia_store import SOVIAStore, SOVIAStoreError
 from .planner import plan_request, requires_write_approval, workflow_name
-from .runlog import RunLogError, inspect_run
+from .runlog import RunLogError, inspect_run, list_recent_runs
 
 MAX_BODY_BYTES = 8192
 MAX_UPLOAD_BYTES = MAX_CSV_BYTES
 MAX_UPLOAD_BODY_BYTES = ((MAX_UPLOAD_BYTES + 2) // 3) * 4 + 4096
+
+
+def _recent_runs_payload(state_path: Path, query_string: str) -> tuple[int, dict[str, object]]:
+    """Build a bounded API response without exposing runtime receipt payloads."""
+    query = parse_qs(query_string, keep_blank_values=True)
+    values = query.get("limit")
+    if set(query) - {"limit"} or (values is not None and (len(values) != 1 or not values[0].isascii()
+            or not values[0].isdigit() or len(values[0]) > 2)):
+        return 400, {"error": "limit must be an integer from 1 through 20"}
+    limit = int(values[0]) if values is not None else 10
+    if not 1 <= limit <= 20:
+        return 400, {"error": "limit must be an integer from 1 through 20"}
+    try:
+        return 200, {"runs": list_recent_runs(state_path, limit), "limit": limit}
+    except RunLogError:
+        return 500, {"error": "runtime run history is unavailable"}
 MAX_UPLOADS_PER_SERVER = 10
 MAX_REQUESTS_PER_MINUTE = 60
 _RUN_ID = re.compile(r"^Gui[A-Fa-f0-9]{12}$")
@@ -187,6 +203,10 @@ def create_server(
                     self._send_json(500, {"error": "local UI asset unavailable"})
                     return
                 self._send_bytes(200, body, content_type)
+                return
+            if parsed.path == "/api/runs":
+                status_code, payload = _recent_runs_payload(state, parsed.query)
+                self._send_json(status_code, payload)
                 return
             if parsed.path == "/api/status":
                 query = parse_qs(parsed.query, keep_blank_values=True)
