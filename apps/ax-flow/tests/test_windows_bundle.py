@@ -68,6 +68,7 @@ class PortableWindowsBundleTests(unittest.TestCase):
             # successfully started backend (even when it hosts another HAE).
             with closing(socket.socket()) as occupied:
                 occupied.bind(("127.0.0.1", 0))
+                occupied.listen(1)
                 held_port = occupied.getsockname()[1]
                 unavailable = subprocess.run([
                     sys.executable, str(script), "--data-dir", str(data),
