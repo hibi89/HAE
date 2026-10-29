@@ -86,6 +86,18 @@ class WebUITests(unittest.TestCase):
         self.assertFalse(self.business.exists())
 
 
+    def test_ui_async_response_guards_are_shipped_in_served_asset(self):
+        # Static regression contract; browser-level race behavior needs a DOM runner.
+        status, _, script_bytes = self.request("/app.js")
+        self.assertEqual(status, 200)
+        script = script_bytes.decode("utf-8")
+        self.assertIn("if (submittedKey !== requestKey()) {", script)
+        self.assertIn("if (uploadVersion !== uploadRequestVersion ||", script)
+        self.assertIn("if (uploadVersion === uploadRequestVersion) previewButton.disabled = false;", script)
+        self.assertIn("if (requestVersion !== historyRequestVersion || historyRunId.value.trim() !== runId) return;", script)
+        self.assertIn("if (requestVersion !== recentRunsRequestVersion) return;", script)
+        self.assertIn("if (requestVersion === recentRunsRequestVersion) recentRunsButton.disabled = false;", script)
+
     def test_bounded_csv_upload_runs_through_existing_preview_and_is_cleaned(self):
         source = b"id,name\n11,SyntheticUpload\n"
         original_hash = hashlib.sha256((self.inputs / "contacts.csv").read_bytes()).hexdigest()
