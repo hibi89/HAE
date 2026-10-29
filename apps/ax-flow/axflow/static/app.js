@@ -402,6 +402,7 @@ async function loadDbvora() {
 
 previewButton.addEventListener("click", async () => {
   previewButton.disabled = true;
+  approvalInput.checked = false;
   setMessage("CSV 파일·구조·요청한 변환과 실행 범위를 읽기 전용으�� 검증하고 있습니다…");
   previewKey = "";
   previewId = "";
@@ -448,6 +449,7 @@ for (const input of [taskInput, csvInput]) {
     previewKey = "";
     previewId = "";
     requiresApproval = true;
+    approvalInput.checked = false;
     updateRunButton();
     resultCard.hidden = true;
     previewDetail.hidden = true;
@@ -459,6 +461,7 @@ csvFileInput.addEventListener("change", async () => {
   previewKey = "";
   previewId = "";
   requiresApproval = true;
+  approvalInput.checked = false;
   resultCard.hidden = true;
   csvInput.value = "";
   updateRunButton();
