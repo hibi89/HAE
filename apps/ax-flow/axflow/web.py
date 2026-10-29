@@ -517,6 +517,30 @@ def create_server(
             self._sovia_lock = threading.Lock()
             self._sovia_reports: OrderedDict[str, dict[str, object]] = OrderedDict()
 
+        def classify_workflow_status(self, run_id: str, plan_sha256: str,
+                                     execution_status: str, sovia_audit: dict,
+                                     dbvora: dict, audit_persisted: bool) -> str:
+            """LA's durable execution/audit is core; optional configured advisors are additive.
+
+            A fresh default installation must not claim a partial *execution*
+            only because unconfigured SOVIA or DBVORA features are absent.
+            """
+            if execution_status != "completed":
+                return "partial"
+            try:
+                la_evidence = read_execution_audit(state, run_id)
+            except (LookupError, BackendUnavailable):
+                return "partial"
+            if (la_evidence.get("plan_sha256") != plan_sha256
+                    or la_evidence.get("total_events", 0) < 1):
+                return "partial"
+            if self.sovia_root is not None and (
+                    sovia_audit.get("available") is not True or not audit_persisted):
+                return "partial"
+            if self.dbvora_client.base_url is not None and dbvora.get("available") is not True:
+                return "partial"
+            return "completed"
+
         def run_integrations(self, plan: dict, run_id: str, plan_sha256: str,
                              outcome: dict, approved: bool) -> dict[str, object]:
             try:
@@ -549,10 +573,10 @@ def create_server(
                 # Audit persistence is optional; never overwrite a committed
                 # workflow receipt with an advisory storage failure.
                 persisted = False
-            status = ("completed" if outcome.get("status", {}).get("status") == "completed"
-                      and report.get("available") is True and dbvora.get("available") is True
-                      and persisted
-                      else "partial")
+            status = self.classify_workflow_status(
+                run_id, plan_sha256, outcome.get("status", {}).get("status", "unknown"),
+                report, dbvora, persisted,
+            )
             integration = {"sovia_audit": report, "dbvora": dbvora,
                            "audit_persisted": persisted, "workflow_status": status,
                            "execution_status": outcome.get("status", {}).get("status", "unknown")}
@@ -596,10 +620,11 @@ def create_server(
             except RunLogError:
                 execution_completed = False
                 audit_matches_run = False
-            status = ("completed" if execution_completed and audit_matches_run
-                      and audit.get("available") is True and dbvora.get("available") is True
-                      and persisted
-                      else "partial")
+            status = self.classify_workflow_status(
+                run_id, durable_run.get("plan_sha256", "") if execution_completed else "",
+                durable_status, audit, dbvora, persisted,
+            ) if (execution_completed and
+                  (audit_matches_run or self.sovia_root is None)) else "partial"
             return {"sovia_audit": audit, "dbvora": dbvora,
                     "audit_persisted": persisted, "workflow_status": status,
                     "execution_status": durable_status}
