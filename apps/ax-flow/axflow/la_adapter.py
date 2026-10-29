@@ -115,7 +115,7 @@ def _executor_for_snapshot(executor_type, state_path: Path, business_path: Path,
 
 
 def execute(plan: object, run_id: str, *, state_path: Path, business_path: Path,
-            input_root: Path, approve_writes: bool,
+            input_root: Path, approve_writes: bool, resume_existing: bool = False,
             csv_snapshot: dict[str, object] | None = None,
             expected_csv_sha256: str | None = None) -> dict[str, object]:
     """Execute with LA under HAE's per-run process lock and return receipts/audit."""
@@ -127,7 +127,10 @@ def execute(plan: object, run_id: str, *, state_path: Path, business_path: Path,
         ) as executor:
             started_at = datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
             try:
-                result = executor.execute(plan, run_id, approve_writes=approve_writes)
+                # Existing failed/running runs must pass LA's explicit resume
+                # receipt validation before any step is replayed.
+                operation = executor.resume if resume_existing else executor.execute
+                result = operation(plan, run_id, approve_writes=approve_writes)
             except Exception as cause:
                 # LA's durable ledger already records failed steps and retries.
                 # Preserve that evidence for SOVIA before propagating the failure.
