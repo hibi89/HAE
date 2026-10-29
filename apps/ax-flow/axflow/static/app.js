@@ -199,6 +199,7 @@ async function loadRunHistory() {
     historyState.textContent = "저장된 실행 결과와 자문 상태를 불러왔습니다. 새 업무 실행이나 데이터 쓰기는 발생하지 않았습니다.";
     historyState.className = "history-state success";
   } catch (error) {
+    if (requestVersion !== historyRequestVersion || historyRunId.value.trim() !== runId) return;
     resultCard.hidden = true;
     historyState.textContent = safeFailureMessage(error);
     historyState.className = "history-state error";
