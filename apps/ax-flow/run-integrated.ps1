@@ -51,6 +51,11 @@ if ($OldPythonPath) { $env:PYTHONPATH += ";$OldPythonPath" }
 & python -c "from lightning_azent.runtime import LAExecutor; from axflow.web import create_server; print('HAE and Lightning Azent imports OK')"
 if ($LASTEXITCODE -ne 0) { throw 'HAE / Lightning Azent integration import failed; refusing to start.' }
 if ($Smoke) {
+    $RepoRootForTests = (Resolve-Path (Join-Path $AppRoot '..\..')).Path
+    $ExpectedLa = Join-Path $RepoRootForTests 'packages\lightning-azent\lightning_azent\__init__.py'
+    if (-not (Test-Path $ExpectedLa -PathType Leaf)) {
+        throw 'Smoke tests require LA staged under repo/packages/lightning-azent; refusing to report skipped integration tests as PASS.'
+    }
     Push-Location $AppRoot
     try {
         & python -m unittest discover -s tests -p test_la_adapter.py -v
