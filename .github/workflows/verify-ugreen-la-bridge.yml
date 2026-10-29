@@ -1,0 +1,52 @@
+name: HAE private synthetic UGREEN-LA integration proof
+
+on:
+  push:
+    branches:
+      - verify/ugreen-la-bridge-20261030
+    paths:
+      - ".github/workflows/verify-ugreen-la-bridge.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: HAE LA v0 -> public UGREEN read-only bridge (SYNTHETIC)
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout trusted HAE LA source (private; stays in private runner)
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Checkout exact public UGREEN bridge commit
+        uses: actions/checkout@v4
+        with:
+          repository: hibi89/hibi89-ugreen-nas-hackathon
+          ref: 54db97464b67da77a463acbd0e68c913cafd7dea
+          path: ugreen
+          persist-credentials: false
+
+      - name: Use Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Test public UGREEN consent, plan and audit boundaries
+        working-directory: ugreen
+        run: |
+          python -m unittest discover -s tests -p 'test_ecosystem_contract.py' -v
+          python -m unittest discover -s tests -p 'test_la_bridge.py' -v
+
+      - name: Exercise real HAE LAExecutor with temporary synthetic SQLite
+        working-directory: ugreen
+        run: python tools/verify_la_runtime_bridge.py --la-package-root ../packages/lightning-azent
+
+      - name: Declare explicit limits
+        run: |
+          echo "HAE source remains in private workflow only."
+          echo "Real Lightning Azent local synthetic flow verified only if all previous steps passed."
+          echo "UGREEN NAS / Uliya Experts / actual customer data: NOT TESTED."
