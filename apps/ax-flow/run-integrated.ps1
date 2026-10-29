@@ -16,8 +16,15 @@ if (-not $LaCheckout) {
     if (-not (Test-Path (Join-Path $LaCheckout 'packages\lightning-azent\lightning_azent\__init__.py') -PathType Leaf)) {
         if (-not (Get-Command git -ErrorAction SilentlyContinue)) { throw 'Git is required to fetch Lightning Azent. Install Git or pass -LaCheckout.' }
         New-Item -ItemType Directory -Force -Path $DemoRoot | Out-Null
-        $RepoRoot = (& git -C $PSScriptRoot rev-parse --show-toplevel 2>$null)
-        if ($LASTEXITCODE -eq 0 -and $RepoRoot) {
+        $RepoRoot = $null
+        try {
+            $RepoRoot = (& git -C $PSScriptRoot rev-parse --show-toplevel 2>$null)
+            if ($LASTEXITCODE -ne 0) { $RepoRoot = $null }
+        } catch {
+            # Source ZIPs are valid inputs: use the remote LA checkout below.
+            $RepoRoot = $null
+        }
+        if ($RepoRoot) {
             & git -C $RepoRoot rev-parse --verify feature/lightning-azent 2>$null | Out-Null
             if ($LASTEXITCODE -ne 0) {
                 & git -C $RepoRoot fetch origin feature/lightning-azent:refs/heads/feature/lightning-azent
