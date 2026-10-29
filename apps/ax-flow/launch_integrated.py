@@ -8,6 +8,7 @@ synthetic example rows; business SQLite writes require explicit UI approval.
 from __future__ import annotations
 
 import argparse
+import errno
 from contextlib import contextmanager
 import json
 import os
@@ -112,13 +113,19 @@ def wait_for_backend(origin: str, child: subprocess.Popen, timeout: float = 12.0
 
 
 def require_free_port(port: int) -> None:
-    """Do not confuse an already-running HAE on this port with our new child."""
+    """Detect an active loopback listener, not harmless TCP TIME_WAIT sockets.
+
+    Immediately rebinding an exclusive probe socket after HTTP shutdown can
+    falsely reject a healthy server restart on Windows and Linux.
+    """
     try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
-            probe.bind(("127.0.0.1", port))
+        with socket.create_connection(("127.0.0.1", port), timeout=0.35):
+            raise LaunchError("Local port " + str(port) +
+                              " is in use. Choose another --port or close the existing server.")
     except OSError as exc:
-        raise LaunchError("Local port " + str(port) +
-                          " is in use. Choose another --port or close the existing server.") from exc
+        if exc.errno not in (errno.ECONNREFUSED, 10061):
+            raise LaunchError("Cannot verify that local port " + str(port) +
+                              " is available.") from exc
 
 
 def stop(child: subprocess.Popen) -> None:
