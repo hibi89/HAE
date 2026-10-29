@@ -48,6 +48,7 @@ let uploadRequestVersion = 0;
 let recentRunsRequestVersion = 0;
 let previewRequestVersion = 0;
 let uploadInProgress = false;
+let executionInProgress = false;
 
 function requestKey() {
   return JSON.stringify([taskInput.value, csvInput.value]);
@@ -60,7 +61,7 @@ function setMessage(text, state = "") {
 
 function updateRunButton() {
   approvalSection.hidden = !requiresApproval;
-  runButton.disabled = !previewKey || previewKey !== requestKey() || (requiresApproval && !approvalInput.checked);
+  runButton.disabled = executionInProgress || !previewKey || previewKey !== requestKey() || (requiresApproval && !approvalInput.checked);
 }
 
 async function api(path, options = {}) {
@@ -541,8 +542,9 @@ csvFileInput.addEventListener("change", async () => {
 approvalInput.addEventListener("change", updateRunButton);
 
 runButton.addEventListener("click", async () => {
-  if ((requiresApproval && !approvalInput.checked) || previewKey !== requestKey()) return;
-  runButton.disabled = true;
+  if (executionInProgress || !previewKey || (requiresApproval && !approvalInput.checked) || previewKey !== requestKey()) return;
+  executionInProgress = true;
+  updateRunButton();
   setMessage(requiresApproval
     ? "합성 CSV를 검사한 뒤 로컬 SQLite에 저장합니다…"
     : "합성 CSV를 읽기 전용으로 검색합니다…");
@@ -600,6 +602,10 @@ runButton.addEventListener("click", async () => {
     }
     setMessage(safeFailureMessage(error), "error");
   } finally {
+    executionInProgress = false;
+    previewKey = "";
+    previewId = "";
+    approvalInput.checked = false;
     updateRunButton();
     loadRecentRuns();
   }
