@@ -100,10 +100,18 @@ def _open_csv_readonly(path: Path, input_root: Path):
     file_attribute_directory = 0x10
     file_attribute_reparse_point = 0x400
 
+    def win32_path(target: Path) -> str:
+        value = os.path.abspath(os.fspath(target))
+        if value.startswith("\\\\?\\"):
+            return value
+        if value.startswith("\\\\"):
+            return "\\\\?\\UNC\\" + value[2:]
+        return "\\\\?\\" + value
+
     def open_handle(target: Path, *, directory: bool, share: int):
         flags = open_reparse_point | (backup_semantics if directory else sequential_scan)
         handle = kernel.CreateFileW(
-            str(target), 0x80 if directory else 0x80000000 | 0x80,
+            win32_path(target), 0x80 if directory else 0x80000000 | 0x80,
             share, None, open_existing, flags, None,
         )
         if not handle or handle == invalid_handle:

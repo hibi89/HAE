@@ -614,6 +614,39 @@ raise SystemExit(main())
             if saved.exists():
                 saved.rename(junction)
 
+    def test_csv_snapshot_reads_unicode_input_path(self):
+        input_root = self.root / "입력 데이터"
+        input_root.mkdir()
+        (input_root / "매출.csv").write_bytes("id,name\n1,서울\n".encode("utf-8"))
+        engine = Engine(self.root / "unicode-state.db", self.root / "unicode-business.db", input_root)
+        snapshot = engine._read_csv("매출.csv")
+        self.assertEqual(snapshot["headers"], ["id", "name"])
+        self.assertEqual(snapshot["rows"], [{"id": "1", "name": "서울"}])
+
+    @unittest.skipUnless(os.name == "nt", "Windows long-path handling is platform-specific")
+    def test_csv_snapshot_reads_path_longer_than_legacy_max_path(self):
+        input_root = self.root / "long-path-input"
+        input_root.mkdir()
+        current = input_root
+        relative_parts = []
+        for _ in range(8):
+            name = "segment_" + "x" * 30
+            relative_parts.append(name)
+            current = current / name
+            try:
+                current.mkdir()
+            except OSError as exc:
+                if getattr(exc, "winerror", None) == 206:
+                    self.skipTest("Windows/Python long-path support is disabled for this runner")
+                raise
+        relative_parts.append("contacts.csv")
+        (current / "contacts.csv").write_bytes(b"id\n1\n")
+        relative = "/".join(relative_parts)
+        self.assertGreater(len(str(current / "contacts.csv")), 260)
+        engine = Engine(self.root / "long-state.db", self.root / "long-business.db", input_root)
+        snapshot = engine._read_csv(relative)
+        self.assertEqual(snapshot["rows"], [{"id": "1"}])
+
     def test_csv_input_limits_and_path_allowlist_fail_before_business_writes(self):
         input_root = self.root / "invalid-csv"
         input_root.mkdir()

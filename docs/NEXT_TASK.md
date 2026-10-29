@@ -1,9 +1,9 @@
 ## Next after CSV preflight completion — 2026-10-29 KST
 
-1. Run the real synthetic four-system HAE → Lightning Azent → SOVIA → DBVORA integration E2E using pinned, read-only reference source checkouts. Record exact versions and distinguish partial/unavailable contracts from a successful integration.
+1. Four-system HAE → Lightning Azent → SOVIA → DBVORA synthetic E2E passed with pinned read-only refs (LA `9cba6424`, SOVIA `7418b23a`, DBVORA `7f9a1c0d`). Preserve this as the executable contract and rerun when those interfaces change.
 2. Windows CSV path hardening now uses native handle checks and read-only sharing, with tests for writer denial, parent junction swap outside the input root, and replacement between stat/open. Cross-process run coordination uses per-run OS locks and durable SQLite receipts; do not replace it with a database-wide lock without new evidence that the keyed lock is insufficient.
 3. Keep the validated scope explicit: UTF-8 CSV, 256 KiB, 1,000 rows, 64 columns, 4,096 characters/cell. Preview stays SQLite-free; raw values must not leak into responses/logs.
-4. Synthetic validation does not imply customer readiness or clear separate HAE product acceptance, security, installer, backup/restore or release gates. The four-system integrated E2E remains unverified until the separate LA/SOVIA/DBVORA roots are configured.
+4. Synthetic validation does not imply customer readiness or clear separate HAE product acceptance, security, installer, backup/restore or release gates. Next investigate end-to-end Windows long-path behavior (the fixture currently skips with WinError 206 before HAE code runs).
 ## Next after draft Azent fixtures (2026-10-27 KST)
 1. **Gate R first:** verify `REA_APP@33f6d345f8d4577194248eed4543d602819d3192` in authorized connected runner (Python unittest full+targeted P23/P24, Node parser pinned tests) and record source SHAs/OS/counts and Windows-specific SKIP. Do not equate file inspection with PASS.
 2. Draft original generic contracts and runnable-shape fixtures exist at `docs/lightning-azent/FUNCTIONAL_CONTRACTS_DRAFT.md` and `docs/lightning-azent/fixtures/`. The three plans are in **legacy `axflow.ir.v0` only**, not an Azent implementation or validated integration. Do not advance Gate N/L from JSON parsing.
