@@ -1,3 +1,9 @@
+## P0 after integrated one-click launch — 2026-10-29 KST
+1. Run native Windows `HAE-Start.cmd` from `feature/axflow-mvp` and confirm `/api/health` reports `Lightning Azent` on fresh synthetic data; verify read-only preview, explicit approval, SQLite run and audit, no credentials.
+2. Run `VERIFY-WINDOWS.cmd --no-pause` from extracted unchanged shipped archive; 7/7 HTTP+SQLite and all three NTFS gates, no skips. Run full suite Python/Node at exact same SHA.
+3. Existing legacy data must continue selecting native engine in auto mode. No silent file migration; explicit `HAE_ENGINE_BACKEND=lightning-azent` chooses the separate new ledger. Preserve historical evidence boundaries, no unsupported percent inflation.
+4. Full customer HAE still separately requires OAuth/provider adapters, DBVORA supported-source backup/restore, pilot workflows and release security evidence.
+
 ## HAE next regression gate — 2026-10-29 KST
 1. In an authenticated executable checkout at the updated `feature/axflow-mvp` SHA, run `cd apps/ax-flow && node --test tests/test_history_stale_error.cjs tests/test_history_race.cjs tests/test_approval_state.cjs tests/test_run_history.cjs` and record PASS/FAIL/SKIP.
 2. Run full Python, Node syntax, synthetic HAE/LA integration and GUI checks on matching source SHA. The new stale-error test was evaluated using a V8 shim only; **native execution remains unverified**.

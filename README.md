@@ -35,6 +35,12 @@ Read `HANDOFF.md` → `STATUS.md` → `AGENTS.md` → `REQUIREMENTS.md` → `doc
 
 ## CURRENT SPRINT OVERRIDE — 2026-10-27 KST
 **3–5-day preferred HAE hackathon-reusable supported-scope MVP (Oct31), max 7-day release review goal (Nov02)**. Active plan: [docs/SPRINT_7_DAY_HACKATHON.md](docs/SPRINT_7_DAY_HACKATHON.md). Previous five-week calendar is historical. This is not full commercial product completion; actual SHA-bound integration and security tests determine what can be reused. REA_APP and DBVORA remain independent tools.
-# Windows local quick start
+# Windows local quick start (HAE + Lightning Azent)
 
-On Windows with Python 3.11 or newer installed, double-click `HAE-Start.cmd`. It starts the existing HAE app on loopback, waits until the page responds, and opens the default browser. The console stays open while HAE runs; closing it stops the local server. No administrator rights, installer, account, or external service is used. The default data directory is `%LOCALAPPDATA%\HAE`; set `HAE_DATA_DIR` to choose another location or `HAE_PORT` to select a different local port. The launcher prefers a compatible Lightning Azent package available in the checkout and otherwise uses HAE's existing local engine; set `HAE_BACKEND=lightning-azent` to require LA and fail closed if it is unavailable.
+On Windows with Python 3.11+, double-click `HAE-Start.cmd`. A fresh synthetic installation selects the **already shipped** `apps/ax-flow/hae-integrated.pyz` and its `launch_integrated.py` automatically. This is the independent Lightning Azent backend, not a silent native-engine simulation. Browser UI runs on localhost and still requires a read-only preview and explicit SQLite write approval. No Git, pip, OAuth, internet, installer or administrator rights are required for this local synthetic demo. The console stays open until stopped.
+
+**Preserve earlier data:** if the selected data directory already contains legacy `state.sqlite` or `business.sqlite` but not new `runtime.db`/`business.db`, auto mode retains the legacy engine and **does not migrate or overwrite either ledger**. To deliberately use the new synthetic LA ledger, set `HAE_ENGINE_BACKEND=lightning-azent`; use `HAE_ENGINE_BACKEND=axflow` to require the old engine. If the integrated artifact is missing, auto mode uses the older existing engine; incomplete/unsafe artifacts fail closed. External/customer data remains unsupported.
+
+Configuration: `HAE_DATA_DIR` chooses a local storage root (default `%LOCALAPPDATA%\HAE`), `HAE_PORT` overrides loopback port 8765, and `HAE_NO_BROWSER=1` prevents automatic browser opening. The authoritative backend setting is `HAE_ENGINE_BACKEND`, not `HAE_BACKEND`.
+
+Reproduce dispatcher tests in checkout with `cd apps/ax-flow && python -m unittest discover -s tests -p test_start_hae.py -v`. Native Windows `.cmd` and full product acceptance must be verified independently.
