@@ -1,3 +1,9 @@
+## HAE 핵심 통합 검증 완료 — 해총 인수인계 (2026-10-29 KST)
+- **먼저 읽을 것:** `TO_HAECHONG.md` (해총 보고) → `docs/HAE_LA_TROUBLESHOOTING_2026-10-29.md` (장애 원인·해결·재발 방지) → `apps/ax-flow/ACCEPTANCE-EVIDENCE-20261029.md` (실행 증빙).
+- **실측:** Linux Python 3.13, 실제 동일 배포 바이너리 HAE/LA HTTP/SQLite 7/7 PASS, 실행기 13/13 PASS, smoke PASS. 파일 SHA-256 `a8b114e63083b291561bfea9f55694aa7e5aff002c46d1414d1d6ce510269eb6`.
+- **범위:** 로컬 synthetic 핵심 MVP만 100% 통합 검증. Windows/NTFS 실기기, 브라우저 및 상용 전체 출시 게이트는 별도 미완료. 과거 하단의 실행 미완료 상태 기록은 그 당시 시점 기준이며 현재 최상단 보고가 최신이다.
+- **다음 조치:** 동일 배포물로 Windows `HAE-Start.cmd --verify`와 `VERIFY-WINDOWS.cmd --no-pause`를 실행한 뒤 전체 제품/출시 게이트를 진행. CI `steps=[]`, `runner_id=0`은 테스트 FAIL 아님.
+
 ## HAE one-click integrated LA launch handoff — 2026-10-29 KST
 1. **Goal/spec/tech:** Make top-level `HAE-Start.cmd` on Windows launch the already-shipped actual HAE+Lightning Azent zipapp by default on fresh synthetic installs, while preserving earlier legacy SQLite files; Python 3.11+ stdlib + existing offline zipapp and localhost UI.
 2. **Implemented/rationale:** New `apps/ax-flow/start_hae.py` dispatcher, modified `HAE-Start.cmd`, updated README. Compare two options: direct unconditional LA switching (less code, silent legacy ledger mismatch) vs explicit reversible routing with old-data detection (selected; safe, no new service or cost). Launcher sees optional `HAE_ENGINE_BACKEND`, data root, port, browser preferences; invalid or incomplete local artifacts fail closed.

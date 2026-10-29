@@ -1,3 +1,9 @@
+## 2026-10-29 HAE–LA 핵심 통합 실행 성공 / 해총 보고
+- **실제 Linux Python 3.13 실행으로 검증:** 동일 GitHub 배포 바이너리로 HAE + LA HTTP/SQLite E2E **7/7 PASS**, launcher regression **13/13 PASS**, backend smoke PASS. 검증 코드 SHA `dc252b22266ad4e5d95f7a16c0cddfac2371ef58`; 증빙 `apps/ax-flow/ACCEPTANCE-EVIDENCE-20261029.md`.
+- **97% 병목 해소:** GitHub 바이너리 UTF-8 decode 실패 → `fetch_file(encoding=base64)` → 무결성 확인 후 로컬 실행. CI 러너 미할당은 테스트 실패가 아니었고, 반복적인 주변 수정 대신 E2E 실행을 우선함.
+- **상세 사고 기록:** `docs/HAE_LA_TROUBLESHOOTING_2026-10-29.md`; **해총 제출:** `TO_HAECHONG.md`.
+- **범위 경고:** Windows 네이티브 / 고객 제품 전체 100%는 아님. 100%는 로컬 합성 핵심 7단계 MVP 계약에 한정.
+
 ## HAE default launcher connects the shipped LA backend — 2026-10-29 KST
 - **Actual gap fixed:** repository `HAE-Start.cmd` previously invoked only `axflow.desktop_launcher`; if the independent LA source branch was absent in the checkout it silently selected the older native engine even though `hae-integrated.pyz` was shipped. Added `apps/ax-flow/start_hae.py` deterministic launch dispatcher and updated top-level `.cmd` to call it through Python 3.11+.
 - **Behavior:** fresh install -> existing packaged LA launcher with `HAE_NO_BROWSER`, `HAE_PORT`, `HAE_DATA_DIR`; auto mode with previous `state.sqlite`/`business.sqlite` and no integrated ledger preserves old backend and customer files; incomplete/symlinked integrated artifacts fail closed; `HAE_ENGINE_BACKEND=axflow` retains explicit native mode; `lightning-azent` forces LA backend without silent downgrade. README corrected the earlier wrong `HAE_BACKEND` environment-variable name.

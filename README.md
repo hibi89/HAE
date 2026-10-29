@@ -22,6 +22,8 @@ A user chooses a suggested task or writes a natural-language instruction, adds o
 ## Development stages
 REA_APP core → permitted n8n functionality/architecture study → independent Lightning Azent execution engine + SQLite → AI/file workflows + OAuth → DBVORA data-management UI integration → browser/Windows/security, recovery, customer pilots.
 
+HAE–LA 실제 통합 검증 및 97% 병목 해결: [트러블슈팅 기록](docs/HAE_LA_TROUBLESHOOTING_2026-10-29.md) · [해총 보고서](TO_HAECHONG.md) · [실행 증빙](apps/ax-flow/ACCEPTANCE-EVIDENCE-20261029.md). **검증 범위: Linux 로컬 합성 데이터 핵심 MVP 7/7 PASS. Windows/상용 전체는 별도 미완료.**
+
 Master engineering plan: [docs/MASTER_SCHEDULE.md](docs/MASTER_SCHEDULE.md). Database architecture: [docs/DATA_ARCHITECTURE.md](docs/DATA_ARCHITECTURE.md). Validation: [docs/ACCEPTANCE_MATRIX.md](docs/ACCEPTANCE_MATRIX.md).
 
 ## Branches
