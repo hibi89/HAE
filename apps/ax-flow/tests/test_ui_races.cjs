@@ -148,6 +148,9 @@ async function testExecutionIsSingleFlightAndNeedsFreshPreview() {
   assert.equal(submitted.preview_id, "preview-test");
   assert.equal(submitted.approve_writes, true);
   assert.equal(ui.get("#run").disabled, true);
+  assert.equal(ui.get("#preview").disabled, true);
+  await ui.get("#preview").fire("click");
+  assert.equal(ui.requests.filter((r) => r.url === "/api/preview").length, 1, "execution blocks new preview");
   const request = ui.requests.find((r) => r.url === "/api/run");
   ui.respond(request, { error: "synthetic failure" }, 500);
   await Promise.all([first, second]);
