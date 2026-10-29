@@ -304,10 +304,12 @@ async function testHistoryRestoresLaAuditWithoutSovia() {
     run_id: "Gui0123456789ab", status: "completed", steps_recorded: 2, integration: {},
   });
   await ui.flush();
+  await new Promise((resolve) => setImmediate(resolve));
   const sovia = ui.requests.find((r) => r.url.startsWith("/api/audit?"));
   assert.ok(sovia);
   ui.respond(sovia, { error: "SOVIA unavailable" }, 404);
   await ui.flush();
+  await new Promise((resolve) => setImmediate(resolve));
   const la = ui.requests.find((r) => r.url.startsWith("/api/la-audit?"));
   assert.ok(la, "LA audit remains available when SOVIA is missing");
   ui.respond(la, {
