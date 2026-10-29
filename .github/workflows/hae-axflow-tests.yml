@@ -51,6 +51,21 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: ./apps/ax-flow/run-integrated.ps1 -LaCheckout ./la-source -Smoke
+      - name: Build and smoke offline Windows bundle via double-click entrypoint
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          python tools/build_hae_windows_bundle.py --la-package packages/lightning-azent --output-dir HAE-Windows
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cmd /c .\HAE-Windows\run-bundled.cmd --smoke --port 18473 --data-dir "$env:RUNNER_TEMP\HAE Bundle Smoke"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Publish offline Windows bundle
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: HAE-Windows-offline
+          path: HAE-Windows/
+          if-no-files-found: error
       - name: Verify synthetic end-to-end Python suite
         working-directory: apps/ax-flow
         run: python -m unittest discover -s tests -v
