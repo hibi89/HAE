@@ -1,4 +1,4 @@
-name: HAE private synthetic UGREEN-LA integration proof
+name: HAE PRIVATE pinned-source UGREEN-LA-SOVIA synthetic E2E
 
 on:
   push:
@@ -12,41 +12,70 @@ permissions:
   contents: read
 
 jobs:
-  check:
-    name: HAE LA v0 -> public UGREEN read-only bridge (SYNTHETIC)
+  verified-private-e2e:
+    name: Actual private HAE LA + public SOVIA + public UGREEN (no NAS)
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     steps:
-      - name: Checkout trusted HAE LA source (private; stays in private runner)
+      - name: Checkout exact private HAE LA source inside private runner
         uses: actions/checkout@v4
         with:
+          repository: hibi89/HAE
+          ref: 9cba6424dadf3fadb0ccd6ed10040e322c4a62fa
+          path: hae
           persist-credentials: false
 
-      - name: Checkout exact public UGREEN bridge commit
+      - name: Checkout exact public UGREEN verifier
         uses: actions/checkout@v4
         with:
           repository: hibi89/hibi89-ugreen-nas-hackathon
-          ref: 54db97464b67da77a463acbd0e68c913cafd7dea
+          ref: d99441559caa638e947bbc0d5a79cb9cffed02bb
           path: ugreen
           persist-credentials: false
 
-      - name: Use Python 3.11
+      - name: Checkout exact public SOVIA advisory engine
+        uses: actions/checkout@v4
+        with:
+          repository: hibi89/SOVIA_sovereign
+          ref: 7418b23aff9b3abbd3faf5d1477e7244ec82b681
+          path: sovia
+          persist-credentials: false
+
+      - name: Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Test public UGREEN consent, plan and audit boundaries
+      - name: Validate both pins and run actual HAE local-only synthetic E2E
         working-directory: ugreen
         run: |
-          python -m unittest discover -s tests -p 'test_ecosystem_contract.py' -v
-          python -m unittest discover -s tests -p 'test_la_bridge.py' -v
+          python tools/verify_private_hae_chain.py \
+            --hae-root ../hae \
+            --sovia-root ../sovia > "$RUNNER_TEMP/ugreen-private-synthetic-proof.json"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          path = Path(os.environ["RUNNER_TEMP"]) / "ugreen-private-synthetic-proof.json"
+          report = json.loads(path.read_text(encoding="utf-8"))
+          assert report["result"] == "PASS"
+          assert report["proof_type"] == "REAL_HAE_LA_AND_SOVIA_SYNTHETIC_LOCAL_ONLY"
+          assert report["real_la_synthetic_sqlite"] == "PASS"
+          assert report["real_la_approved_write_rows"] == 1
+          assert report["real_la_replay_duplicate_writes"] == 0
+          assert report["real_sovia_advisory"] == "PASS"
+          assert report["scenario_count"] == 4
+          assert report["actual_nas_verified"] is False
+          assert report["registered_uliya_expert_invoked"] is False
+          assert report["release_gate"] == "HOLD"
+          print("PASS: private pinned LA source + actual local SQLite + pinned SOVIA advisory")
+          print("NAS/ULIYA: NOT_TESTED; owner data: NOT_USED; official submission: HOLD")
+          PY
 
-      - name: Exercise real HAE LAExecutor with temporary synthetic SQLite
-        working-directory: ugreen
-        run: python tools/verify_la_runtime_bridge.py --la-package-root ../packages/lightning-azent
-
-      - name: Declare explicit limits
-        run: |
-          echo "HAE source remains in private workflow only."
-          echo "Real Lightning Azent local synthetic flow verified only if all previous steps passed."
-          echo "UGREEN NAS / Uliya Experts / actual customer data: NOT TESTED."
+      - name: Store hash-only synthetic proof in private HAE artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: private-hae-la-ugreen-synthetic-e2e
+          path: ${{ runner.temp }}/ugreen-private-synthetic-proof.json
+          retention-days: 7
+          if-no-files-found: error
