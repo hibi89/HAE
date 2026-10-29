@@ -375,7 +375,8 @@ def create_server(
                         self._send_json(200, {"run_id": run_id, **outcome, **integration})
                     else:
                         result = Engine(state, business, input_root=root).execute(
-                            plan, run_id, approve_writes=body["approve_writes"]
+                            plan, run_id, approve_writes=body["approve_writes"],
+                            csv_snapshot=csv_snapshot, expected_csv_sha256=approved_sha256,
                         )
                         self._send_json(200, {
                             "run_id": run_id, "result": result, "status": inspect_run(state, run_id),
