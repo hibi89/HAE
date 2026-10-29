@@ -131,6 +131,7 @@ async function testRunRejectsMissingPreviewToken() {
   const request = ui.requests.find((r) => r.url === "/api/preview");
   ui.respond(request, { plan: { steps: [] }, preview_id: "", requires_approval: false, workflow: "csv_lookup" });
   await preview;
+  assert.equal(ui.get("#run").disabled, true);
   await ui.get("#run").fire("click");
   assert.equal(ui.requests.filter((r) => r.url === "/api/run").length, 0);
 }
