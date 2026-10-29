@@ -13,13 +13,16 @@ from contextlib import contextmanager
 import json
 import os
 import socket
+import sqlite3
 from pathlib import Path
 import sys
+import tempfile
 import threading
 import time
 from typing import Iterator
 from urllib.error import HTTPError, URLError
 from urllib.request import ProxyHandler, Request, build_opener
+from contextlib import closing
 import webbrowser
 
 
@@ -127,6 +130,132 @@ def require_free_port(port: int) -> None:
                               " is available.") from exc
 
 
+def verify_bundle(package: Path) -> None:
+    """Real, isolated HAE/LA HTTP acceptance; never touch user's HAE data."""
+    import sys
+
+    sys.path.insert(0, str(package))
+    from axflow.web import create_server
+
+    with tempfile.TemporaryDirectory(prefix="hae-la-offline-e2e-") as tmp:
+        root = Path(tmp)
+        inputs = root / "input"
+        inputs.mkdir()
+        (inputs / "contacts.csv").write_bytes(
+            b"id,name\n11,SyntheticAlice\n12,SyntheticBob\n"
+        )
+        state, business = root / "state.db", root / "business.db"
+
+        def request(origin: str, method: str, endpoint: str, payload: dict | None = None):
+            data = json.dumps(payload).encode("utf-8") if payload is not None else None
+            headers = {"Origin": origin, "Content-Type": "application/json"} if data else {}
+            req = Request(origin + endpoint, data=data, headers=headers, method=method)
+            opener = build_opener(ProxyHandler({}))
+            try:
+                with opener.open(req, timeout=8) as response:
+                    return response.status, json.load(response)
+            except HTTPError as exc:
+                with exc:
+                    return exc.code, json.load(exc)
+
+        def require(status: int, body: dict, expected: int, description: str):
+            if status != expected:
+                raise LaunchError(description + " returned HTTP " + str(status) +
+                                  " instead of " + str(expected))
+            return body
+
+        def start():
+            service = create_server(
+                inputs, state, business, port=0, engine_backend="lightning-azent",
+            )
+            worker = threading.Thread(
+                target=service.serve_forever, kwargs={"poll_interval": 0.05},
+                daemon=True,
+            )
+            worker.start()
+            return service, worker, "http://127.0.0.1:" + str(service.server_port)
+
+        def stop(service, worker):
+            service.shutdown()
+            worker.join(timeout=5)
+            service.server_close()
+            if worker.is_alive():
+                raise LaunchError("offline verification server did not stop")
+
+        steps = 0
+        service, worker, origin = start()
+        try:
+            status, body = request(origin, "GET", "/api/health")
+            require(status, body, 200, "backend health")
+            if (body.get("ready") is not True or
+                    body.get("engine_backend", {}).get("name") != "Lightning Azent"):
+                raise LaunchError("packaged Lightning Azent backend is not ready")
+            steps += 1
+
+            args = {"task": "Import this CSV into local SQLite", "csv_path": "contacts.csv"}
+            status, preview = request(origin, "POST", "/api/preview", args)
+            require(status, preview, 200, "read-only preview")
+            if not preview.get("requires_approval") or state.exists() or business.exists():
+                raise LaunchError("preview unexpectedly modified SQLite or omitted consent gate")
+            steps += 1
+
+            denied = {**args, "preview_id": preview["preview_id"], "approve_writes": False}
+            status, refusal = request(origin, "POST", "/api/run", denied)
+            require(status, refusal, 403, "write consent refusal")
+            if state.exists() or business.exists():
+                raise LaunchError("unapproved write modified SQLite")
+            steps += 1
+
+            status, run = request(origin, "POST", "/api/run", {**denied, "approve_writes": True})
+            require(status, run, 200, "approved SQLite execution")
+            if (run.get("status", {}).get("status") != "completed"
+                    or run.get("workflow_status") != "completed"
+                    or run.get("result", {}).get("imported_rows") != 2):
+                raise LaunchError("LA execution did not complete 2 synthetic rows")
+            first_id = run["run_id"]
+            steps += 1
+
+            status, audit = request(origin, "GET", "/api/la-audit?run_id=" + first_id)
+            require(status, audit, 200, "durable LA audit")
+            if (audit.get("approval_count", 0) < 1
+                    or audit.get("total_events", 0) < 1
+                    or "SyntheticAlice" in json.dumps(audit)):
+                raise LaunchError("LA audit evidence is incomplete or disclosed source data")
+            steps += 1
+
+            status, preview2 = request(origin, "POST", "/api/preview", args)
+            require(status, preview2, 200, "second preview")
+            status, run2 = request(origin, "POST", "/api/run", {
+                **args, "preview_id": preview2["preview_id"], "approve_writes": True,
+            })
+            require(status, run2, 200, "second approved SQLite execution")
+            if run2.get("run_id") == first_id or run2.get("result", {}).get("imported_rows") != 2:
+                raise LaunchError("second execution failed or duplicated the run ID")
+            with closing(sqlite3.connect(business)) as connection:
+                count = connection.execute("SELECT COUNT(*) FROM csv_records").fetchone()[0]
+            if count != 4:
+                raise LaunchError("two LA executions did not persist four distinct rows")
+            steps += 1
+        finally:
+            stop(service, worker)
+
+        service, worker, origin = start()
+        try:
+            status, saved = request(origin, "GET", "/api/status?run_id=" + first_id)
+            require(status, saved, 200, "restored run status")
+            status, restored = request(origin, "GET", "/api/la-audit?run_id=" + first_id)
+            require(status, restored, 200, "restored LA audit")
+            if (saved.get("status") != "completed" or
+                    restored.get("total_events", 0) < audit.get("total_events", 0)):
+                raise LaunchError("LA SQLite run and audit were not restored after restart")
+            steps += 1
+        finally:
+            stop(service, worker)
+    if steps != 7:
+        raise LaunchError("bundled E2E verification was incomplete")
+    print("HAE + LA offline bundled HTTP/SQLite acceptance: 7/7 PASS", flush=True)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data-dir", help="private local data directory (default: LOCALAPPDATA/HAE)")
@@ -134,6 +263,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--no-browser", action="store_true", help="do not open the local UI automatically")
     parser.add_argument("--smoke", action="store_true",
                         help="start and verify bundled real LA backend, then cleanly stop")
+    parser.add_argument("--verify", action="store_true",
+                        help="run isolated 7-step real HTTP/SQLite E2E without touching user files")
     args = parser.parse_args(argv)
     if sys.version_info < (3, 11):
         raise LaunchError("Python 3.11+ is required.")
@@ -142,6 +273,11 @@ def main(argv: list[str] | None = None) -> int:
     package = Path(__file__).resolve().with_name("hae-integrated.pyz")
     if not package.is_file() or package.is_symlink():
         raise LaunchError("Missing offline hae-integrated.pyz beside this launcher.")
+    if args.smoke and args.verify:
+        raise LaunchError("--smoke and --verify cannot be used together")
+    if args.verify:
+        verify_bundle(package)
+        return 0
     root = data_directory(args.data_dir)
     with single_instance(root / ".hae-bundle.lock"):
         require_free_port(args.port)
