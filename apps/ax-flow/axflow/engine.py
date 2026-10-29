@@ -24,6 +24,9 @@ MAX_CSV_BYTES = 262144
 MAX_CSV_ROWS = 1000
 MAX_CSV_COLUMNS = 64
 MAX_CSV_CELL_CHARS = 4096
+# Windows MAX_PATH reserves one UTF-16 code unit for the terminating NUL. HAE
+# does not enable system long-path settings, so reject longer paths before access.
+MAX_WINDOWS_CSV_PATH_CHARS = 259
 MAX_SAFE_INTEGER = 9007199254740991
 NUMBER_TEXT = re.compile(r"^[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?$")
 _RUN_LOCK_GUARD = threading.Lock()
@@ -894,6 +897,11 @@ class Engine:
         try:
             for part in relative.parts:
                 candidate = candidate / part
+                windows_path_chars = len(str(candidate).encode("utf-16-le", errors="surrogatepass")) // 2
+                if os.name == "nt" and windows_path_chars > MAX_WINDOWS_CSV_PATH_CHARS:
+                    raise PlanError(
+                        "CSV input exceeds HAE's supported Windows path length; shorten its folder path"
+                    )
                 if _has_reparse_point(candidate):
                     raise PlanError("CSV input must not traverse symbolic links or reparse points")
             resolved = candidate.resolve(strict=True)

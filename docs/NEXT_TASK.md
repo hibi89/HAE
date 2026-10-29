@@ -383,3 +383,9 @@ Limits are enforced and tested: 256 KiB, 1000 data rows, 64 columns, 4096 chars 
 3. Review native Windows file-opening behavior for symlinks/reparse points and final-validation-to-open race; keep limitations explicit until a verified safe approach is available.
 4. Preserve local-only synthetic scope, explicit approval, 256 KiB CSV cap, post-execution-only SOVIA mode and read-only DBVORA inventory. Do not claim customer readiness or real-time SOVIA blocking.
 
+
+## Next — HAE Windows path and MVP usability follow-up (2026-10-29)
+1. Keep the current fail-closed Windows CSV path ceiling of 259 UTF-16 code units. Do not enable long-path system policy or claim `\\?\` extended-path support without a dedicated path audit and cross-version tests.
+2. Latest full Windows HAE suite at base `3d09c3a6`: 112/112 PASS with local loopback permission; four-system synthetic API E2E PASS; launcher restart status/audit PASS. Manual browser E2E was interrupted by the user's Escape input and remains unverified.
+3. Next priority: obtain a full manual browser path under an authorized interaction window, including Preview, explicit approval, result/audit/inventory, and restart. Preserve SOVIA as advisory post-execution only and treat absent DBVORA service as unavailable.
+4. Keep LA/SOVIA/DBVORA references read-only and use synthetic data only.

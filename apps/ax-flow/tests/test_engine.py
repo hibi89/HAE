@@ -623,29 +623,29 @@ raise SystemExit(main())
         self.assertEqual(snapshot["headers"], ["id", "name"])
         self.assertEqual(snapshot["rows"], [{"id": "1", "name": "서울"}])
 
-    @unittest.skipUnless(os.name == "nt", "Windows long-path handling is platform-specific")
-    def test_csv_snapshot_reads_path_longer_than_legacy_max_path(self):
+    @unittest.skipUnless(os.name == "nt", "Windows MAX_PATH refusal is platform-specific")
+    def test_preflight_rejects_path_over_windows_max_before_filesystem_access(self):
         input_root = self.root / "long-path-input"
         input_root.mkdir()
-        current = input_root
-        relative_parts = []
-        for _ in range(8):
-            name = "segment_" + "x" * 30
-            relative_parts.append(name)
-            current = current / name
-            try:
-                current.mkdir()
-            except OSError as exc:
-                if getattr(exc, "winerror", None) == 206:
-                    self.skipTest("Windows/Python long-path support is disabled for this runner")
-                raise
-        relative_parts.append("contacts.csv")
-        (current / "contacts.csv").write_bytes(b"id\n1\n")
-        relative = "/".join(relative_parts)
-        self.assertGreater(len(str(current / "contacts.csv")), 260)
-        engine = Engine(self.root / "long-state.db", self.root / "long-business.db", input_root)
-        snapshot = engine._read_csv(relative)
-        self.assertEqual(snapshot["rows"], [{"id": "1"}])
+        # Supplementary Unicode characters take two UTF-16 code units on Windows.
+        relative = "😀" * 100 + "/contacts.csv"
+        plan = {"version": "axflow.ir.v0", "steps": [
+            {"id": "source", "op": "csv_read", "path": relative},
+        ]}
+        from axflow import engine as engine_module
+        inspected_lengths = []
+
+        def observe_component(path):
+            inspected_lengths.append(len(str(path)))
+            utf16_units = len(str(path).encode("utf-16-le", errors="surrogatepass")) // 2
+            self.assertLessEqual(utf16_units, engine_module.MAX_WINDOWS_CSV_PATH_CHARS)
+            return False
+
+        with patch.object(engine_module, "_has_reparse_point", side_effect=observe_component):
+            with self.assertRaisesRegex(PlanError, "supported Windows path length"):
+                preflight_csv_plan(plan, input_root)
+        self.assertFalse((self.root / "long-state.db").exists())
+        self.assertFalse((self.root / "long-business.db").exists())
 
     def test_csv_input_limits_and_path_allowlist_fail_before_business_writes(self):
         input_root = self.root / "invalid-csv"
