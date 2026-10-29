@@ -202,6 +202,13 @@ print(json.dumps({"status": result["status"]["status"],
                 with urlopen(origin + "/api/status?run_id=" + outcome["run_id"], timeout=5) as status_response:
                     saved_status = json.loads(status_response.read().decode("utf-8"))
                 self.assertEqual(saved_status["status"], "completed")
+                self.assertEqual(saved_status["run_id"], outcome["run_id"])
+                self.assertIn("integration", saved_status)
+                self.assertIn("sovia_audit", saved_status["integration"])
+                with urlopen(origin + "/api/dbvora", timeout=5) as dbvora_response:
+                    inventory = json.loads(dbvora_response.read().decode("utf-8"))
+                self.assertIn("available", inventory)
+                self.assertIsInstance(inventory["available"], bool)
                 self.assertNotIn("Alice", json.dumps(outcome["audit"]))
                 outcomes.append((task, csv_path, preview["preview_id"], outcome))
 
