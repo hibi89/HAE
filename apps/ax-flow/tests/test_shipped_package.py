@@ -70,6 +70,15 @@ class ShippedOfflinePackageTests(unittest.TestCase):
             self.assertFalse((root / "로컬 데이터" / "runtime.db").exists())
             self.assertFalse((root / "로컬 데이터" / "business.db").exists())
 
+            untouched = root / "사용자 실제 데이터"
+            verify = subprocess.run([
+                sys.executable, str(bundle / "launch_integrated.py"),
+                "--data-dir", str(untouched), "--verify",
+            ], cwd=root, env=env, capture_output=True, text=True, timeout=30)
+            self.assertEqual(verify.returncode, 0, verify.stdout + verify.stderr)
+            self.assertIn("7/7 PASS", verify.stdout)
+            self.assertFalse(untouched.exists(), "isolated acceptance must never initialize real user data")
+
 
 if __name__ == "__main__":
     unittest.main()
