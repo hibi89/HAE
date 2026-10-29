@@ -63,10 +63,17 @@ def launch_command(root: Path, environment: dict[str, str], python: str) -> tupl
     )
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     try:
         root = Path(__file__).resolve().parents[2]
+        requested = sys.argv[1:] if argv is None else argv
+        if requested not in ([], ["--verify"]):
+            raise StartError("Only --verify is supported as a startup argument")
         cmd, env, selected = launch_command(root, os.environ, sys.executable)
+        if requested:
+            if selected != "integrated":
+                raise StartError("Offline verification requires the bundled Lightning Azent engine")
+            cmd.extend(requested)
         print("HAE launcher: " + selected, flush=True)
         if selected == "preserved-legacy":
             print("Existing HAE SQLite data detected; no automatic engine or data migration.", flush=True)

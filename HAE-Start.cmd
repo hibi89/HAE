@@ -22,12 +22,12 @@ set "HAE_EXIT=2"
 goto failed
 
 :use_py
-py -3 "%HAE_ENTRY%"
+py -3 "%HAE_ENTRY%" %*
 set "HAE_EXIT=%errorlevel%"
 goto finished
 
 :use_python
-python "%HAE_ENTRY%"
+python "%HAE_ENTRY%" %*
 set "HAE_EXIT=%errorlevel%"
 goto finished
 

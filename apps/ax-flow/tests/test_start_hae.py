@@ -95,6 +95,14 @@ class HaeStartTests(unittest.TestCase):
         with self.assertRaisesRegex(launcher.StartError, "HAE_ENGINE_BACKEND"):
             self.select(dict(self.env, HAE_ENGINE_BACKEND="remote"))
 
+    def test_verify_argument_requires_integrated_bundle(self):
+        with patch.object(launcher, "__file__", str(self.app / "start_hae.py")), patch.dict(os.environ, self.env, clear=True):
+            self.assertEqual(launcher.main(["--verify"]), 2)
+
+    def test_unknown_arguments_rejected(self):
+        with patch.object(launcher, "__file__", str(self.app / "start_hae.py")), patch.dict(os.environ, self.env, clear=True):
+            self.assertEqual(launcher.main(["--unknown"]), 2)
+
     def test_dispatch_invokes_selected_script_without_user_database_write(self):
         self.ship()
         ran = self.app / "launch_integrated.py"
