@@ -51,7 +51,8 @@ class HaeStartTests(unittest.TestCase):
         self.assertIn("axflow.desktop_launcher", cmd)
         self.assertEqual((data / "state.sqlite").read_bytes(), b"EXISTING-USER-DATA")
         (data / "runtime.db").write_bytes(b"NEW-ENGINE-USER-DATA")
-        self.assertEqual(self.select()[2], "integrated")
+        self.assertEqual(self.select()[2], "preserved-legacy")
+        self.assertEqual(self.select(dict(self.env, HAE_ENGINE_BACKEND="lightning-azent"))[2], "integrated")
 
     def test_explicit_modes_preserve_contract(self):
         self.ship()

@@ -48,7 +48,9 @@ def launch_command(root: Path, environment: dict[str, str], python: str) -> tupl
                       any((data / filename).exists() for filename in ("state.sqlite", "business.sqlite")))
     integrated_present = (data is not None and
                           any((data / filename).exists() for filename in ("runtime.db", "business.db")))
-    keep_legacy = preference == "auto" and legacy_present and not integrated_present
+    # A legacy ledger must never be hidden by a second empty ledger in auto mode.
+    # Explicit selection is required for an intentional backend switch.
+    keep_legacy = preference == "auto" and legacy_present
     if preference != "axflow" and present and not keep_legacy:
         return [python, str(launch), *args], env, "integrated"
 
