@@ -7,8 +7,8 @@
 6. **Data/safety:** Tests use synthetic fixtures and isolated clone only; no original local SQLite/config, credentials, `main`, or customer data changed. Production N/A.
 7. **Product scope:** Existing bounded synthetic MVP acceptance remains distinct from full commercial product gates; do not create an overall completion percentage. OAuth/providers, DBVORA restore and customer pilots remain open.
 8. **Identity:** Configured git author/committer `이해인 <haein5898@naver.com>` differs from connected GitHub profile `hibi89 <godls5898@gmail.com>`. No identity override was made. Report the mismatch.
-9. **Delivery status:** Candidate is ready. Before push, re-read remote `feature/axflow-mvp` and require exact base SHA `d0507968009909cafb245ce55469be3e979e9aad`; then fast-forward push only if unchanged. Current merge candidate SHA `33adacf2d098305e60e1f10a99f6104b05cf71f2`.
-10. **Next:** Verify remote feature ref is still at the expected base, push the fast-forward, read back final remote SHA, and clean only task-created `work/hae-merge` after successful verification. Never merge or modify `main`.
+9. **Delivery status:** Remote `feature/axflow-mvp` was confirmed at expected base `d0507968009909cafb245ce55469be3e979e9aad`, then fast-forwarded to integration code commit `33adacf2d098305e60e1f10a99f6104b05cf71f2`. The documentation-only follow-up was also pushed, and final remote feature readback succeeded. No force push.
+10. **Next:** Integration and verification are complete. `main` was not modified; task-created `work/hae-merge` is intentionally preserved per request not to delete temporary folders or user data.
 
 ## HAE 핵심 통합 검증 완료 — 해총 인수인계 (2026-10-29 KST)
 - **먼저 읽을 것:** `TO_HAECHONG.md` (해총 보고) → `docs/HAE_LA_TROUBLESHOOTING_2026-10-29.md` (장애 원인·해결·재발 방지) → `apps/ax-flow/ACCEPTANCE-EVIDENCE-20261029.md` (실행 증빙).

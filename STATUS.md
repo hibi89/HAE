@@ -4,7 +4,7 @@
 - **Revalidation on integrated SHA:** Windows `HAE-Start.cmd --verify` 7/7 PASS; `apps/ax-flow/VERIFY-WINDOWS.cmd --no-pause` 4/4 PASS (real E2E + 3 NTFS gates); Python full suite 148 PASS / 11 SKIP; Node CJS regressions all PASS including UI race 14 assertions; `git diff --check` PASS.
 - **Command note:** first NTFS invocation used repo root where the script does not exist; reran from `apps/ax-flow`, where all gates passed. No product failure.
 - **Preservation:** only synthetic tests in isolated `work/hae-merge`; no original user database/configuration changed. `main` untouched. Full HAE readiness remains separate; Production N/A.
-- **Identity:** configured Git author/committer `이해인 <haein5898@naver.com>` differs from connected profile `hibi89 <godls5898@gmail.com>`; identity was not overridden. Current feature push pending final ref check.
+- **Delivery:** remote `feature/axflow-mvp` was fast-forwarded from the verified base to code commit `33adacf2d098305e60e1f10a99f6104b05cf71f2`; `main` remains `c17442b4295af92d03dfbb7d5e61ce4e3c3d48c0`. Final remote readback was successful. Configured author/committer `이해인 <haein5898@naver.com>` differs from connected profile `hibi89 <godls5898@gmail.com>`; identity was not overridden.
 
 ## Windows + браузерная проверка HAE — 2026-10-29 KST
 - **База/ветка:** `hibi89/HAE`, исходная remote feature branch HEAD `d0507968009909cafb245ce55469be3e979e9aad`; изолированная проверочная ветка `test/windows-browser-20261029`. Python 3.11.9 x64, Node v24.21.0, Windows/NTFS, браузер Codex IAB. `py -3` не обнаруживает установленную Python; fallback `python` работает.
