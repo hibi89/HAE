@@ -196,9 +196,18 @@ print(json.dumps({"status": result["status"]["status"],
                 self.assertIn("sovia_audit", outcome)
                 self.assertIn("dbvora", outcome)
                 self.assertIn(outcome["workflow_status"], {"completed", "partial"})
-                with urlopen(origin + "/api/audit?run_id=" + outcome["run_id"], timeout=5) as audit_response:
-                    saved_audit = json.loads(audit_response.read().decode("utf-8"))
-                self.assertEqual(saved_audit["run_id"], outcome["run_id"])
+                from urllib.error import HTTPError
+                audit_url = origin + "/api/audit?run_id=" + outcome["run_id"]
+                if outcome["sovia_audit"]["available"] is True:
+                    with urlopen(audit_url, timeout=5) as audit_response:
+                        saved_audit = json.loads(audit_response.read().decode("utf-8"))
+                    self.assertEqual(saved_audit["run_id"], outcome["run_id"])
+                else:
+                    # SOVIA is optional. Its unavailability must not turn
+                    # the LA SQLite execution into a failure or a 200 audit.
+                    with self.assertRaises(HTTPError) as unavailable_audit:
+                        urlopen(audit_url, timeout=5)
+                    self.assertEqual(unavailable_audit.exception.code, 404)
                 with urlopen(origin + "/api/status?run_id=" + outcome["run_id"], timeout=5) as status_response:
                     saved_status = json.loads(status_response.read().decode("utf-8"))
                 self.assertEqual(saved_status["status"], "completed")
