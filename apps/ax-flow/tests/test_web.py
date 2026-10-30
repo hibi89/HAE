@@ -66,6 +66,34 @@ class WebUITests(unittest.TestCase):
         status, response_headers, raw = self.request(path, payload=payload, headers=headers, method="POST")
         return status, response_headers, json.loads(raw.decode("utf-8"))
 
+    def test_pending_run_id_mismatch_rejected_before_sqlite_execution(self):
+        task = "Import this CSV into local SQLite"
+        code, _, preview = self.post_json("/api/preview", {
+            "task": task, "csv_path": "contacts.csv",
+        })
+        self.assertEqual(code, 200, preview)
+        wrong = "Gui" + ("0" * 12)
+        self.assertNotEqual(wrong, preview["pending_run_id"])
+        code, _, blocked = self.post_json("/api/run", {
+            "task": task, "csv_path": "contacts.csv",
+            "preview_id": preview["preview_id"],
+            "pending_run_id": wrong, "approve_writes": True,
+        })
+        self.assertEqual(code, 409, blocked)
+        self.assertEqual(
+            blocked["error"], "pending run ID differs from approved preview")
+        self.assertFalse(self.state.exists())
+        self.assertFalse(self.business.exists())
+        code, _, actual = self.post_json("/api/run", {
+            "task": task, "csv_path": "contacts.csv",
+            "preview_id": preview["preview_id"],
+            "pending_run_id": preview["pending_run_id"],
+            "approve_writes": True,
+        })
+        self.assertEqual(code, 200, actual)
+        self.assertEqual(actual["run_id"], preview["pending_run_id"])
+        self.assertEqual(actual["result"]["imported_rows"], 1)
+
     def test_preview_binds_public_pending_run_id_to_actual_execution(self):
         # Read-only reconciliation can inspect this ID if /api/run loses
         # its response AFTER a business write. Preview itself never writes.
