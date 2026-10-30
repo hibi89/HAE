@@ -24,6 +24,7 @@ G83_UGREEN_COMMIT = "45e09ae506b5ffed11b143f1e0387a4e7bfc303a"
 LA_COMMIT = "9cba6424dadf3fadb0ccd6ed10040e322c4a62fa"
 WEB_PATH = "apps/ax-flow/axflow/web.py"
 APPROVAL = "--execute-synthetic-only"
+PUBLIC_G83_FILES = ("tools/verify_hae_la_local_e2e.py", "tools/flowpilot_hae_bridge.py")
 
 
 class NativeGateError(ValueError):
@@ -40,6 +41,19 @@ def _git(folder: Path, *args: str) -> str:
     return result.stdout.strip()
 
 
+def verify_public_source_integrity(root: Path, baseline: str = G83_UGREEN_COMMIT) -> None:
+    """Allow newer documentation commits without accepting altered verification code."""
+    try:
+        _git(root, "merge-base", "--is-ancestor", baseline, "HEAD")
+    except NativeGateError as exc:
+        raise NativeGateError("UGREEN checkout does not descend from G83") from exc
+    for path in PUBLIC_G83_FILES:
+        baseline_blob = _git(root, "rev-parse", f"{baseline}:{path}")
+        current_blob = _git(root, "hash-object", "--path", path, path)
+        if current_blob != baseline_blob:
+            raise NativeGateError("G83 verification code integrity mismatch")
+
+
 def validate_sources(la_package: Path, ugreen_root: Path, confirmed: bool) -> tuple[Path, Path]:
     if confirmed is not True:
         raise NativeGateError("explicit owner synthetic execution consent required")
@@ -53,8 +67,7 @@ def validate_sources(la_package: Path, ugreen_root: Path, confirmed: bool) -> tu
             or not (ugreen_root / "tools" / "flowpilot_hae_bridge.py").is_file()):
         raise NativeGateError("genuine LA package or public G83 verification source absent")
 
-    if _git(ugreen_root, "rev-parse", "HEAD") != G83_UGREEN_COMMIT:
-        raise NativeGateError("public UGREEN verification checkout is not pinned G83")
+    verify_public_source_integrity(ugreen_root)
     if _git(la_package, "rev-parse", "HEAD") != LA_COMMIT:
         raise NativeGateError("Lightning Azent checkout does not match pinned source")
     actual_web_blob = _git(HAE_ROOT, "hash-object", "--path", WEB_PATH, WEB_PATH)
@@ -141,6 +154,7 @@ def main(argv: list[str] | None = None) -> int:
         result = {
             "status": "G84_NATIVE_E2E_NOT_VERIFIED",
             "error_type": type(exc).__name__,
+            "failure_gate": str(exc) if isinstance(exc, NativeGateError) else "runtime-or-packaging",
             "original_binary_replaced": False,
             "real_nas_verified": False,
         }
