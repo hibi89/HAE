@@ -44,6 +44,22 @@ jobs:
       - name: Verify real six-stage HAE to LA to SQLite HTTP acceptance
         working-directory: apps/ax-flow
         run: python smoke_http.py
+      - name: Checkout exact public UGREEN FlowPilot HTTP bridge (no private source export)
+        uses: actions/checkout@v4
+        with:
+          repository: hibi89/hibi89-ugreen-nas-hackathon
+          ref: 3cab98b6dadf97dcab32b77f8b33ff7dafb2b462
+          path: ugreen-source
+          persist-credentials: false
+      - name: Verify pinned public bridge commit identity
+        shell: bash
+        run: |
+          test "$(git -C ugreen-source rev-parse HEAD)" = "3cab98b6dadf97dcab32b77f8b33ff7dafb2b462"
+      - name: Real FlowPilot to HAE to Lightning Azent SQLite and audit E2E (private)
+        working-directory: apps/ax-flow
+        env:
+          UGREEN_BRIDGE_ROOT: ${{ github.workspace }}/ugreen-source/tools
+        run: python -m unittest discover -s tests -p test_ugreen_flowpilot_external_bridge.py -v
       - name: Verify real HAE to Lightning Azent HTTP integration
         working-directory: apps/ax-flow
         run: python -m unittest discover -s tests -p test_la_adapter.py -v
