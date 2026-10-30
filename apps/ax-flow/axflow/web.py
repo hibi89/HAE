@@ -386,6 +386,7 @@ def create_server(
                         "planner": "bounded local rules",
                         "engine_backend": active_backend,
                         "preview_id": preview_id,
+                        "pending_run_id": run_id,  # read-only audit recovery after lost POST response
                         "resumes_run_id": resume_run_id,
                         "plan": plan,
                         "input": {key: value for key, value in csv_summary.items() if key != "source_sha256"},
