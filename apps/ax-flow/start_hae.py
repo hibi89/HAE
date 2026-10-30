@@ -67,14 +67,20 @@ def main(argv: list[str] | None = None) -> int:
     try:
         root = Path(__file__).resolve().parents[2]
         requested = sys.argv[1:] if argv is None else argv
-        if requested not in ([], ["--verify"]):
-            raise StartError("Only --verify is supported as a startup argument")
+        if requested not in ([], ["--verify"], ["--doctor"]):
+            raise StartError("Only --verify and --doctor are supported as startup arguments")
         # Verification is isolated from all customer ledgers. Prefer the
         # complete offline bundle even when auto startup preserves legacy data.
         selected_env = dict(os.environ)
         if requested and selected_env.get("HAE_ENGINE_BACKEND", "auto").strip().lower() == "auto":
             selected_env["HAE_ENGINE_BACKEND"] = "lightning-azent"
         cmd, env, selected = launch_command(root, selected_env, sys.executable)
+        if requested == ["--doctor"]:
+            # Offline static inspection only: no subprocess, sockets or SQLite.
+            from hae_doctor import preflight_json
+            status, report = preflight_json(root, env, selected)
+            print(report, flush=True)
+            return status
         if requested:
             if selected != "integrated":
                 raise StartError("Offline verification requires the bundled Lightning Azent engine")

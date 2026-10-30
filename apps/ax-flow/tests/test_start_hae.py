@@ -8,6 +8,10 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import zipfile
+import json
+import io
+from contextlib import redirect_stdout
 from unittest.mock import patch
 
 
@@ -117,6 +121,24 @@ class HaeStartTests(unittest.TestCase):
         with patch.object(launcher, "__file__", str(self.app / "start_hae.py")), patch.dict(os.environ, self.env, clear=True), patch.object(launcher.subprocess, "call", side_effect=lambda cmd, **kwargs: commands.append(cmd) or 0):
             self.assertEqual(launcher.main(["--verify"]), 0)
         self.assertEqual(commands, [[sys.executable, str(self.app / "launch_integrated.py"), "--verify"]])
+
+    def test_doctor_cli_checks_real_zip_without_launching_server(self):
+        (self.app / "launch_integrated.py").write_text("# launcher\n", encoding="utf-8")
+        with zipfile.ZipFile(self.app / "hae-integrated.pyz", "w") as archive:
+            for name in ("__main__.py", "axflow/web.py", "lightning_azent/__init__.py"):
+                archive.writestr(name, b"synthetic")
+        captured = io.StringIO()
+        with (patch.object(launcher, "__file__", str(self.app / "start_hae.py")),
+              patch.dict(os.environ, self.env, clear=True),
+              patch.object(launcher.subprocess, "call",
+                           side_effect=AssertionError("doctor must never run backend")),
+              redirect_stdout(captured)):
+            self.assertEqual(launcher.main(["--doctor"]), 0)
+        result = json.loads(captured.getvalue())
+        self.assertEqual(result["status"], "OFFLINE_BUNDLE_STATIC_OK")
+        self.assertFalse(result["runtime_executed"])
+        self.assertEqual(result["release_gate"], "HOLD")
+        self.assertFalse((self.root / "local").exists())
 
     def test_unknown_arguments_rejected(self):
         with patch.object(launcher, "__file__", str(self.app / "start_hae.py")), patch.dict(os.environ, self.env, clear=True):
