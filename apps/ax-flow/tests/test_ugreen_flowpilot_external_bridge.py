@@ -89,7 +89,9 @@ class ExternalUGREENHAEBridgeAcceptance(unittest.TestCase):
         outcome = self.invoke(approval=APPROVAL, preview_id=first["preview_id"])
         self.assertEqual(outcome["status"], "HAE_LA_SQLITE_AUDIT_CONFIRMED")
         self.assertEqual(outcome["imported_rows"], 2)
-        self.assertTrue(outcome["actual_la_execution_verified"])
+        self.assertTrue(outcome["hae_http_audit_verified"])
+        self.assertFalse(outcome["actual_la_execution_verified"])
+        # Independent SQLite read immediately below, not a protocol-stub claim.
         self.assertFalse(outcome["real_nas_verified"])
         self.assertGreaterEqual(outcome["audit_events"], 2)
         self.assertEqual(self.db_count(), 2)
