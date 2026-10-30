@@ -66,6 +66,31 @@ class WebUITests(unittest.TestCase):
         status, response_headers, raw = self.request(path, payload=payload, headers=headers, method="POST")
         return status, response_headers, json.loads(raw.decode("utf-8"))
 
+    def test_preview_binds_public_pending_run_id_to_actual_execution(self):
+        # Read-only reconciliation can inspect this ID if /api/run loses
+        # its response AFTER a business write. Preview itself never writes.
+        task = "Import this CSV into local SQLite"
+        code, _, preview = self.post_json("/api/preview", {
+            "task": task, "csv_path": "contacts.csv",
+        })
+        self.assertEqual(code, 200, preview)
+        self.assertRegex(preview["pending_run_id"], r"^Gui[A-Fa-f0-9]{12}$")
+        self.assertFalse(self.state.exists())
+        self.assertFalse(self.business.exists())
+        code, _, result = self.post_json("/api/run", {
+            "task": task, "csv_path": "contacts.csv",
+            "preview_id": preview["preview_id"], "approve_writes": True,
+        })
+        self.assertEqual(code, 200, result)
+        self.assertEqual(result["run_id"], preview["pending_run_id"])
+        self.assertEqual(result["result"]["imported_rows"], 1)
+        code, _, body = self.request("/api/status?run_id=" + quote(
+            preview["pending_run_id"]))
+        self.assertEqual(code, 200)
+        persisted = json.loads(body.decode("utf-8"))
+        self.assertEqual(persisted["run_id"], preview["pending_run_id"])
+        self.assertEqual(persisted["status"], "completed")
+
     def test_health_reports_backend_without_opening_sqlite(self):
         status, _, body = self.request("/api/health")
         self.assertEqual(status, 200)
