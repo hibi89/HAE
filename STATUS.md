@@ -1,3 +1,10 @@
+## G85 actual owner-local private HAE + LA synthetic SQLite E2E PASS — 2026-10-31 KST
+- Owner PowerShell private G85 Git integrity regression: 5 tests, 5.513s, OK, exit 0.
+- Owner PowerShell new UGREEN main entrypoint: G85_UGREEN_NATIVE_BACKEND_E2E_PASS exit 0, nested G84_GENUINE_HAE_LA_SQLITE_E2E_PASS, genuine HAE/LA code and synthetic SQLite exact 2 rows/provenance, approved pending ID, persisted audit after restart and no duplicate on read-only recovery.
+- Generated disposable archive SHA256: 2697c20cfebdcb52ae660e534b0a644b0e3ec47c3947cb77bce720eecb9d3fcb. Existing distribution archive unchanged.
+- Private HAE code SHA c482e57587ce5d0f619997b6e5c7d160d0d3d400; public G85 evidence UGREEN docs/integrations/G85_OWNER_LOCAL_NATIVE_PASS_20261031.md at 2fd5cde4eac4367829abb844572f0ebb650535fc. Public CI 41097309612 and 41097309367 SUCCESS, distinct from native local proof.
+- External NAS/Uliya and real user data, Devpost submission, hosted deployment UNVERIFIED. Design/submission HOLD.
+
 ## G85 — 2026-10-31 KST · G84 owner-local native PASS acknowledged; descendant verifier fix
 - Prior G84 owner PowerShell run PASSED actual private HAE → LA → synthetic SQLite: `G84_GENUINE_HAE_LA_SQLITE_E2E_PASS`, exit 0, SHA256 `b4135d61e3608835927dad62bc1532dd908a644932fe94e42a94f09116daa388`; exact two CSV rows, pending approval binding, LA audit and restart read-only recovery. This supersedes G84 NOT_RUN status below for the owner-local run only.
 - G85 private HAE backend validation source commit `4f87d0bc38652354fbc4ee549d15ffc086940902`: immutable G83 public verifier/bridge Git blob parity and ancestry, not docs-sensitive HEAD equality. Five disposable Git fixture tests added at commit `c482e57587ce5d0f619997b6e5c7d160d0d3d400`; HAE tests and renewed native G85 local E2E are NOT_RUN pending owner execution.

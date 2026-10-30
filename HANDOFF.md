@@ -1,3 +1,15 @@
+## G85 verified owner-native handoff — 2026-10-31 KST
+1. Goal/stack: real owner-local HAE→LA→temporary SQLite E2E plus Git source integrity, Python 3.11 stdlib, no new paid dependency.
+2. Completed: private G85 descendant verification source, five fixtures; public UGREEN main entrypoint calls real private engine without copying source.
+3. Actual tests: owner PowerShell 5 Git fixture tests OK in 5.513s. G85_UGREEN_NATIVE_BACKEND_E2E_PASS, exit 0, nested G84_GENUINE_HAE_LA_SQLITE_E2E_PASS, exact 2 rows and source hash, approval pending ID, LA audit persists after restart, no duplicate on reconciliation. Disposable pyz SHA256 2697c20cfebdcb52ae660e534b0a644b0e3ec47c3947cb77bce720eecb9d3fcb. UGREEN public CI 41097309612 and 41097309367 SUCCESS separately.
+4. Done: genuine local synthetic HAE LA backend. Pending/blocked: real Uliya Expert/NAS hardware, customer pilot, deployment and Devpost. Design HOLD.
+5. Root: initial G84 gate falsely required exact G83 checkout HEAD even after docs commit; G85 now checks G83 ancestry and immutable verifier/bridge Git blobs. Fault recovery remains GET-only, no automatic repeat POST.
+6. Git source: HAE feature/axflow-mvp code c482e57587ce5d0f619997b6e5c7d160d0d3d400; LA feature/lightning-azent 9cba6424dadf3fadb0ccd6ed10040e322c4a62fa; public UGREEN lead/ugreen code 7e0f48b278ef559e52960e1c50e8a3429db94a0e, evidence commit 2fd5cde4eac4367829abb844572f0ebb650535fc. HAE tools/g84_verify_ugreen_native.py and tools/test_g85_native_integrity.py.
+7. No Production URL or Vercel deployment; owner Windows local checkouts, documented reproducible commands in UGREEN docs/integrations/G85_OWNER_LOCAL_NATIVE_PASS_20261031.md.
+8. Original HAE distribution binary, NAS, original user DB, credentials, official Skill and submission files unchanged; synthetic disposable files only. Git parent commit rollback.
+9. Next: real NAS/Uliya interface viability and authorized integration, no re-running unchanged completed G85 acceptance. Approval required before external action; backend first.
+10. Checked 2026-10-31 KST. Owner-local native source-backed proof PASSED; public CI verified at code SHA; actual NAS and official release NOT_VERIFIED.
+
 ## G85 — 2026-10-31 KST · Private backend verifier pin fix; owner G84 proof acknowledged
 1. Goal/stacks: ensure owner-local true HAE→LA→SQLite native acceptance is reproducible without detached G83 checkout, Python 3.11 stdlib + Git; preserve privacy and offline zero-cost.
 2. Completed/decision: compared brittle G83 checkout HEAD equality vs immutable G83 verifier and bridge blob hashes plus ancestry; selected latter. HAE tools/g84_verify_ugreen_native.py code at 4f87d0bc38652354fbc4ee549d15ffc086940902; added five isolated Git-fixture tests tools/test_g85_native_integrity.py at c482e57587ce5d0f619997b6e5c7d160d0d3d400. Public UGREEN also added owner-local main-repo wrapper.
