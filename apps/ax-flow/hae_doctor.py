@@ -29,7 +29,7 @@ def _archive_ok(archive: Path) -> bool:
             for item in infos:
                 name = item.filename
                 mode = item.external_attr >> 16
-                if (not name or "\" in name or name.startswith("/")
+                if (not name or "\\" in name or name.startswith("/")
                         or any(part in {".", ".."} for part in name.split("/"))
                         or ":" in name.split("/")[0]
                         or any(ord(c) < 32 or ord(c) == 127 for c in name)
