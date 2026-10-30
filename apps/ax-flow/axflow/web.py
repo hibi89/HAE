@@ -393,7 +393,15 @@ def create_server(
                     })
                     return
 
-                self._require_fields(body, {"task", "csv_path", "preview_id", "approve_writes"})
+                required = {"task", "csv_path", "preview_id", "approve_writes"}
+                if set(body) not in (required, required | {"pending_run_id"}):
+                    raise RequestError(400, "run request fields are missing or unsupported")
+                expected_pending = body.get("pending_run_id")
+                if expected_pending is not None and (
+                    not isinstance(expected_pending, str)
+                    or not _RUN_ID.fullmatch(expected_pending)
+                ):
+                    raise RequestError(409, "pending run ID differs from approved preview")
                 if not isinstance(body["approve_writes"], bool):
                     raise RequestError(400, "approve_writes must be a boolean")
                 plan = plan_request(body["task"], body["csv_path"])
@@ -406,6 +414,10 @@ def create_server(
                 if approval is None:
                     raise RequestError(409, "preview expired or no longer matches the request")
                 run_id, approved_sha256, approved_backend = approval
+                # A caller-supplied recovery identity must be bound to the
+                # exact previously issued preview; never read/report another run.
+                if expected_pending is not None and expected_pending != run_id:
+                    raise RequestError(409, "pending run ID differs from approved preview")
                 active_backend = backend_info(plan)
                 if str(active_backend["capability_fingerprint"]) != approved_backend:
                     self.server.invalidate_preview(preview_id)
