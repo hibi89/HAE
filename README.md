@@ -46,3 +46,7 @@ On Windows with Python 3.11+, double-click `HAE-Start.cmd`. A fresh synthetic in
 Configuration: `HAE_DATA_DIR` chooses a local storage root (default `%LOCALAPPDATA%\HAE`), `HAE_PORT` overrides loopback port 8765, and `HAE_NO_BROWSER=1` prevents automatic browser opening. The authoritative backend setting is `HAE_ENGINE_BACKEND`, not `HAE_BACKEND`.
 
 Reproduce dispatcher tests in checkout with `cd apps/ax-flow && python -m unittest discover -s tests -p test_start_hae.py -v`. Native Windows `.cmd` and full product acceptance must be verified independently.
+
+### Offline first-run diagnosis
+
+From the existing Windows HAE checkout root, run HAE-Start.cmd --doctor to inspect engine selection and packaged HAE+LA zipapp integrity **without** opening a socket or running a workflow. This is a read-only static preflight, not customer acceptance; JSON always reports customer_ready=false and release_gate=HOLD. Run HAE-Start.cmd --verify for isolated 7-stage synthetic HTTP/SQLite acceptance and complete Python/Node/Windows test gates separately. No customer data migration is performed.

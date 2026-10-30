@@ -1,3 +1,7 @@
+## HAE+LA commercial P0 · 2026-10-31 KST
+- Added offline --doctor via HAE-Start.cmd and start_hae.py, static redacted ZIP/engine-route check; no service or database writes. Feature commit 924cd8783a2fad9f0cacc9e43030ec668cd7fb7e.
+- Exact doctor module Git blob 1453001586b80fe9ca4e70bf975e117882cef104 matched locally executed source; 7/7 standalone synthetic tests and Python compile PASS. New start_hae integration test / Windows doctor / private HAE full suite NOT_RUN at new SHA.
+- Earlier G85 native HAE+LA synthetic E2E PASS remains separate. Commercial product F5/D2/F6/F7/F8/B1 pending, release_gate HOLD. Original package, customer SQLite and LA branch unchanged.
 ## G85 actual owner-local private HAE + LA synthetic SQLite E2E PASS — 2026-10-31 KST
 - Owner PowerShell private G85 Git integrity regression: 5 tests, 5.513s, OK, exit 0.
 - Owner PowerShell new UGREEN main entrypoint: G85_UGREEN_NATIVE_BACKEND_E2E_PASS exit 0, nested G84_GENUINE_HAE_LA_SQLITE_E2E_PASS, genuine HAE/LA code and synthetic SQLite exact 2 rows/provenance, approved pending ID, persisted audit after restart and no duplicate on read-only recovery.
