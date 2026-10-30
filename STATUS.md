@@ -1,3 +1,9 @@
+## G81 · 2026-10-31 KST — UGREEN→HAE→LA bridge backend test staged; HAE CI pre-run BLOCKED
+- **Source:** private `feature/axflow-mvp` HAE unchanged; only added `apps/ax-flow/tests/test_ugreen_flowpilot_external_bridge.py` and checkout/test step in `.github/workflows/hae-axflow-tests.yml`; branch code SHA `59358140394b010222c8f3522106a477fff5468d`. Public UGREEN bridge pinned to `3cab98b6dadf97dcab32b77f8b33ff7dafb2b462`, never copied private source to UGREEN.
+- **PUBLIC proof:** UGREEN FlowPilot real loopback HTTP *stub* integration, safety, approval and audit contract CI 41087475588, **758 PASS/0 FAIL/5 SKIP**; local zipapp verification refusal tests added, public CI 41088316985 **765 PASS/0 FAIL/5 SKIP**. Stub is not real HAE runtime proof.
+- **PRIVATE blocker:** HAE workflow 41087897092 Ubuntu+Windows both `runner_id=0`, `steps=[]`, pre-run failure, logs unavailable. No test ran; prior 41087844829 also failed before execution. Cause not established. **Stop CI reruns without changed runner/account conditions**. Private E2E remains **UNVERIFIED**.
+- **Next:** execute owner-authorized synthetic temporary HAE zipapp local acceptance using public `tools/verify_hae_la_local_e2e.py` with explicit SHA and switch; verify true SQLite rows, LA audit and restart. Full backend NAS/Uliya/optional DBVORA+SOVIA still pending. No actual deployment, NAS, Devpost, or source/data mutation. Full G81 checkpoint at HANDOFF.md.
+
 ## feature/axflow-mvp fast-forward 통합 후보 검증 — 2026-10-29 KST
 - **HEAD 비교:** feature base `d0507968009909cafb245ce55469be3e979e9aad`; source development `feat/windows-ux-followup` HEAD `33adacf2d098305e60e1f10a99f6104b05cf71f2`. Merge-base equals feature base; 5 commits are linear descendants, no divergent edits. Candidate is a fast-forward; source history preserved.
 - **Integrated candidate:** local isolated branch `integrate/windows-ux-into-mvp`, candidate SHA `33adacf2d098305e60e1f10a99f6104b05cf71f2`.
