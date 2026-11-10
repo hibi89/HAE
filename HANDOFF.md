@@ -1,3 +1,16 @@
+## Lightning Azent P13 handoff — optional HAE bridge (2026-11-10 KST)
+
+1. **Goal/tech:** HAE deterministic planner -> optional Lightning Azent adapter; Python stdlib, `axflow.ir.v0` to `azent.api.v0` local-only runtime; full ecosystem still requires SOVIA + DBVORA.
+2. **Implemented/decision:** New HAEConsumer + HAEBridge, fail-closed capability handshake, redacted review, scoped synthetic consent digest, manual run/resume and receipt/status/audit. Chosen over replacing the live HAE GUI directly, avoiding unverified cutover.
+3. **Tests:** Linux Python 3.13.5 exact source syntax PASS; 14 isolated LA bridge tests + 7 isolated HAE consumer tests PASS / 0 FAIL. Boundary doubles used; exact source blob SHA recorded in P13 doc. Full 65 LA / 84 HAE / Native Windows/real SQLite integration **NOT RUN** on P13.
+4. **Status:** 60% -> **68% provisional**, 70% target **NOT VERIFIED**; RELEASE HOLD, no production service/Vercel applicable.
+5. **Risk:** Digest not user authentication; actual HAE GUI integration absent; unsupported provider/OAuth, SOVIA, DBVORA and package remain. No failed local test after revision; earlier globally injected mock harness was replaced to avoid contaminating normal discovery.
+6. **Repo/ref:** private `hibi89/HAE@feature/lightning-azent`; feature commit and final SHA should be read from current remote. New paths in P13 detail doc; all original engine code preserved.
+7. **Commands/environment:** `python -m unittest discover -s packages/lightning-azent/tests -v` and `python packages/lightning-azent/verify_local.py` on authorized Windows checkout, plus `python -m unittest discover -s apps/ax-flow/tests -v`. No paid dependencies, no Vercel.
+8. **Security/backup:** Existing Git history rollback; only new modules/tests + prefixed status docs. No secrets/customer originals, new endpoint, external transmission or license changes.
+9. **Next:** Real HAE planner -> new bridge -> actual SQLite LA execute+resume/approval-denied E2E and full exact-SHA regression, then Windows import/packaging assessment. Owner approval needed only for customer or production operations.
+10. **Checkpoint:** 2026-11-10 KST; Linux isolated test scope only, GitHub feature branch expected; document 기준 SHA confirmed separately after push. [P13 evidence](docs/lightning-azent/HAE_BRIDGE_P13_20261110.md).
+
 ## Lightning Azent — exact-SHA recovery and release checkpoint (2026-10-28 KST)
 
 1. **Verified source:** `hibi89/HAE`, branch `feature/lightning-azent`, SHA `7df9aa1f419696ed04cf98ecc1fd99470db54cd9`. Full verifier ran at this exact source SHA; `ls-remote` matched it at test time. The follow-up checkpoint is documentation-only and leaves executable sources unchanged.

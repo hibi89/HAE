@@ -1,3 +1,5 @@
+> **2026-11-10 KST — Lightning Azent P13 opt-in HAE bridge, interim 68% (70% target UNVERIFIED):** `feature/lightning-azent`에 API 버전 확인·원본 값 비노출 프리뷰·실행 ID/계획/승인 쓰기 단계에 묶인 SHA256 요청 해시·합성 오프라인 수동 실행/재개/읽기 전용 증거 확인 어댑터와 HAE 기존 `plan_request` 소비자 어댑터를 **신규 파일로만** 추가. Linux Python 3.13.5 **격리 14+7=21/21 PASS**, 개발 원본 blob SHA 대조. 테스트에는 실제 LA 엔진/HAE planner 대신 경계 더블을 사용했으므로 전체 LA65/HAE84·신규 Native Windows·실 SQLite E2E **미검증**. 구형 GUI/실행 경로·생산·외부 연결·결제/고객자료 변경 없음. 인간 승인 보안/외부 감사 대체 아님. **RELEASE HOLD**. 상세: [P13 근거](docs/lightning-azent/HAE_BRIDGE_P13_20261110.md). 70% 도달 전 실제 원본 통합 회귀 필수.
+
 ## Lightning Azent — verified scheduled process-crash recovery (2026-10-28 KST)
 
 - **Verified source SHA:** `feature/lightning-azent@7df9aa1f419696ed04cf98ecc1fd99470db54cd9`. The full verifier ran at this source SHA; remote matched it before the subsequent documentation-only checkpoint.
