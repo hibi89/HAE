@@ -129,13 +129,20 @@ class HAEBridge:
         self._require_compatible_runtime()
         self._prepare(plan, run_id)
         verification = self.executor.verify_receipts(plan, run_id)
-        if verification.get("verified") is not True:
+        if not isinstance(verification, dict) or verification.get("verified") is not True:
             raise PlanError("Lightning Azent receipts not verified")
+        status = self.executor.status(run_id)
+        # A clean receipt check is not proof of a successful workflow. A missing,
+        # running or failed run must never be advertised as completed evidence.
+        if not isinstance(status, dict) or status.get("status") != "completed":
+            raise PlanError("Lightning Azent run is not completed")
+        if status.get("run_id") != run_id:
+            raise PlanError("Lightning Azent status belongs to a different run")
         return {
             "bridge_version": BRIDGE_VERSION,
             "run_id": run_id,
             "verified": True,
-            "status": self.executor.status(run_id),
+            "status": status,
             "audit": self.executor.audit(run_id),
             "audit_version": AUDIT_VERSION,
             "independent_sovia_audit": False,

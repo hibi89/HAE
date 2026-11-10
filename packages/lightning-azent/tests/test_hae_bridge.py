@@ -149,6 +149,28 @@ class BridgeTests(unittest.TestCase):
         with self.assertRaises(PlanError):
             self.bridge.evidence(self.read, 'RunA')
 
+    def test_incomplete_states_cannot_claim_verified_evidence(self):
+        for state in ('running', 'failed', 'pending', None):
+            with self.subTest(state=state):
+                self.executor.status = lambda run_id: {'run_id': run_id, 'status': state}
+                with self.assertRaisesRegex(PlanError, 'not completed'):
+                    self.bridge.evidence(self.read, 'RunA')
+
+    def test_missing_or_wrong_run_status_fails_closed(self):
+        for status in (None, {'status': 'completed'},
+                       {'run_id': 'OtherRun', 'status': 'completed'}):
+            with self.subTest(status=status):
+                self.executor.status = lambda run_id: status
+                with self.assertRaises(PlanError):
+                    self.bridge.evidence(self.read, 'RunA')
+
+    def test_malformed_receipt_verification_fails_closed(self):
+        for proof in (None, True, 'verified', {}):
+            with self.subTest(proof=proof):
+                self.executor.verify_receipts = lambda *args: proof
+                with self.assertRaises(PlanError):
+                    self.bridge.evidence(self.read, 'RunA')
+
 
 if __name__ == '__main__':
     unittest.main()

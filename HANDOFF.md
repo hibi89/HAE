@@ -1,3 +1,16 @@
+## Lightning Azent P15 handoff — evidence completion gate (2026-11-10 KST)
+
+1. Goal: evidence should never call incomplete/failed run verified; Python stdlib LA optional bridge, HAE customer product requirements unchanged.
+2. Changes: P15 HAEBridge evidence requires receipt verified dict, `status=completed`, matching run ID. Chosen isolated facade fix over touching runlog/state schema. Three new contract tests.
+3. Executed: Linux Python3.13.5 bridge 17/17 + HAE adapter 7/7 PASS (boundary doubles); exact Git blob source/test SHA parity, syntax PASS. Real LA/HAE/P14 SQLite E2E NOT RUN.
+4. Progress: **69% provisional** (68→69), 70% goal unverified, RELEASE HOLD.
+5. Root cause/limits: P13 evidence hard-coded True after receipt validation without a completed run check. Fixed; independent SOVIA audit/authentication unchanged/unavailable. No repeated failed CI.
+6. Repo/ref: `hibi89/HAE@feature/lightning-azent`; exact P15 blobs/code/test and final commit in `docs/lightning-azent/HAE_BRIDGE_P15_EVIDENCE_20261110.md`, branch SHA verify after commit.
+7. Runtime/verification: `python packages/lightning-azent/verify_local.py` on authorized clean checkout; Production/Vercel not applicable.
+8. Original/rollback: P15 limited to optional bridge and tests plus docs; Git revert possible; no customer original/credentials/DB or external changes.
+9. Next: execute P14 true HAE planner -> LAExecutor actual SQLite acceptance + full LA/HAE tests and Windows, verify SHA before scoring 70%.
+10. KST 2026-11-10. GitHub code and isolated Python proofs verified, full integration and user deployment unverified.
+
 ## Lightning Azent P14 handoff — real E2E definitions, verification pending (2026-11-10 KST)
 
 1. **Goal:** 68→70% 검증을 위한 HAE planner → LA → 실제 합성 SQLite end-to-end.
