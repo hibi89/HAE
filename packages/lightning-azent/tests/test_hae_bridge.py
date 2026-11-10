@@ -44,7 +44,10 @@ class FakeExecutor:
         return {'verified': True}
 
     def status(self, run_id):
-        return {'run_id': run_id, 'status': 'completed'}
+        return {'run_id': run_id, 'status': 'completed',
+                'plan_sha256': self.valid_sha, 'steps_recorded': 5,
+                'step_outcomes': {'completed': 4, 'skipped': 1,
+                                  'failed': 0, 'running': 0}}
 
     def audit(self, run_id):
         return {'events': []}
@@ -56,6 +59,7 @@ class BridgeTests(unittest.TestCase):
         self.bridge = HAEBridge(self.executor)
         self.read = fixture('conditional-route.json')
         self.write = fixture('csv-filter-import.json')
+        self.executor.valid_sha = self.bridge.review(self.read, 'RunA').plan_sha256
 
     def test_review_redacts_step_values_and_has_no_execution(self):
         view = self.bridge.review(self.read, 'Run_1').public_view()
@@ -169,6 +173,35 @@ class BridgeTests(unittest.TestCase):
             with self.subTest(proof=proof):
                 self.executor.verify_receipts = lambda *args: proof
                 with self.assertRaises(PlanError):
+                    self.bridge.evidence(self.read, 'RunA')
+
+    def test_mismatched_persisted_plan_digest_is_not_verified(self):
+        real_status = self.executor.status
+        self.executor.status = lambda run_id: {
+            **real_status(run_id), 'plan_sha256': '0'*64}
+        with self.assertRaisesRegex(PlanError, 'status plan'):
+            self.bridge.evidence(self.read, 'RunA')
+
+    def test_missing_or_partially_checkpointed_step_records_are_denied(self):
+        real_status = self.executor.status
+        for n in (0, 3, 6, None, True):
+            with self.subTest(n=n):
+                self.executor.status = lambda run_id, n=n: {
+                    **real_status(run_id), 'steps_recorded': n}
+                with self.assertRaisesRegex(PlanError, 'step ledger'):
+                    self.bridge.evidence(self.read, 'RunA')
+
+    def test_failed_running_or_malformed_step_counts_are_denied(self):
+        real_status = self.executor.status
+        for bad in ({'completed': 3, 'skipped': 1, 'failed': 1, 'running': 0},
+                    {'completed': 4, 'skipped': 0, 'failed': 0, 'running': 1},
+                    {'completed': 5, 'skipped': -1, 'failed': 0, 'running': 1},
+                    {'completed': 4, 'skipped': '1', 'failed': 0, 'running': 0},
+                    None):
+            with self.subTest(bad=bad):
+                self.executor.status = lambda run_id, bad=bad: {
+                    **real_status(run_id), 'step_outcomes': bad}
+                with self.assertRaisesRegex(PlanError, 'step ledger'):
                     self.bridge.evidence(self.read, 'RunA')
 
 

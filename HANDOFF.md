@@ -1,3 +1,16 @@
+## Lightning Azent P16 handoff — provisional 70% / integration HOLD (2026-11-10 KST)
+
+1. Goal/tech: add durable integrity checks for completed workflow evidence at HAE→LA optional bridge; Python stdlib local SQLite status contract.
+2. Changed: reject mismatched plan SHA, missing/malformed step_count, failed/running/negative outcomes; allow completed+skipped exactly matching planned steps. Selected facade boundary over engine schema migration.
+3. Executed: actual Linux Python 3.13.5 20/20 isolated LA bridge + 7/7 HAE consumer PASS, source/test syntax and Git blob SHA equal to remote, 0 FAIL. Not actual LA engine E2E or Windows.
+4. State: **70% provisional product progress**, 70% operational E2E acceptance **unverified**, RELEASE HOLD, customer GUI old runtime.
+5. Blocker: no complete authenticated clone in container; Actions private billed minutes not verified; cannot claim original LA/HAE suites executed. No repeated failed approach.
+6. Repo/branch: `hibi89/HAE@feature/lightning-azent`; P16 source `3b65da2ac0...`, test `960ed2fd77ae...`, exact HEAD confirm after push.
+7. Deployment: no LA Vercel/Production. Test Windows Python3.11+ `python packages/lightning-azent/verify_local.py` from full clean branch.
+8. Original/backup: only optional bridge/tests and status docs; normal Git revert; no original UI, customers, credentials, remote actions or billing changes.
+9. Next: execute P14 real HAE planner→LAExecutor SQLite E2E and full 65+ LA +84 HAE on authorized environment; verify safety and score, then Windows/package/DBVORA/SOVIA.
+10. KST 2026-11-10; full integrations unverified. [P16 detailed audit](docs/lightning-azent/HAE_BRIDGE_P16_STEP_COMPLETENESS_20261110.md).
+
 ## Lightning Azent P15 handoff — evidence completion gate (2026-11-10 KST)
 
 1. Goal: evidence should never call incomplete/failed run verified; Python stdlib LA optional bridge, HAE customer product requirements unchanged.

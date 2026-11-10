@@ -127,7 +127,7 @@ class HAEBridge:
     def evidence(self, plan: object, run_id: str) -> dict[str, object]:
         """Read-only local receipt/status/audit; no original workflow data is returned."""
         self._require_compatible_runtime()
-        self._prepare(plan, run_id)
+        prepared, expected_hash, _, _ = self._prepare(plan, run_id)
         verification = self.executor.verify_receipts(plan, run_id)
         if not isinstance(verification, dict) or verification.get("verified") is not True:
             raise PlanError("Lightning Azent receipts not verified")
@@ -138,6 +138,20 @@ class HAEBridge:
             raise PlanError("Lightning Azent run is not completed")
         if status.get("run_id") != run_id:
             raise PlanError("Lightning Azent status belongs to a different run")
+        if status.get("plan_sha256") != expected_hash:
+            raise PlanError("Lightning Azent status plan does not match reviewed plan")
+        # A corrupted or partially checkpointed ledger must never be presented
+        # as complete even if its top-level run status is incorrectly 'completed'.
+        counts = status.get("step_outcomes")
+        total = len(prepared.runtime_plan["steps"])
+        if (type(status.get("steps_recorded")) is not int
+                or status["steps_recorded"] != total
+                or not isinstance(counts, dict)
+                or any(type(counts.get(k)) is not int or counts[k] < 0
+                       for k in ("completed", "skipped", "failed", "running"))
+                or counts["failed"] or counts["running"]
+                or counts["completed"] + counts["skipped"] != total):
+            raise PlanError("Lightning Azent step ledger is not complete")
         return {
             "bridge_version": BRIDGE_VERSION,
             "run_id": run_id,
