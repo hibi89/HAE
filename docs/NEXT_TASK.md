@@ -1,3 +1,9 @@
+## HAE 70% provisional checkpoint (2026-11-10 KST) — next actionable safe work
+1. Current user-directed HAE whole-product scope estimate: **70%** (65→70, +5%p), native business SQLite inventory/no-overwrite SHA-pinned snapshot tests **Linux 24 PASS, Windows 23 PASS/1 POSIX SKIP** at feature SHA `7cc7b36559df19a488eb333ce12c69349797a76d`. [Exact GitHub Actions 42738240787](https://github.com/hibi89/HAE/actions/runs/42738240787) **FAILS overall**, so do not mark end-to-end done.
+2. Full Python CI at same SHA: Linux 185 tests 3 FAIL/7 SKIP, Windows 185 tests 11 FAIL/7 SKIP. First resolve packaging old checked-in zipapp/ZIP source parity and locale/Windows path issues **without overwriting historical release artifact, weakening a safety gate or modifying main**. Detailed [CI audit](docs/HAE_BUSINESS_SQLITE_CI_AUDIT_20261110.md).
+3. Next branch changes: source-checked regressions for actual Windows junction, short-path aliases, cp1252 console, old ZIP CRC/source snapshot; ensure all existing normal functions continue. Run targeted native code test, full Python+Node CI at exact SHA only when meaningful source improvements. Customer OAuth/DBVORA connected-source restore/production release require approval; synthetic-only no external data.
+4. Preserve `main` and `feature/lightning-azent`, user original SQLite, shipped old zipapp and Cloudflare/KIC/PayPal states. Business backup CLI no real customer data until owner consent.
+
 ## P0 after integrated one-click launch — 2026-10-29 KST
 1. Run native Windows `HAE-Start.cmd` from `feature/axflow-mvp` and confirm `/api/health` reports `Lightning Azent` on fresh synthetic data; verify read-only preview, explicit approval, SQLite run and audit, no credentials.
 2. Run `VERIFY-WINDOWS.cmd --no-pause` from extracted unchanged shipped archive; 7/7 HTTP+SQLite and all three NTFS gates, no skips. Run full suite Python/Node at exact same SHA.
