@@ -93,7 +93,7 @@ class BridgeTests(unittest.TestCase):
     def test_changed_valid_plan_invalidates_confirmation(self):
         digest = self.bridge.review(self.write, 'RunA').request_sha256
         changed = deepcopy(self.write)
-        changed['steps'][1]['value'] = 101
+        changed['steps'][0]['path'] = 'orders_alt.csv'
         with self.assertRaises(ApprovalRequired):
             self.bridge.execute(changed, 'RunA', synthetic=True,
                 owner_confirmed=True, confirmed_request_sha256=digest)
