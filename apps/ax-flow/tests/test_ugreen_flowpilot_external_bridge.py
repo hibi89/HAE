@@ -89,8 +89,12 @@ class ExternalUGREENHAEBridgeAcceptance(unittest.TestCase):
         outcome = self.invoke(approval=APPROVAL, preview_id=first["preview_id"])
         self.assertEqual(outcome["status"], "HAE_LA_SQLITE_AUDIT_CONFIRMED")
         self.assertEqual(outcome["imported_rows"], 2)
-        self.assertTrue(outcome["hae_http_audit_verified"])
-        self.assertFalse(outcome["actual_la_execution_verified"])
+        # G81 pinned public bridge uses scoped HAE HTTP+LA audit evidence;
+        # its report is distinct from the independent SQLite query below.
+        self.assertTrue(outcome["hae_http_connected"])
+        self.assertTrue(outcome["actual_la_execution_verified"])
+        self.assertEqual(outcome["verification_scope"], "HAE_LOOPBACK_HTTP_AND_LA_AUDIT_REPORT")
+        self.assertFalse(outcome["actual_uliya_agent_invoked"])
         # Independent SQLite read immediately below, not a protocol-stub claim.
         self.assertFalse(outcome["real_nas_verified"])
         self.assertGreaterEqual(outcome["audit_events"], 2)
