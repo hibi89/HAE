@@ -40,6 +40,10 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}/packages/lightning-azent${{ runner.os == 'Windows' && ';' || ':' }}${{ github.workspace }}/apps/ax-flow
         run: python -B -m unittest discover -s packages/lightning-azent/tests -v
+      - name: Focused SQLite backup source mutation regression
+        env:
+          PYTHONPATH: ${{ github.workspace }}/apps/ax-flow${{ runner.os == 'Windows' && ';' || ':' }}${{ github.workspace }}/packages/lightning-azent
+        run: python -B -m unittest discover -s apps/ax-flow/tests -p test_engine.py -k backup_discards_snapshot_when_source_changes_before_publish -v
       - name: Original HAE axflow regression
         env:
           PYTHONPATH: ${{ github.workspace }}/apps/ax-flow${{ runner.os == 'Windows' && ';' || ':' }}${{ github.workspace }}/packages/lightning-azent

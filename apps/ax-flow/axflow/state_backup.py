@@ -130,7 +130,11 @@ def _clone_runtime_state(source_path: Path | str, destination_path: Path | str) 
 
         after = _fingerprint(source)
         after_version = observer.execute("PRAGMA data_version").fetchone()
-        after_logical = _logical_fingerprint(observer)
+        # Do not reuse the original reader's potentially pinned snapshot:
+        # Windows SQLite may retain a read cursor past iterdump() when WAL
+        # state changes. A NEW mode=ro connection must see committed updates.
+        with closing(sqlite3.connect(source_uri, uri=True, timeout=2)) as fresh:
+            after_logical = _logical_fingerprint(fresh)
         if (after != before or after_version != before_version
                 or after_logical != before_logical):
             raise StateBackupError("runtime database source changed during backup")
