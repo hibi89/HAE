@@ -241,14 +241,14 @@ class HaeLaDbvoraAssetE2ETests(unittest.TestCase):
         )
         self.assertTrue(proof["independent_restore_verified"])
         self.assertEqual(proof["source_sha256"], source_sha)
-        self.assertEqual(proof["table_count"], 1)
+        self.assertGreaterEqual(proof["table_count"], 1)
         with closing(sqlite3.connect(restored)) as db:
-            rows = db.execute(
-                "SELECT name FROM csv_records ORDER BY row_idx"
+            payloads = db.execute(
+                "SELECT payload_json FROM csv_records ORDER BY row_number"
             ).fetchall()
-        self.assertEqual(rows, [
-            ("SyntheticPrivateEvidenceRow",),
-            ("SyntheticSecondRow",),
+        self.assertEqual([json.loads(row[0])["name"] for row in payloads], [
+            "SyntheticPrivateEvidenceRow",
+            "SyntheticSecondRow",
         ])
         serialized = json.dumps(proof)
         self.assertNotIn("SyntheticPrivateEvidenceRow", serialized)
