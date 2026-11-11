@@ -1,3 +1,5 @@
+> **2026-11-11 KST HAE 임시 최종완성률 73%:** synthetic-only offline SQLite schema CLI (names hidden by default) plus Windows console path/port regression fixes, exact GitHub source `4f19b367...`. Local isolated new tests 14/14 PASS; full GitHub CI still FAIL due stale shipped artifacts and unresolved legacy Windows regressions. R-09 actual DBVORA connection/customer OAuth not implemented, RELEASE HOLD. [증거](docs/HAE_OFFLINE_SCHEMA_P3_20261111.md).
+
 # HAE — Humanized Automation Ecosystem
 
 **Final customer-facing product name: HAE (Humanized Automation Ecosystem).** Former name: AX FLOW. Internal `axflow` package, `apps/ax-flow/` path, `feature/axflow-mvp` branch, and `hibi89/AX_FLOW` repository remain compatibility identifiers, not product branding.
