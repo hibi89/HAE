@@ -9,8 +9,6 @@ import tempfile
 import unittest
 from zipfile import ZIP_STORED, ZipFile, ZipInfo
 
-from sqlite_test_utils import sqlite_connection
-
 ROOT = Path(__file__).resolve().parents[1]
 REPO = ROOT.parents[1]
 sys.path.insert(0, str(ROOT))
@@ -115,7 +113,9 @@ class PortableP18Tests(unittest.TestCase):
         state = self.root / "state.sqlite"
         business = self.root / "business.sqlite"
         denied = self.cli("run", plan, "--state", state, "--data", business,
-                          "--run-id", "SyntheticP18", "--synthetic", expected=2)
+                          "--input-root", self.root, "--run-id", "SyntheticP18",
+                          "--synthetic", expected=2)
+        self.assertIn("ApprovalRequired", denied.stderr)
         self.assertFalse(state.exists())
         self.assertFalse(business.exists())
 
