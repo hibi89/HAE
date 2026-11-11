@@ -339,6 +339,25 @@ async function testAssetProofManualOnlyAndLatestResponseWins() {
   assert.equal(button.disabled, false);
 }
 
+async function testDbvoraRefreshCancelsPendingAssetProof() {
+  const ui = setup();
+  const verify = ui.get("#verify-dbvora-asset");
+  const pending = verify.fire("click");
+  const proof = ui.requests.find((r) => r.url === "/api/dbvora-asset");
+  assert.ok(proof);
+  const refresh = ui.get("#refresh-dbvora").fire("click");
+  const db = ui.requests.filter((r) => r.url === "/api/dbvora").at(-1);
+  ui.respond(db, { available: false, error_code: "NOT_CONFIGURED" });
+  await refresh;
+  assert.equal(verify.disabled, false, "DBVORA refresh must unlock canceled proof button");
+  ui.respond(proof, {
+    available: true, provider_protocol_verified: true,
+    source_sha256: "a".repeat(64), table_count: 2,
+  });
+  await pending;
+  assert.match(ui.get("#dbvora-asset-attestation").textContent, /검증 미실행/);
+}
+
 async function testDbvoraNewestResponseWins() {
   const ui = setup();
   const button = ui.get("#refresh-dbvora");
@@ -357,6 +376,7 @@ async function testDbvoraNewestResponseWins() {
   await testRunRejectsMissingPreviewToken();
   await testDbvoraNewestResponseWins();
   await testAssetProofManualOnlyAndLatestResponseWins();
+  await testDbvoraRefreshCancelsPendingAssetProof();
   await testPreviewStaleFailure();
   await testExecutionIsSingleFlightAndNeedsFreshPreview();
   await testHistoryStaleFailure();
@@ -369,5 +389,5 @@ async function testDbvoraNewestResponseWins() {
   await testResumePreviewRejectsInvalidRunIdWithoutRequest();
   await testLiveReceiptRendersRedactedLaEvents();
   await testHistoryRestoresLaAuditWithoutSovia();
-  console.log("HAE simulated UI race tests: 15 PASS");
+  console.log("HAE simulated UI race tests: 16 PASS");
 })().catch((error) => { console.error(error); process.exitCode = 1; });

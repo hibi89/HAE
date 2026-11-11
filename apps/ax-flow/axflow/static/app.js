@@ -421,6 +421,7 @@ function describeDbvoraProvenance(result) {
 
 function renderDbvora(result) {
   ++assetAttestationVersion;
+  assetVerifyButton.disabled = false;
   assetAttestation.textContent = "선택한 합성 DB 자산 일치 검증 미실행";
   clearChildren(dbvoraTables);
   clearChildren(dbvoraRelations);
