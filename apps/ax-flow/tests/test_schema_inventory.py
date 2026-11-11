@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from contextlib import closing
 import os
 from pathlib import Path
 import sqlite3
@@ -20,7 +21,7 @@ class OfflineSchemaTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.source = self.root / 'synthetic.sqlite'
-        with sqlite3.connect(self.source) as db:
+        with closing(sqlite3.connect(self.source)) as db, db:
             db.executescript('''
                 PRAGMA foreign_keys=ON;
                 CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT NOT NULL);
@@ -90,13 +91,13 @@ class OfflineSchemaTests(unittest.TestCase):
             inspect_offline_schema(self.source, synthetic=True)
 
     def test_injected_schema_views_triggers_virtual_tables_refused(self):
-        with sqlite3.connect(self.source) as db:
+        with closing(sqlite3.connect(self.source)) as db, db:
             db.execute('CREATE VIEW unsafe_view AS SELECT * FROM customers')
         with self.assertRaises(SchemaInventoryError):
             inspect_offline_schema(self.source, synthetic=True)
 
     def test_empty_sqlite_schema_refused(self):
-        with sqlite3.connect(self.root / 'empty.sqlite'):
+        with closing(sqlite3.connect(self.root / 'empty.sqlite')) as db, db:
             pass
         with self.assertRaises(SchemaInventoryError):
             inspect_offline_schema(self.root / 'empty.sqlite', synthetic=True)
@@ -108,7 +109,7 @@ class OfflineSchemaTests(unittest.TestCase):
 
     def test_utf8_and_quoted_identifier_only_in_review(self):
         path = self.root / 'quoted.sqlite'
-        with sqlite3.connect(path) as db:
+        with closing(sqlite3.connect(path)) as db, db:
             db.execute('CREATE TABLE "테이블""이름" ("컬럼""이름" INTEGER)')
         default = inspect_offline_schema(path, synthetic=True)
         self.assertEqual(default['table_count'], 1)
