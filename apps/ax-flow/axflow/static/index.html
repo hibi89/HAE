@@ -136,10 +136,13 @@
         <p id="dbvora-meta" class="dbvora-meta"></p>
         <p id="dbvora-provenance" class="dbvora-meta"></p>
         <p id="dbvora-asset-attestation" class="dbvora-meta" role="status" aria-live="polite">소유자 지정 자산 검증 미실행</p>
+        <p id="asset-registry-status" class="dbvora-meta" role="status" aria-live="polite">로컬 자산 등록부 상태 확인 전</p>
+        <label class="dbvora-meta"><input id="asset-registry-consent" type="checkbox"> 합성 자산의 SHA·스키마 개수 등 검증 메타데이터를 별도 로컬 등록부에 저장하는 데 동의합니다. 경로·행 데이터는 저장하지 않습니다.</label>
         <div id="dbvora-tables" class="dbvora-tables"></div>
         <div id="dbvora-relations" class="dbvora-relations"></div>
         <button id="refresh-dbvora" class="text-button" type="button">구조 맵 새로고침</button>
         <button id="verify-dbvora-asset" class="text-button" type="button">합성 DB 자산 일치 검증</button>
+        <button id="register-dbvora-asset" class="text-button" type="button" disabled>검증된 합성 자산 등록</button>
       </section>
 
       <footer><span>HAE</span><span>localhost only · no account · no external API</span></footer>

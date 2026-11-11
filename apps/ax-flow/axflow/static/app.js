@@ -25,6 +25,9 @@ const dbvoraRelations = document.querySelector("#dbvora-relations");
 const dbvoraRefreshButton = document.querySelector("#refresh-dbvora");
 const assetAttestation = document.querySelector("#dbvora-asset-attestation");
 const assetVerifyButton = document.querySelector("#verify-dbvora-asset");
+const registryConsent = document.querySelector("#asset-registry-consent");
+const registryStatus = document.querySelector("#asset-registry-status");
+const registryRegisterButton = document.querySelector("#register-dbvora-asset");
 const previewDetail = document.querySelector("#preview-detail");
 const previewImpact = document.querySelector("#preview-impact");
 const approvalImpact = document.querySelector("#approval-impact");
@@ -59,6 +62,8 @@ let uploadInProgress = false;
 let executionInProgress = false;
 let dbvoraRequestVersion = 0;
 let assetAttestationVersion = 0;
+let registryReviewSha = "";
+let registryWriteInProgress = false;
 
 function requestKey() {
   return JSON.stringify([taskInput.value, csvInput.value]);
@@ -421,6 +426,9 @@ function describeDbvoraProvenance(result) {
 
 function renderDbvora(result) {
   ++assetAttestationVersion;
+  registryReviewSha = "";
+  registryConsent.checked = false;
+  registryRegisterButton.disabled = true;
   assetVerifyButton.disabled = false;
   assetAttestation.textContent = "선택한 합성 DB 자산 일치 검증 미실행";
   clearChildren(dbvoraTables);
@@ -484,6 +492,9 @@ async function verifyDbvoraAsset() {
   // Explicit user click only: never auto-probe an owner-selected DB on page load.
   const version = ++assetAttestationVersion;
   assetVerifyButton.disabled = true;
+  registryReviewSha = "";
+  registryConsent.checked = false;
+  registryRegisterButton.disabled = true;
   assetAttestation.textContent = "로컬 합성 DB 자산 일치 검증 중…";
   try {
     const proof = await api("/api/dbvora-asset");
@@ -492,6 +503,8 @@ async function verifyDbvoraAsset() {
         typeof proof.source_sha256 === "string" && /^[a-f0-9]{64}$/.test(proof.source_sha256) &&
         Number.isInteger(proof.table_count) && proof.table_count >= 1) {
       // Do not display provider-supplied paths, SQL, identifiers or free text.
+      registryReviewSha = proof.source_sha256;
+      updateRegistryButton();
       assetAttestation.textContent = "합성 DB 메타데이터 일치 확인 · 테이블 " +
         proof.table_count + "개 · SHA256 " + proof.source_sha256.slice(0, 12) +
         "… · 실제 고객/DBVORA 프로세스 인증은 미검증";
@@ -506,6 +519,53 @@ async function verifyDbvoraAsset() {
     }
   } finally {
     if (version === assetAttestationVersion) assetVerifyButton.disabled = false;
+  }
+}
+
+function updateRegistryButton() {
+  registryRegisterButton.disabled = registryWriteInProgress ||
+    !registryConsent.checked || !/^[a-f0-9]{64}$/.test(registryReviewSha);
+}
+
+async function loadAssetRegistry() {
+  try {
+    const status = await api("/api/asset-registry");
+    registryStatus.textContent = status.available === true && Number.isInteger(status.asset_count)
+      ? "로컬 자산 등록부 " + status.asset_count + "개 등록 · 실제 고객 자산은 미지원"
+      : status.error_code === "NOT_CONFIGURED"
+        ? "등록부 미설정 · 사전 승인한 합성 메타데이터 등록부가 필요합니다"
+        : "자산 등록부 조회 불가 · 수동 검증 필요";
+  } catch {
+    registryStatus.textContent = "자산 등록부 조회 불가 · 수동 검증 필요";
+  }
+}
+
+async function registerReviewedAsset() {
+  if (registryWriteInProgress || !registryConsent.checked ||
+      !/^[a-f0-9]{64}$/.test(registryReviewSha)) return;
+  const selectedSha = registryReviewSha;
+  registryWriteInProgress = true;
+  updateRegistryButton();
+  registryStatus.textContent = "승인된 합성 자산 등록 중…";
+  try {
+    const outcome = await api("/api/asset-registry/register", {
+      method: "POST", body: JSON.stringify({
+        approve_registry_write: true, expected_sha256: selectedSha,
+      }),
+    });
+    if (registryReviewSha !== selectedSha) return; // old response invalidated.
+    registryStatus.textContent = outcome.status === "REGISTERED" ||
+      outcome.status === "ALREADY_REGISTERED"
+      ? "합성 자산 등록 완료 · 로컬 메타데이터만 기록 · 상용 출시 보류"
+      : "자산 등록 보류";
+  } catch {
+    if (registryReviewSha === selectedSha) {
+      registryStatus.textContent = "자산 등록 보류 · 소스 변경 또는 권한/연결 문제";
+    }
+  } finally {
+    registryWriteInProgress = false;
+    registryConsent.checked = false;
+    updateRegistryButton();
   }
 }
 
@@ -826,6 +886,9 @@ historyCopyButton.addEventListener("click", async () => {
 
 dbvoraRefreshButton.addEventListener("click", loadDbvora);
 assetVerifyButton.addEventListener("click", verifyDbvoraAsset);
+registryConsent.addEventListener("change", updateRegistryButton);
+registryRegisterButton.addEventListener("click", registerReviewedAsset);
+loadAssetRegistry();
 
 checkConnection();
 loadDbvora();

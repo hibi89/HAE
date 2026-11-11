@@ -358,6 +358,49 @@ async function testDbvoraRefreshCancelsPendingAssetProof() {
   assert.match(ui.get("#dbvora-asset-attestation").textContent, /검증 미실행/);
 }
 
+async function testRegistryRequiresManualReviewConsentAndNoDuplicateSubmission() {
+  const ui = setup();
+  const button = ui.get("#register-dbvora-asset");
+  assert.equal(button.disabled, true, "registration must not be possible on page load");
+  assert.equal(ui.requests.filter((r) => r.url === "/api/asset-registry/register").length, 0);
+  const verify = ui.get("#verify-dbvora-asset").fire("click");
+  const review = ui.requests.find((r) => r.url === "/api/dbvora-asset");
+  ui.respond(review, {available: true, provider_protocol_verified: true,
+    source_sha256: "a".repeat(64), table_count: 2});
+  await verify;
+  assert.equal(button.disabled, true, "successful review alone does not approve persistence");
+  ui.get("#asset-registry-consent").checked = true;
+  await ui.get("#asset-registry-consent").fire("change");
+  assert.equal(button.disabled, false);
+  const first = button.fire("click");
+  const second = button.fire("click");
+  const requests = ui.requests.filter((r) => r.url === "/api/asset-registry/register");
+  assert.equal(requests.length, 1, "registration must be single-flight");
+  assert.equal(JSON.parse(requests[0].options.body).expected_sha256, "a".repeat(64));
+  ui.respond(requests[0], {status: "REGISTERED", release_gate: "HOLD"});
+  await Promise.all([first, second]);
+  assert.match(ui.get("#asset-registry-status").textContent, /등록 완료/);
+  assert.equal(ui.get("#asset-registry-consent").checked, false);
+  assert.equal(button.disabled, true);
+}
+async function testRegistryReviewClearsAfterMapChange() {
+  const ui = setup();
+  const verify = ui.get("#verify-dbvora-asset").fire("click");
+  const review = ui.requests.find((r) => r.url === "/api/dbvora-asset");
+  ui.respond(review, {available: true, provider_protocol_verified: true,
+    source_sha256: "a".repeat(64), table_count: 2});
+  await verify;
+  ui.get("#asset-registry-consent").checked = true;
+  await ui.get("#asset-registry-consent").fire("change");
+  assert.equal(ui.get("#register-dbvora-asset").disabled, false);
+  const refresh = ui.get("#refresh-dbvora").fire("click");
+  const network = ui.requests.filter((r) => r.url === "/api/dbvora").at(-1);
+  ui.respond(network, {available:false, error_code:"UNAVAILABLE"});
+  await refresh;
+  assert.equal(ui.get("#register-dbvora-asset").disabled, true);
+  await ui.get("#register-dbvora-asset").fire("click");
+  assert.equal(ui.requests.filter((r) => r.url === "/api/asset-registry/register").length, 0);
+}
 async function testDbvoraNewestResponseWins() {
   const ui = setup();
   const button = ui.get("#refresh-dbvora");
@@ -376,6 +419,8 @@ async function testDbvoraNewestResponseWins() {
   await testRunRejectsMissingPreviewToken();
   await testDbvoraNewestResponseWins();
   await testAssetProofManualOnlyAndLatestResponseWins();
+  await testRegistryRequiresManualReviewConsentAndNoDuplicateSubmission();
+  await testRegistryReviewClearsAfterMapChange();
   await testDbvoraRefreshCancelsPendingAssetProof();
   await testPreviewStaleFailure();
   await testExecutionIsSingleFlightAndNeedsFreshPreview();
@@ -389,5 +434,5 @@ async function testDbvoraNewestResponseWins() {
   await testResumePreviewRejectsInvalidRunIdWithoutRequest();
   await testLiveReceiptRendersRedactedLaEvents();
   await testHistoryRestoresLaAuditWithoutSovia();
-  console.log("HAE simulated UI race tests: 16 PASS");
+  console.log("HAE simulated UI race tests: 18 PASS");
 })().catch((error) => { console.error(error); process.exitCode = 1; });

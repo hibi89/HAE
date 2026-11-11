@@ -26,6 +26,9 @@ from .la_adapter import (
 )
 from .dbvora_client import DbvoraClient
 from .asset_attestation import AssetAttestationError, attest_synthetic_dbvora_asset
+from .asset_registry import (
+    AssetRegistryError, read_synthetic_registry, register_synthetic_asset,
+)
 from .sovia_adapter import SOVIAUnavailable, reconcile as reconcile_sovia
 from .sovia_store import SOVIAStore, SOVIAStoreError
 from .planner import plan_request, requires_write_approval, workflow_name
@@ -88,6 +91,7 @@ def create_server(
     port: int = 8765,
     dbvora_url: str | None = None,
     dbvora_asset_source: Path | None = None,
+    asset_registry_path: Path | None = None,
     synthetic_asset_allowed: bool = False,
     engine_backend: str = "axflow",
     sovia_root: Path | None = None,
@@ -116,6 +120,18 @@ def create_server(
         asset_source = Path(dbvora_asset_source).expanduser()
         if not asset_source.is_absolute():
             raise PlanError("DBVORA synthetic asset source must be absolute")
+    registry = None
+    if asset_registry_path is not None:
+        if synthetic_asset_allowed is not True or asset_source is None:
+            raise PlanError("registry requires an explicit synthetic DBVORA asset")
+        registry = Path(asset_registry_path).expanduser()
+        if (not registry.is_absolute() or registry.resolve(strict=False) in
+                {state, business, asset_source.resolve(strict=False)}):
+            raise PlanError("registry must be an independent absolute metadata file")
+        try:
+            read_synthetic_registry(registry, synthetic=True)
+        except AssetRegistryError as exc:
+            raise PlanError("asset registry is unavailable or not initialized") from exc
 
     def backend_info(plan: dict) -> dict[str, object]:
         if engine_backend == "lightning-azent":
@@ -281,6 +297,21 @@ def create_server(
                 else:
                     self._send_json(200, report)
                 return
+            if parsed.path == "/api/asset-registry":
+                if parsed.query:
+                    self._send_json(400, {"error": "asset registry accepts no query"})
+                    return
+                if registry is None:
+                    self._send_json(200, {"available": False, "error_code": "NOT_CONFIGURED",
+                                          "release_gate": "HOLD"})
+                else:
+                    try:
+                        receipt = read_synthetic_registry(registry, synthetic=True)
+                        self._send_json(200, {"available": True, **receipt})
+                    except AssetRegistryError:
+                        self._send_json(200, {"available": False, "error_code": "REGISTRY_HOLD",
+                                              "release_gate": "HOLD"})
+                return
             if parsed.path == "/api/dbvora-asset":
                 if parsed.query:
                     self._send_json(400, {"error": "asset attestation accepts no query"})
@@ -312,8 +343,10 @@ def create_server(
         def do_POST(self) -> None:
             if not self._check_local_request(require_origin=True):
                 return
-            route = urlsplit(self.path).path
-            if route not in {"/api/upload", "/api/preview", "/api/run"}:
+            parsed = urlsplit(self.path)
+            route = parsed.path
+            if route not in {"/api/upload", "/api/preview", "/api/run",
+                             "/api/asset-registry/register"}:
                 self._send_json(404, {"error": "route not found"})
                 return
             run_id = None
@@ -337,6 +370,31 @@ def create_server(
                 body = self._read_json(
                     max_bytes=MAX_UPLOAD_BODY_BYTES if route == "/api/upload" else MAX_BODY_BYTES
                 )
+                if route == "/api/asset-registry/register":
+                    if parsed.query:
+                        raise RequestError(400, "registry registration accepts no query")
+                    self._require_fields(body, {"approve_registry_write", "expected_sha256"})
+                    sha = body["expected_sha256"]
+                    if (registry is None or asset_source is None):
+                        raise RequestError(409, "asset registry not configured")
+                    if body["approve_registry_write"] is not True:
+                        raise RequestError(403, "explicit synthetic registry write approval required")
+                    if (not isinstance(sha, str) or re.fullmatch(r"[a-f0-9]{64}", sha) is None):
+                        raise RequestError(400, "source SHA256 must be explicit")
+                    try:
+                        current_proof = attest_synthetic_dbvora_asset(
+                            asset_source, self.server.dbvora_client, synthetic=True,
+                        )
+                        if current_proof["source_sha256"] != sha:
+                            raise RequestError(409, "selected source changed since review")
+                        outcome = register_synthetic_asset(
+                            registry, asset_source, self.server.dbvora_client,
+                            synthetic=True, acknowledge_owner=True,
+                        )
+                    except (AssetRegistryError, AssetAttestationError):
+                        raise RequestError(409, "asset registration held for safety") from None
+                    self._send_json(200, outcome)
+                    return
                 if route == "/api/upload":
                     self._require_fields(body, {"filename", "content_base64"})
                     filename = body["filename"]
