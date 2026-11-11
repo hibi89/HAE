@@ -18,6 +18,8 @@ import unittest
 from urllib.request import Request, urlopen
 
 from axflow.schema_inventory import inspect_offline_schema
+from axflow.asset_attestation import attest_synthetic_dbvora_asset
+from axflow.dbvora_client import DbvoraClient
 from axflow.web import create_server
 
 
@@ -190,6 +192,13 @@ class HaeLaDbvoraAssetE2ETests(unittest.TestCase):
         self.assertEqual(self.provider.requests, [
             ("GET", "/health"), ("GET", "/api/inventory"),
         ])
+        provider_url = "http://127.0.0.1:" + str(self.provider.server_port)
+        proof = attest_synthetic_dbvora_asset(
+            self.business, DbvoraClient(provider_url), synthetic=True,
+        )
+        self.assertTrue(proof["provider_protocol_verified"])
+        self.assertFalse(proof["customer_ready"])
+        self.assertEqual(proof["source_sha256"], before)
         serialized = json.dumps(inventory)
         self.assertNotIn("SyntheticPrivateEvidenceRow", serialized)
         self.assertNotIn(str(self.root), serialized)
