@@ -156,209 +156,211 @@ print(json.dumps({"status": result["status"]["status"],
     def test_http_flow_uses_real_lightning_backend_and_matches_axflow(self):
         from axflow.engine import MAX_CSV_BYTES
         self.assertEqual(MAX_CSV_BYTES, 256 * 1024)
-        with tempfile.TemporaryDirectory(prefix="hae-la-adapter-") as folder:
-            root = Path(folder)
-            inputs = root / "input"
-            inputs.mkdir()
-            contacts = b"id,name\n11,Alice\n12,Bob\n"
-            sales = b"amount,id\n120,11\n80,12\n"
-            (inputs / "contacts.csv").write_bytes(contacts)
-            (inputs / "sales.csv").write_bytes(sales)
-            state, business = root / "la-state.db", root / "la-business.db"
-            server = create_server(
-                inputs, state, business, port=0, engine_backend="lightning-azent",
+        # Register the temp directory cleanup before the HTTP server cleanup.
+        # Windows must release active SQLite handles after a failed request.
+        folder = self.enterContext(tempfile.TemporaryDirectory(prefix="hae-la-adapter-"))
+        root = Path(folder)
+        inputs = root / "input"
+        inputs.mkdir()
+        contacts = b"id,name\n11,Alice\n12,Bob\n"
+        sales = b"amount,id\n120,11\n80,12\n"
+        (inputs / "contacts.csv").write_bytes(contacts)
+        (inputs / "sales.csv").write_bytes(sales)
+        state, business = root / "la-state.db", root / "la-business.db"
+        server = create_server(
+            inputs, state, business, port=0, engine_backend="lightning-azent",
+        )
+        thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True)
+        thread.start()
+        self.addCleanup(server.server_close)
+        self.addCleanup(thread.join, 3)
+        self.addCleanup(server.shutdown)
+        origin = f"http://127.0.0.1:{server.server_port}"
+
+        with urlopen(origin + "/api/health", timeout=20) as health_response:
+            health = json.loads(health_response.read().decode("utf-8"))
+        self.assertEqual(health["ready"], True)
+        self.assertEqual(health["engine_backend"]["name"], "Lightning Azent")
+        self.assertFalse(state.exists())
+        self.assertFalse(business.exists())
+
+        def post_json(route: str, payload: dict):
+            request = Request(
+                origin + route, data=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json", "Origin": origin}, method="POST",
             )
-            thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True)
-            thread.start()
-            self.addCleanup(server.server_close)
-            self.addCleanup(thread.join, 3)
-            self.addCleanup(server.shutdown)
-            origin = f"http://127.0.0.1:{server.server_port}"
+            with urlopen(request, timeout=20) as response:
+                return response.status, json.loads(response.read().decode("utf-8"))
 
-            with urlopen(origin + "/api/health", timeout=5) as health_response:
-                health = json.loads(health_response.read().decode("utf-8"))
-            self.assertEqual(health["ready"], True)
-            self.assertEqual(health["engine_backend"]["name"], "Lightning Azent")
-            self.assertFalse(state.exists())
-            self.assertFalse(business.exists())
+        flows = [
+            ("Import this CSV into local SQLite", "contacts.csv", True),
+            ("이 CSV에서 amount가 100 이상일 때만 로컬 SQLite에 저장해줘", "sales.csv", True),
+            ("이 CSV에서 id가 11인 행을 찾아줘", "contacts.csv", False),
+        ]
+        outcomes = []
+        self.assertFalse(state.exists())
+        self.assertFalse(business.exists())
+        for index, (task, csv_path, approved) in enumerate(flows):
+            status, preview = post_json("/api/preview", {"task": task, "csv_path": csv_path})
+            self.assertEqual(status, 200, preview)
+            self.assertEqual(preview["engine_backend"]["name"], "Lightning Azent")
+            self.assertEqual(preview["engine_backend"]["api_version"], "azent.api.v0")
+            self.assertEqual(preview["engine_backend"]["preflight"]["executes_workflow"], False)
 
-            def post_json(route: str, payload: dict):
-                request = Request(
-                    origin + route, data=json.dumps(payload).encode("utf-8"),
-                    headers={"Content-Type": "application/json", "Origin": origin}, method="POST",
-                )
-                with urlopen(request, timeout=5) as response:
-                    return response.status, json.loads(response.read().decode("utf-8"))
-
-            flows = [
-                ("Import this CSV into local SQLite", "contacts.csv", True),
-                ("이 CSV에서 amount가 100 이상일 때만 로컬 SQLite에 저장해줘", "sales.csv", True),
-                ("이 CSV에서 id가 11인 행을 찾아줘", "contacts.csv", False),
-            ]
-            outcomes = []
-            self.assertFalse(state.exists())
-            self.assertFalse(business.exists())
-            for index, (task, csv_path, approved) in enumerate(flows):
-                status, preview = post_json("/api/preview", {"task": task, "csv_path": csv_path})
-                self.assertEqual(status, 200, preview)
-                self.assertEqual(preview["engine_backend"]["name"], "Lightning Azent")
-                self.assertEqual(preview["engine_backend"]["api_version"], "azent.api.v0")
-                self.assertEqual(preview["engine_backend"]["preflight"]["executes_workflow"], False)
-
-                plan = preview["plan"]
-                baseline = Engine(root / f"base-state-{index}.db", root / f"base-business-{index}.db",
-                                  input_root=inputs).execute(
-                    plan, f"BaseRun{index}", approve_writes=approved,
-                )
-                status, outcome = post_json("/api/run", {
-                    "task": task, "csv_path": csv_path, "preview_id": preview["preview_id"],
-                    "approve_writes": approved,
-                })
-                self.assertEqual(status, 200, outcome)
-                self.assertEqual(outcome["status"]["status"], "completed")
-                self.assertEqual(outcome["result"], baseline)
-                self.assertEqual(outcome["backend"]["name"], "Lightning Azent")
-                self.assertIn("events", outcome["audit"])
-                self.assertIn("sovia_audit", outcome)
-                self.assertIn("dbvora", outcome)
-                self.assertIn(outcome["workflow_status"], {"completed", "partial"})
-                from urllib.error import HTTPError
-                audit_url = origin + "/api/audit?run_id=" + outcome["run_id"]
-                if outcome["sovia_audit"]["available"] is True:
-                    with urlopen(audit_url, timeout=5) as audit_response:
-                        saved_audit = json.loads(audit_response.read().decode("utf-8"))
-                    self.assertEqual(saved_audit["run_id"], outcome["run_id"])
-                else:
-                    # SOVIA is optional. Its unavailability must not turn
-                    # the LA SQLite execution into a failure or a 200 audit.
-                    with self.assertRaises(HTTPError) as unavailable_audit:
-                        urlopen(audit_url, timeout=5)
-                    self.assertEqual(unavailable_audit.exception.code, 404)
-                with urlopen(origin + "/api/la-audit?run_id=" + outcome["run_id"], timeout=5) as la_response:
-                    la_audit = json.loads(la_response.read().decode("utf-8"))
-                self.assertEqual(la_audit["run_id"], outcome["run_id"])
-                self.assertEqual(la_audit["plan_sha256"], outcome["status"]["plan_sha256"])
-                self.assertGreaterEqual(la_audit["total_events"], 1)
-                self.assertEqual(la_audit["approval_count"] >= 1, approved)
-                self.assertNotIn("Alice", json.dumps(la_audit))
-                self.assertTrue(all(set(item) <= {"event_type", "occurred_at", "step_id"}
-                                    for item in la_audit["events"]))
-                with urlopen(origin + "/api/status?run_id=" + outcome["run_id"], timeout=5) as status_response:
-                    saved_status = json.loads(status_response.read().decode("utf-8"))
-                self.assertEqual(saved_status["status"], "completed")
-                self.assertEqual(saved_status["run_id"], outcome["run_id"])
-                self.assertIn("integration", saved_status)
-                self.assertIn("sovia_audit", saved_status["integration"])
-                with urlopen(origin + "/api/dbvora", timeout=5) as dbvora_response:
-                    inventory = json.loads(dbvora_response.read().decode("utf-8"))
-                self.assertIn("available", inventory)
-                self.assertIsInstance(inventory["available"], bool)
-                self.assertNotIn("Alice", json.dumps(outcome["audit"]))
-                outcomes.append((task, csv_path, preview["preview_id"], outcome))
-
-            self.assertEqual(outcomes[0][3]["result"]["imported_rows"], 2)
-            self.assertEqual(outcomes[1][3]["result"]["imported_rows"], 1)
-            self.assertEqual(outcomes[2][3]["result"]["matched_count"], 1)
-            # A fresh HTTP server must reconstruct run status and audit
-            # integration from durable SQLite without the original UI cache.
-            restarted = create_server(
-                inputs, state, business, port=0, engine_backend="lightning-azent",
+            plan = preview["plan"]
+            baseline = Engine(root / f"base-state-{index}.db", root / f"base-business-{index}.db",
+                              input_root=inputs).execute(
+                plan, f"BaseRun{index}", approve_writes=approved,
             )
-            restarted_thread = threading.Thread(
-                target=restarted.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True,
-            )
-            restarted_thread.start()
-            try:
-                restored_origin = f"http://127.0.0.1:{restarted.server_port}"
-                for _, _, _, completed in outcomes:
-                    run_id = completed["run_id"]
-                    with urlopen(restored_origin + "/api/status?run_id=" + run_id, timeout=5) as response:
-                        restored = json.loads(response.read().decode("utf-8"))
-                    self.assertEqual(restored["status"], "completed")
-                    self.assertEqual(restored["integration"]["execution_status"], "completed")
-                    with urlopen(restored_origin + "/api/la-audit?run_id=" + run_id, timeout=5) as response:
-                        restored_audit = json.loads(response.read().decode("utf-8"))
-                    self.assertEqual(restored_audit["run_id"], run_id)
-                    self.assertGreaterEqual(restored_audit["total_events"], 1)
-                    self.assertIn(restored["integration"]["workflow_status"], {"completed", "partial"})
-                    self.assertEqual(restored["integration"]["sovia_audit"]["run_id"], run_id)
-            finally:
-                restarted.shutdown()
-                restarted.server_close()
-                restarted_thread.join(timeout=3)
+            status, outcome = post_json("/api/run", {
+                "task": task, "csv_path": csv_path, "preview_id": preview["preview_id"],
+                "approve_writes": approved,
+            })
+            self.assertEqual(status, 200, outcome)
+            self.assertEqual(outcome["status"]["status"], "completed")
+            self.assertEqual(outcome["result"], baseline)
+            self.assertEqual(outcome["backend"]["name"], "Lightning Azent")
+            self.assertIn("events", outcome["audit"])
+            self.assertIn("sovia_audit", outcome)
+            self.assertIn("dbvora", outcome)
+            self.assertIn(outcome["workflow_status"], {"completed", "partial"})
+            from urllib.error import HTTPError
+            audit_url = origin + "/api/audit?run_id=" + outcome["run_id"]
+            if outcome["sovia_audit"]["available"] is True:
+                with urlopen(audit_url, timeout=20) as audit_response:
+                    saved_audit = json.loads(audit_response.read().decode("utf-8"))
+                self.assertEqual(saved_audit["run_id"], outcome["run_id"])
+            else:
+                # SOVIA is optional. Its unavailability must not turn
+                # the LA SQLite execution into a failure or a 200 audit.
+                with self.assertRaises(HTTPError) as unavailable_audit:
+                    urlopen(audit_url, timeout=20)
+                self.assertEqual(unavailable_audit.exception.code, 404)
+            with urlopen(origin + "/api/la-audit?run_id=" + outcome["run_id"], timeout=20) as la_response:
+                la_audit = json.loads(la_response.read().decode("utf-8"))
+            self.assertEqual(la_audit["run_id"], outcome["run_id"])
+            self.assertEqual(la_audit["plan_sha256"], outcome["status"]["plan_sha256"])
+            self.assertGreaterEqual(la_audit["total_events"], 1)
+            self.assertEqual(la_audit["approval_count"] >= 1, approved)
+            self.assertNotIn("Alice", json.dumps(la_audit))
+            self.assertTrue(all(set(item) <= {"event_type", "occurred_at", "step_id"}
+                                for item in la_audit["events"]))
+            with urlopen(origin + "/api/status?run_id=" + outcome["run_id"], timeout=20) as status_response:
+                saved_status = json.loads(status_response.read().decode("utf-8"))
+            self.assertEqual(saved_status["status"], "completed")
+            self.assertEqual(saved_status["run_id"], outcome["run_id"])
+            self.assertIn("integration", saved_status)
+            self.assertIn("sovia_audit", saved_status["integration"])
+            with urlopen(origin + "/api/dbvora", timeout=20) as dbvora_response:
+                inventory = json.loads(dbvora_response.read().decode("utf-8"))
+            self.assertIn("available", inventory)
+            self.assertIsInstance(inventory["available"], bool)
+            self.assertNotIn("Alice", json.dumps(outcome["audit"]))
+            outcomes.append((task, csv_path, preview["preview_id"], outcome))
 
-            retry_task, retry_path, retry_preview, first = outcomes[0]
-            status, replay = post_json("/api/run", {
+        self.assertEqual(outcomes[0][3]["result"]["imported_rows"], 2)
+        self.assertEqual(outcomes[1][3]["result"]["imported_rows"], 1)
+        self.assertEqual(outcomes[2][3]["result"]["matched_count"], 1)
+        # A fresh HTTP server must reconstruct run status and audit
+        # integration from durable SQLite without the original UI cache.
+        restarted = create_server(
+            inputs, state, business, port=0, engine_backend="lightning-azent",
+        )
+        restarted_thread = threading.Thread(
+            target=restarted.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True,
+        )
+        restarted_thread.start()
+        try:
+            restored_origin = f"http://127.0.0.1:{restarted.server_port}"
+            for _, _, _, completed in outcomes:
+                run_id = completed["run_id"]
+                with urlopen(restored_origin + "/api/status?run_id=" + run_id, timeout=20) as response:
+                    restored = json.loads(response.read().decode("utf-8"))
+                self.assertEqual(restored["status"], "completed")
+                self.assertEqual(restored["integration"]["execution_status"], "completed")
+                with urlopen(restored_origin + "/api/la-audit?run_id=" + run_id, timeout=20) as response:
+                    restored_audit = json.loads(response.read().decode("utf-8"))
+                self.assertEqual(restored_audit["run_id"], run_id)
+                self.assertGreaterEqual(restored_audit["total_events"], 1)
+                self.assertIn(restored["integration"]["workflow_status"], {"completed", "partial"})
+                self.assertEqual(restored["integration"]["sovia_audit"]["run_id"], run_id)
+        finally:
+            restarted.shutdown()
+            restarted.server_close()
+            restarted_thread.join(timeout=3)
+
+        retry_task, retry_path, retry_preview, first = outcomes[0]
+        status, replay = post_json("/api/run", {
+            "task": retry_task, "csv_path": retry_path,
+            "preview_id": retry_preview, "approve_writes": True,
+        })
+        self.assertEqual(status, 200, replay)
+        self.assertEqual(replay["result"], first["result"])
+        self.assertEqual(replay["status"]["status"], "completed")
+        # A completed run cannot bypass the approved source fingerprint.
+        (inputs / "contacts.csv").write_bytes(b"id,name\n99,ChangedAfterSuccess\n")
+        from urllib.error import HTTPError
+        with self.assertRaises(HTTPError) as rejected:
+            post_json("/api/run", {
                 "task": retry_task, "csv_path": retry_path,
                 "preview_id": retry_preview, "approve_writes": True,
             })
-            self.assertEqual(status, 200, replay)
-            self.assertEqual(replay["result"], first["result"])
-            self.assertEqual(replay["status"]["status"], "completed")
-            # A completed run cannot bypass the approved source fingerprint.
-            (inputs / "contacts.csv").write_bytes(b"id,name\n99,ChangedAfterSuccess\n")
-            from urllib.error import HTTPError
-            with self.assertRaises(HTTPError) as rejected:
-                post_json("/api/run", {
-                    "task": retry_task, "csv_path": retry_path,
-                    "preview_id": retry_preview, "approve_writes": True,
-                })
-            self.assertEqual(rejected.exception.code, 409)
-            with closing(sqlite3.connect(business)) as con:
-                self.assertEqual(con.execute(
-                    "SELECT COUNT(*) FROM csv_records WHERE run_id=?", (first["run_id"],)
-                ).fetchone()[0], 2)
+        self.assertEqual(rejected.exception.code, 409)
+        with closing(sqlite3.connect(business)) as con:
+            self.assertEqual(con.execute(
+                "SELECT COUNT(*) FROM csv_records WHERE run_id=?", (first["run_id"],)
+            ).fetchone()[0], 2)
 
-            # Simulate interrupted execution after durable SQLite receipts.
-            # A fresh matching preview must target the original run ID and
-            # require a new explicit write approval before LA resumes.
-            (inputs / "contacts.csv").write_bytes(contacts)
-            with closing(sqlite3.connect(state)) as con:
-                with con:
-                    con.execute("UPDATE runs SET status='failed' WHERE run_id=?", (first["run_id"],))
-            with self.assertRaises(HTTPError) as changed_plan:
-                post_json("/api/preview", {
-                    "task": "Find rows in this CSV where id equals 11",
-                    "csv_path": retry_path, "resume_run_id": first["run_id"],
-                })
-            self.assertEqual(changed_plan.exception.code, 409)
-            with self.assertRaises(HTTPError) as missing_run:
-                post_json("/api/preview", {
-                    "task": retry_task, "csv_path": retry_path,
-                    "resume_run_id": "Gui000000000000",
-                })
-            self.assertEqual(missing_run.exception.code, 404)
-            status, resume_preview = post_json("/api/preview", {
+        # Simulate interrupted execution after durable SQLite receipts.
+        # A fresh matching preview must target the original run ID and
+        # require a new explicit write approval before LA resumes.
+        (inputs / "contacts.csv").write_bytes(contacts)
+        with closing(sqlite3.connect(state)) as con:
+            with con:
+                con.execute("UPDATE runs SET status='failed' WHERE run_id=?", (first["run_id"],))
+        with self.assertRaises(HTTPError) as changed_plan:
+            post_json("/api/preview", {
+                "task": "Find rows in this CSV where id equals 11",
+                "csv_path": retry_path, "resume_run_id": first["run_id"],
+            })
+        self.assertEqual(changed_plan.exception.code, 409)
+        with self.assertRaises(HTTPError) as missing_run:
+            post_json("/api/preview", {
+                "task": retry_task, "csv_path": retry_path,
+                "resume_run_id": "Gui000000000000",
+            })
+        self.assertEqual(missing_run.exception.code, 404)
+        status, resume_preview = post_json("/api/preview", {
+            "task": retry_task, "csv_path": retry_path,
+            "resume_run_id": first["run_id"],
+        })
+        self.assertEqual(status, 200, resume_preview)
+        self.assertEqual(resume_preview["resumes_run_id"], first["run_id"])
+        self.assertEqual(resume_preview["requires_approval"], True)
+        with self.assertRaises(HTTPError) as no_consent:
+            post_json("/api/run", {
+                "task": retry_task, "csv_path": retry_path,
+                "preview_id": resume_preview["preview_id"], "approve_writes": False,
+            })
+        self.assertEqual(no_consent.exception.code, 403)
+        status, resumed = post_json("/api/run", {
+            "task": retry_task, "csv_path": retry_path,
+            "preview_id": resume_preview["preview_id"], "approve_writes": True,
+        })
+        self.assertEqual(status, 200, resumed)
+        self.assertEqual(resumed["run_id"], first["run_id"])
+        self.assertEqual(resumed["status"]["status"], "completed")
+        self.assertEqual(resumed["result"], first["result"])
+        with closing(sqlite3.connect(business)) as con:
+            self.assertEqual(con.execute(
+                "SELECT COUNT(*) FROM csv_records WHERE run_id=?", (first["run_id"],)
+            ).fetchone()[0], 2)
+        with self.assertRaises(HTTPError) as already_completed:
+            post_json("/api/preview", {
                 "task": retry_task, "csv_path": retry_path,
                 "resume_run_id": first["run_id"],
             })
-            self.assertEqual(status, 200, resume_preview)
-            self.assertEqual(resume_preview["resumes_run_id"], first["run_id"])
-            self.assertEqual(resume_preview["requires_approval"], True)
-            with self.assertRaises(HTTPError) as no_consent:
-                post_json("/api/run", {
-                    "task": retry_task, "csv_path": retry_path,
-                    "preview_id": resume_preview["preview_id"], "approve_writes": False,
-                })
-            self.assertEqual(no_consent.exception.code, 403)
-            status, resumed = post_json("/api/run", {
-                "task": retry_task, "csv_path": retry_path,
-                "preview_id": resume_preview["preview_id"], "approve_writes": True,
-            })
-            self.assertEqual(status, 200, resumed)
-            self.assertEqual(resumed["run_id"], first["run_id"])
-            self.assertEqual(resumed["status"]["status"], "completed")
-            self.assertEqual(resumed["result"], first["result"])
-            with closing(sqlite3.connect(business)) as con:
-                self.assertEqual(con.execute(
-                    "SELECT COUNT(*) FROM csv_records WHERE run_id=?", (first["run_id"],)
-                ).fetchone()[0], 2)
-            with self.assertRaises(HTTPError) as already_completed:
-                post_json("/api/preview", {
-                    "task": retry_task, "csv_path": retry_path,
-                    "resume_run_id": first["run_id"],
-                })
-            self.assertEqual(already_completed.exception.code, 409)
+        self.assertEqual(already_completed.exception.code, 409)
 
 
 if __name__ == "__main__":
