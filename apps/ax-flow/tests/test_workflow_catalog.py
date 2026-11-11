@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 import hashlib
+import json
+import subprocess
+import sys
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -109,6 +112,34 @@ class SyntheticWorkflowCatalogTests(unittest.TestCase):
             db.execute("PRAGMA user_version=99")
         with self.assertRaises(WorkflowCatalogError):
             self.save()
+
+    def test_cli_init_save_list_and_load_are_safe(self):
+        def run(*args):
+            return subprocess.run([sys.executable, "-m", "axflow.workflow_catalog_cli",
+                *args, "--synthetic"], capture_output=True, text=True, timeout=12)
+        self.assertEqual(run("init", "--catalog", str(self.catalog),
+                             "--ack-new-file").returncode, 0)
+        saved = run("save", "--catalog", str(self.catalog), "--input-root", str(self.inputs),
+                    "--task", self.task, "--csv", "data.csv", "--source-sha256", self.sha,
+                    "--ack-save")
+        self.assertEqual(saved.returncode, 0, saved.stderr)
+        recipe = json.loads(saved.stdout)
+        self.assertEqual(recipe["status"], "SAVED")
+        listed = run("list", "--catalog", str(self.catalog))
+        self.assertEqual(json.loads(listed.stdout)["recipe_count"], 1)
+        loaded = run("load", "--catalog", str(self.catalog), "--input-root", str(self.inputs),
+                     "--recipe-id", recipe["recipe_id"])
+        self.assertEqual(loaded.returncode, 0, loaded.stderr)
+        self.assertFalse(json.loads(loaded.stdout)["write_approved"])
+        self.assertTrue(json.loads(loaded.stdout)["needs_new_preview"])
+
+    def test_cli_missing_synthetic_flag_refuses_without_leaking(self):
+        proc = subprocess.run([sys.executable, "-m", "axflow.workflow_catalog_cli",
+            "init", "--catalog", str(self.catalog), "--ack-new-file"],
+            capture_output=True, text=True, timeout=12)
+        self.assertEqual(proc.returncode, 2)
+        self.assertFalse(self.catalog.exists())
+        self.assertNotIn(str(self.catalog), proc.stderr)
 
     def test_missing_owner_flag_creates_nothing(self):
         with self.assertRaises(WorkflowCatalogError):
