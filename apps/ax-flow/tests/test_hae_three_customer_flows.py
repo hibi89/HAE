@@ -119,10 +119,12 @@ class ThreeLocalCustomerStyleFlows(unittest.TestCase):
         self.assertEqual(code, 200)
         self.assertEqual(history["status"], "completed")
         self.assertNotIn("Alpha", json.dumps(history))
-        # A second POST with an already consumed preview must never duplicate
-        # side effects. Durable read-only replay remains available.
-        code, _ = self._run(task, preview, True)
-        self.assertEqual(code, 409)
+        # A second POST with the same preview returns the prior durable run
+        # receipt; no duplicate business writes or second run identity.
+        code, duplicate = self._run(task, preview, True)
+        self.assertEqual(code, 200, duplicate)
+        self.assertEqual(duplicate["run_id"], run_id)
+        self.assertEqual(duplicate["status"]["status"], "completed")
         self.assertEqual(
             hashlib.sha256(self.business.read_bytes()).hexdigest(), original_business_sha
         )
