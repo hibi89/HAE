@@ -160,7 +160,7 @@ class WebUITests(unittest.TestCase):
             cwd=Path(__file__).resolve().parents[1],
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn("14 PASS", result.stdout)
+        self.assertIn("16 PASS", result.stdout)
 
     def test_ui_async_response_guards_are_shipped_in_served_asset(self):
         # Static regression contract; browser-level race behavior needs a DOM runner.
