@@ -127,10 +127,12 @@ class HAEBridge:
     def evidence(self, plan: object, run_id: str) -> dict[str, object]:
         """Read-only local receipt/status/audit; no original workflow data is returned."""
         self._require_compatible_runtime()
-        prepared, expected_hash, _, _ = self._prepare(plan, run_id)
+        prepared, expected_hash, needs_write, _ = self._prepare(plan, run_id)
         verification = self.executor.verify_receipts(plan, run_id)
-        if not isinstance(verification, dict) or verification.get("verified") is not True:
-            raise PlanError("Lightning Azent receipts not verified")
+        if (not isinstance(verification, dict)
+                or verification.get("verified") is not True
+                or verification.get("run_id") != run_id):
+            raise PlanError("Lightning Azent receipts do not bind this run")
         status = self.executor.status(run_id)
         # A clean receipt check is not proof of a successful workflow. A missing,
         # running or failed run must never be advertised as completed evidence.
@@ -152,12 +154,64 @@ class HAEBridge:
                 or counts["failed"] or counts["running"]
                 or counts["completed"] + counts["skipped"] != total):
             raise PlanError("Lightning Azent step ledger is not complete")
+        if status.get("error_type") is not None:
+            raise PlanError("completed Lightning Azent run retains an error")
+        audit = self.executor.audit(run_id)
+        if (not isinstance(audit, dict)
+                or audit.get("run_id") != run_id
+                or audit.get("plan_sha256") != expected_hash
+                or type(audit.get("events")) is not list
+                or type(audit.get("approval_receipts")) is not list
+                or not 1 <= len(audit["events"]) <= 4096
+                or len(audit["approval_receipts"]) > 4096):
+            raise PlanError("Lightning Azent audit is missing or unbound")
+        events = audit["events"]
+        completed = []
+        for event in events:
+            if (type(event) is not dict
+                    or type(event.get("event_type")) is not str
+                    or type(event.get("details")) is not dict
+                    or type(event.get("occurred_at")) is not str):
+                raise PlanError("Lightning Azent audit event is malformed")
+            if event["event_type"] == "run_completed":
+                item = event["details"]
+                digest = item.get("output_sha256")
+                if (type(item.get("step_count")) is not int
+                        or item["step_count"] != total
+                        or type(digest) is not str
+                        or len(digest) != 64
+                        or any(ch not in "0123456789abcdef" for ch in digest)):
+                    raise PlanError("Lightning Azent completion event is inconsistent")
+                completed.append(event)
+        if (not completed
+                or events[-1]["event_type"] not in ("run_completed", "run_replayed")):
+            raise PlanError("Lightning Azent completed audit event is missing")
+        expected_steps = [
+            {"step_id": step["id"], "operation": step["op"]}
+            for step in prepared.runtime_plan["steps"] if step["op"] in WRITE_OPS
+        ]
+        if bool(expected_steps) is not needs_write:
+            raise PlanError("Lightning Azent approval scope is inconsistent")
+        receipts = audit["approval_receipts"]
+        if bool(receipts) is not needs_write:
+            raise PlanError("Lightning Azent write approval receipts are missing or unexpected")
+        expected_scope = {"plan_sha256": expected_hash, "write_steps": expected_steps}
+        for receipt in receipts:
+            if (type(receipt) is not dict
+                    or receipt.get("method") != "explicit-write-approval"
+                    or receipt.get("scope") != expected_scope
+                    or type(receipt.get("approved_at")) is not str):
+                raise PlanError("Lightning Azent write approval receipt is inconsistent")
+        # Read again after audit traversal: do not report a snapshot as
+        # completed if another process changed the run while evidence was read.
+        if self.executor.status(run_id) != status:
+            raise PlanError("Lightning Azent status changed during audit read")
         return {
             "bridge_version": BRIDGE_VERSION,
             "run_id": run_id,
             "verified": True,
             "status": status,
-            "audit": self.executor.audit(run_id),
+            "audit": audit,
             "audit_version": AUDIT_VERSION,
             "independent_sovia_audit": False,
         }
