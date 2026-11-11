@@ -154,6 +154,9 @@ raise SystemExit(main())
                 process.stdin.write("GO\n")
                 process.stdin.flush()
                 process.stdin.close()
+                # communicate() re-flushes a non-None stdin, even if closed.
+                # Release the reference after EOF so Python 3.11 handles it.
+                process.stdin = None
             outcomes = []
             for process in processes:
                 stdout, stderr = process.communicate(timeout=30)

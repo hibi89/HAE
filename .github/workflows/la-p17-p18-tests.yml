@@ -7,9 +7,6 @@ on:
       - 'packages/lightning-azent/**'
       - 'apps/ax-flow/**'
       - '.github/workflows/la-p17-p18-tests.yml'
-  pull_request:
-    branches:
-      - feature/lightning-azent
   workflow_dispatch:
 permissions:
   contents: read
