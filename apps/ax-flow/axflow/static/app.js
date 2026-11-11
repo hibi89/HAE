@@ -888,6 +888,7 @@ dbvoraRefreshButton.addEventListener("click", loadDbvora);
 assetVerifyButton.addEventListener("click", verifyDbvoraAsset);
 registryConsent.addEventListener("change", updateRegistryButton);
 registryRegisterButton.addEventListener("click", registerReviewedAsset);
+updateRegistryButton();
 loadAssetRegistry();
 
 checkConnection();
