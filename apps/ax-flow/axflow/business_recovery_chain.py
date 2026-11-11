@@ -33,7 +33,9 @@ def _selected(path: Path | str) -> Path:
     candidate = Path(path).expanduser()
     if not candidate.is_absolute():
         _refuse()
-    return candidate.resolve(strict=True)
+    # Keep the supplied path intact until the link/parent-link validation runs.
+    # Resolving first would silently accept a prohibited symlink alias.
+    return candidate
 
 
 def _identity(path: Path) -> tuple[int, int, int, int, int, int]:
