@@ -63,8 +63,12 @@ class LAExecutor:
             try:
                 existing = inspect_run(self.state_path, run_id)
             except RunLogError as exc:
-                if str(exc) != "run_id not found":
+                if str(exc) not in ("run_id not found",
+                                    "invalid or unreadable runtime ledger"):
                     raise PlanError(str(exc)) from exc
+                # A valid but entirely uninitialized SQLite file has no runs
+                # table yet. Keep original transactional Engine migration
+                # authoritative: it still preflights and rejects corruption.
             else:
                 expected = hashlib.sha256(
                     canonical_json(normalized).encode("utf-8")
