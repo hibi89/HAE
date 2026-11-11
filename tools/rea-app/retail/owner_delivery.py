@@ -28,9 +28,15 @@ class DeliveryError(ValueError):
 def _regular_file(path: Path, limit: int = MAX_JSON_BYTES) -> bytes:
     # Do not follow a final symlink and do not read unbounded JSON.
     info = path.lstat()
-    if not stat.S_ISREG(info.st_mode) or info.st_size > limit:
+    if not stat.S_ISREG(info.st_mode) or info.st_size > limit or path.is_symlink():
         raise DeliveryError(f"invalid or oversized regular file: {path.name}")
-    with path.open("rb") as handle:
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0)
+    fd = os.open(path, flags)
+    with os.fdopen(fd, "rb") as handle:
+        opened = os.fstat(handle.fileno())
+        if (not stat.S_ISREG(opened.st_mode) or opened.st_size > limit
+                or (opened.st_ino, opened.st_dev) != (info.st_ino, info.st_dev)):
+            raise DeliveryError("file changed while opening")
         data = handle.read(limit + 1)
     if len(data) > limit or path.is_symlink():
         raise DeliveryError(f"unsafe or oversized file: {path.name}")
@@ -86,7 +92,8 @@ def _review(reports: list[dict]) -> dict:
     cs = contracts.get("summary")
     if not all(isinstance(item, dict) for item in (ss, isummary, cs)):
         raise DeliveryError("missing summary")
-    if impact.get("snapshots", {}).get("current") != ss:
+    snapshots = impact.get("snapshots")
+    if not isinstance(snapshots, dict) or snapshots.get("current") != ss:
         raise DeliveryError("source map and current snapshot differ")
     keys = ("files_indexed", "source_files", "dependency_edges", "syntax_errors", "skipped_paths")
     output = {key: _count(ss, key) for key in keys}
@@ -103,8 +110,7 @@ def _review(reports: list[dict]) -> dict:
         raise DeliveryError("changed-file count mismatch")
     if len(observed) != output["exported_callable_contracts"]:
         raise DeliveryError("callable count mismatch")
-    snapshots = impact.get("snapshots")
-    if not isinstance(snapshots, dict) or not isinstance(snapshots.get("baseline"), dict):
+    if not isinstance(snapshots.get("baseline"), dict):
         raise DeliveryError("missing baseline")
     if output["syntax_errors"] != _count(snapshots["baseline"], "syntax_errors") + _count(ss, "syntax_errors"):
         raise DeliveryError("syntax-error count mismatch")
