@@ -25,6 +25,7 @@ from .la_adapter import (
     inspect_backend, read_execution_audit,
 )
 from .dbvora_client import DbvoraClient
+from .asset_attestation import AssetAttestationError, attest_synthetic_dbvora_asset
 from .sovia_adapter import SOVIAUnavailable, reconcile as reconcile_sovia
 from .sovia_store import SOVIAStore, SOVIAStoreError
 from .planner import plan_request, requires_write_approval, workflow_name
@@ -86,6 +87,8 @@ def create_server(
     *,
     port: int = 8765,
     dbvora_url: str | None = None,
+    dbvora_asset_source: Path | None = None,
+    synthetic_asset_allowed: bool = False,
     engine_backend: str = "axflow",
     sovia_root: Path | None = None,
 ):
@@ -105,6 +108,14 @@ def create_server(
         raise PlanError("port must be an integer from 0 to 65535")
     if engine_backend not in {"axflow", "lightning-azent"}:
         raise PlanError("engine_backend must be axflow or lightning-azent")
+    asset_source = None
+    if dbvora_asset_source is not None:
+        if (synthetic_asset_allowed is not True or dbvora_url is None
+                or not isinstance(dbvora_asset_source, (Path, str))):
+            raise PlanError("explicit synthetic source and DBVORA loopback are required")
+        asset_source = Path(dbvora_asset_source).expanduser()
+        if not asset_source.is_absolute():
+            raise PlanError("DBVORA synthetic asset source must be absolute")
 
     def backend_info(plan: dict) -> dict[str, object]:
         if engine_backend == "lightning-azent":
@@ -269,6 +280,24 @@ def create_server(
                     self._send_json(404, {"error": "post-execution SOVIA audit is not available for this run"})
                 else:
                     self._send_json(200, report)
+                return
+            if parsed.path == "/api/dbvora-asset":
+                if parsed.query:
+                    self._send_json(400, {"error": "asset attestation accepts no query"})
+                    return
+                if asset_source is None:
+                    proof = {"available": False, "error_code": "NOT_LINKED",
+                             "release_gate": "HOLD"}
+                else:
+                    try:
+                        attested = attest_synthetic_dbvora_asset(
+                            asset_source, self.server.dbvora_client, synthetic=True,
+                        )
+                        proof = {"available": True, **attested}
+                    except AssetAttestationError:
+                        proof = {"available": False, "error_code": "ASSET_ATTESTATION_HOLD",
+                                 "release_gate": "HOLD"}
+                self._send_json(200, proof)
                 return
             if parsed.path == "/api/dbvora":
                 try:

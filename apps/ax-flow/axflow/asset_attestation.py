@@ -84,6 +84,28 @@ def attest_synthetic_dbvora_asset(
                 or _schema_shape(local["tables"], local=True) !=
                     _schema_shape(provider_inventory["tables"], local=False)):
             _deny()
+        # The UI renders top-level relationship metadata independently.
+        # Do not attest a provider that contradicts its table FK catalog.
+        local_relationships = Counter(
+            (table["table"], key["target_table"], key["from"], key["to"])
+            for table in local["tables"] for key in table["foreign_keys"]
+        )
+        remote_relationships = Counter(
+            (rel["from_table"], rel["to_table"], from_col, to_col)
+            for rel in provider_inventory["relationships"]
+            for from_col, to_col in zip(rel["from_columns"], rel["to_columns"])
+        )
+        if (any(len(rel["from_columns"]) != len(rel["to_columns"])
+                for rel in provider_inventory["relationships"])
+                or remote_relationships != local_relationships
+                or provider_inventory.get("provenance", {}).get("size_bytes") !=
+                    "measured_local_filesystem"
+                or provider_inventory.get("provenance", {}).get("tables") !=
+                    "measured_sqlite_catalog"
+                or provider_inventory.get("provenance", {}).get("relationships") !=
+                    "declared_sqlite_foreign_keys"):
+
+            _deny()
         # A provider network call can race the source; re-check the owner path,
         # bytes and file identity after the full response was validated.
         checked = inspect_offline_schema(source_path, synthetic=True, reveal_names=False)

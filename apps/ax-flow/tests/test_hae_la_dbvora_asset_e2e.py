@@ -129,6 +129,7 @@ class HaeLaDbvoraAssetE2ETests(unittest.TestCase):
         self.hae = create_server(
             self.inputs, self.state, self.business, port=0,
             engine_backend="lightning-azent", dbvora_url=provider_url,
+            dbvora_asset_source=self.business, synthetic_asset_allowed=True,
         )
         self.hae_thread = threading.Thread(target=self.hae.serve_forever, daemon=True)
         self.hae_thread.start()
@@ -199,6 +200,9 @@ class HaeLaDbvoraAssetE2ETests(unittest.TestCase):
         self.assertTrue(proof["provider_protocol_verified"])
         self.assertFalse(proof["customer_ready"])
         self.assertEqual(proof["source_sha256"], before)
+        linked_asset = self.get("/api/dbvora-asset")
+        self.assertTrue(linked_asset["available"], linked_asset)
+        self.assertEqual(linked_asset["source_sha256"], before)
         serialized = json.dumps(inventory)
         self.assertNotIn("SyntheticPrivateEvidenceRow", serialized)
         self.assertNotIn(str(self.root), serialized)
@@ -220,7 +224,9 @@ class HaeLaDbvoraAssetE2ETests(unittest.TestCase):
         unavailable = self.get("/api/dbvora")
         self.assertFalse(unavailable["available"])
         self.assertEqual(unavailable["error_code"], "INVALID_HEALTH")
-        self.assertEqual(self.provider.requests, [("GET", "/health")])
+        failed_attestation = self.get("/api/dbvora-asset")
+        self.assertEqual(failed_attestation["error_code"], "ASSET_ATTESTATION_HOLD")
+        self.assertEqual(self.provider.requests, [("GET", "/health"), ("GET", "/health")])
         self.assertEqual(self.get("/api/status?run_id=" + run_id)["status"], "completed")
         self.assertEqual(hashlib.sha256(self.business.read_bytes()).hexdigest(), before)
         with closing(sqlite3.connect(self.business)) as db:

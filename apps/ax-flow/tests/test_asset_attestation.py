@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from contextlib import closing
+import json
+from urllib.request import urlopen
 import copy
 import hashlib
 from pathlib import Path
@@ -15,6 +17,8 @@ from axflow.asset_attestation import (
     AssetAttestationError, attest_synthetic_dbvora_asset,
 )
 from axflow.dbvora_client import DbvoraClient
+from axflow.engine import PlanError
+from axflow.web import create_server
 from test_hae_la_dbvora_asset_e2e import _ProtocolFixture, _contract_from_real_synthetic_sqlite
 
 
@@ -48,6 +52,59 @@ class SyntheticAssetAttestationTests(unittest.TestCase):
     def check_unchanged(self):
         self.assertEqual(hashlib.sha256(self.db.read_bytes()).hexdigest(), self.sha_before)
 
+    def _serve_hae(self, *, linked=True, approved=True):
+        inputs = self.root / "csv-input"
+        inputs.mkdir(exist_ok=True)
+        server = create_server(
+            inputs, self.root / "runtime.sqlite", self.root / "business.sqlite",
+            port=0, dbvora_url=self.client.base_url,
+            dbvora_asset_source=self.db if linked else None,
+            synthetic_asset_allowed=approved,
+        )
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        self.addCleanup(server.server_close)
+        self.addCleanup(thread.join, 3)
+        self.addCleanup(server.shutdown)
+        return "http://127.0.0.1:" + str(server.server_port)
+
+    def test_hae_opt_in_asset_api_checks_real_source_against_loopback(self):
+        origin = self._serve_hae()
+        with urlopen(origin + "/api/dbvora-asset", timeout=5) as response:
+            receipt = json.load(response)
+        self.assertTrue(receipt["available"])
+        self.assertTrue(receipt["provider_protocol_verified"])
+        self.assertEqual(receipt["source_sha256"], self.sha_before)
+        self.assertNotIn(str(self.db), json.dumps(receipt))
+        self.assertNotIn("PRIVATE_SYNTHETIC_ROW", json.dumps(receipt))
+        self.assertFalse((self.root / "runtime.sqlite").exists())
+        self.assertFalse((self.root / "business.sqlite").exists())
+        self.check_unchanged()
+
+    def test_hae_asset_api_refuses_wrong_remote_asset(self):
+        origin = self._serve_hae()
+        self.provider.inventory["db_id"] = "0" * 24
+        with urlopen(origin + "/api/dbvora-asset", timeout=5) as response:
+            payload = json.load(response)
+        self.assertEqual(payload, {
+            "available": False, "error_code": "ASSET_ATTESTATION_HOLD",
+            "release_gate": "HOLD",
+        })
+        self.check_unchanged()
+
+    def test_hae_asset_endpoint_not_linked_by_default(self):
+        origin = self._serve_hae(linked=False)
+        with urlopen(origin + "/api/dbvora-asset", timeout=5) as response:
+            payload = json.load(response)
+        self.assertEqual(payload["error_code"], "NOT_LINKED")
+        self.assertEqual(self.provider.requests, [])
+        self.check_unchanged()
+
+    def test_hae_source_link_rejects_missing_explicit_synthetic_gate(self):
+        with self.assertRaises(PlanError):
+            self._serve_hae(approved=False)
+        self.assertEqual(self.provider.requests, [])
+
     def test_owner_approved_exact_schema_and_fk_attested_without_rows(self):
         receipt = attest_synthetic_dbvora_asset(self.db, self.client, synthetic=True)
         self.assertTrue(receipt["provider_protocol_verified"])
@@ -79,6 +136,18 @@ class SyntheticAssetAttestationTests(unittest.TestCase):
 
     def test_wrong_size_scope_refused(self):
         self.provider.inventory["size_scope"] = "unknown"
+        with self.assertRaises(AssetAttestationError):
+            attest_synthetic_dbvora_asset(self.db, self.client, synthetic=True)
+        self.check_unchanged()
+
+    def test_changed_relationship_map_refused(self):
+        self.provider.inventory["relationships"][0]["to_table"] = "unrelated"
+        with self.assertRaises(AssetAttestationError):
+            attest_synthetic_dbvora_asset(self.db, self.client, synthetic=True)
+        self.check_unchanged()
+
+    def test_missing_provenance_refused(self):
+        self.provider.inventory["provenance"]["tables"] = "unknown"
         with self.assertRaises(AssetAttestationError):
             attest_synthetic_dbvora_asset(self.db, self.client, synthetic=True)
         self.check_unchanged()
