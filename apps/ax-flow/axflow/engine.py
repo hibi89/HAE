@@ -152,7 +152,7 @@ def _open_csv_readonly(path: Path, input_root: Path):
                 root_info.attributes & file_attribute_reparse_point):
             raise PlanError("CSV input root must not be a reparse point")
         root_final = final_path(root_handle)
-        expected_root = ntpath.normcase(ntpath.normpath(str(input_root)))
+        expected_root = ntpath.normcase(ntpath.normpath(os.path.realpath(input_root)))
         if root_final != expected_root:
             raise PlanError("CSV input root changed while it was being opened")
 
@@ -165,7 +165,7 @@ def _open_csv_readonly(path: Path, input_root: Path):
         if csv_info.attributes & file_attribute_directory:
             raise PlanError("CSV input must be a regular .csv file")
         file_final = final_path(csv_handle)
-        expected_file = ntpath.normcase(ntpath.normpath(str(path)))
+        expected_file = ntpath.normcase(ntpath.normpath(os.path.realpath(path)))
         if file_final != expected_file:
             raise PlanError("CSV input changed or resolved outside --input-root")
         try:

@@ -117,6 +117,10 @@ def require_free_port(port: int) -> None:
     """Check whether loopback can bind; the server bind remains authoritative."""
     try:
         with socket.socket() as probe:
+            # Match HTTPServer's SO_REUSEADDR semantics: an expired TIME_WAIT
+            # connection must not falsely report an occupied listening port.
+            # A live listener is still rejected; the actual server bind is final.
+            probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             probe.bind(("127.0.0.1", port))
     except OSError as exc:
         raise LaunchError("Local port " + str(port) +

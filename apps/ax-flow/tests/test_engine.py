@@ -256,7 +256,7 @@ raise SystemExit(main())
 
         def mutate_source_before_second_fingerprint(path):
             nonlocal source_fingerprints
-            if Path(path) == source:
+            if Path(path).samefile(source):
                 source_fingerprints += 1
                 if source_fingerprints == 2:
                     with closing(sqlite3.connect(source)) as con:
@@ -532,7 +532,7 @@ raise SystemExit(main())
 
         @contextmanager
         def replace_before_open(path, root):
-            if path == source:
+            if path.samefile(source):
                 replacement.replace(source)
             with _open_csv_readonly(path, root) as stream:
                 yield stream
@@ -594,7 +594,7 @@ raise SystemExit(main())
         @contextmanager
         def swap_parent_then_open(path, root):
             nonlocal junction_created
-            if path == junction / "contacts.csv":
+            if path.samefile(junction / "contacts.csv"):
                 junction.rename(saved)
                 created = subprocess.run(
                     ["cmd.exe", "/c", "mklink", "/J", str(junction), str(outside)],

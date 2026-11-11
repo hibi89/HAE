@@ -362,7 +362,8 @@ class WebUITests(unittest.TestCase):
         original_is_symlink = Path.is_symlink
 
         def mark_link(candidate):
-            return candidate == link or original_is_symlink(candidate)
+            return ((candidate.exists() and candidate.samefile(link))
+                    or original_is_symlink(candidate))
 
         with patch.object(Path, "is_symlink", mark_link):
             status, _, response = self.post_json("/api/preview", {

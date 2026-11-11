@@ -75,7 +75,7 @@ class NativeWindowsTests(unittest.TestCase):
         @contextmanager
         def swap_parent_then_open(path, root):
             nonlocal junction_created
-            if path == nested / "contacts.csv":
+            if path.samefile(nested / "contacts.csv"):
                 nested.rename(moved)
                 created = subprocess.run(
                     ["cmd.exe", "/d", "/c", "mklink", "/J",
