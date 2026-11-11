@@ -1,27 +1,20 @@
-name: LA P17-P18 isolated synthetic regression
+name: LA P17-P18 Windows focused backup diagnostics
 on:
   push:
-    branches:
-      - feature/la-p17-audit-evidence-20261112
+    branches: [feature/la-p17-audit-evidence-20261112]
     paths:
-      - 'packages/lightning-azent/**'
-      - 'apps/ax-flow/**'
+      - 'apps/ax-flow/tests/test_engine.py'
       - '.github/workflows/la-p17-p18-tests.yml'
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: la-p17-p18-${{ github.ref }}
+  group: la-p17-p18-diagnostic-${{ github.ref }}
   cancel-in-progress: true
 jobs:
-  la-local-synthetic:
-    name: LA synthetic / ${{ matrix.os }} / Py3.11
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 8
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
+  windows-backup-focused:
+    runs-on: windows-latest
+    timeout-minutes: 4
     steps:
       - uses: actions/checkout@v4
         with:
@@ -29,29 +22,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Pin exact checked out source
-        shell: bash
-        run: |
-          git rev-parse HEAD
-          git status --short
-      - name: Compile LA + HAE sources without writing tracked files
-        run: python -B -m compileall -q packages/lightning-azent apps/ax-flow/axflow
-      - name: Full original + P17/P18 Lightning Azent Python regression
+      - name: Print feature SHA
+        run: git rev-parse HEAD
+      - name: Verify Windows backup mutation and no-clobber
         env:
-          PYTHONPATH: ${{ github.workspace }}/packages/lightning-azent${{ runner.os == 'Windows' && ';' || ':' }}${{ github.workspace }}/apps/ax-flow
-        run: python -B -m unittest discover -s packages/lightning-azent/tests -v
-      - name: Focused SQLite backup source mutation regression
-        env:
-          PYTHONPATH: ${{ github.workspace }}/apps/ax-flow${{ runner.os == 'Windows' && ';' || ':' }}${{ github.workspace }}/packages/lightning-azent
+          PYTHONPATH: ${{ github.workspace }}/apps/ax-flow
         run: python -B -m unittest discover -s apps/ax-flow/tests -p test_engine.py -k backup_discards_snapshot_when_source_changes_before_publish -v
-      - name: Original HAE axflow regression
-        env:
-          PYTHONPATH: ${{ github.workspace }}/apps/ax-flow${{ runner.os == 'Windows' && ';' || ':' }}${{ github.workspace }}/packages/lightning-azent
-        run: python -B -m unittest discover -s apps/ax-flow/tests -v
-      - name: Build new-only deterministic synthetic LA zipapp
-        shell: bash
-        run: |
-          mkdir -p dist
-          python -B packages/lightning-azent/build_portable_p18.py --output dist/Lightning-Azent-0.1.0-synthetic-dev.pyz
-          python -B packages/lightning-azent/verify_portable_p18.py --archive dist/Lightning-Azent-0.1.0-synthetic-dev.pyz --sha256-file dist/Lightning-Azent-0.1.0-synthetic-dev.pyz.sha256
-          python -I -B dist/Lightning-Azent-0.1.0-synthetic-dev.pyz capabilities

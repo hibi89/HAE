@@ -256,7 +256,9 @@ raise SystemExit(main())
 
         def mutate_source_before_second_fingerprint(path):
             nonlocal source_fingerprints
-            if Path(path) == source:
+            # A Windows temp path can have a different canonical spelling;
+            # compare the actual file identity rather than lexical path text.
+            if Path(path).samefile(source):
                 source_fingerprints += 1
                 if source_fingerprints == 2:
                     with closing(sqlite3.connect(source)) as con:
@@ -268,8 +270,19 @@ raise SystemExit(main())
             return real_fingerprint(path)
 
         with patch("axflow.state_backup._fingerprint", side_effect=mutate_source_before_second_fingerprint):
-            with self.assertRaisesRegex(StateBackupError, "source changed during backup"):
-                backup_runtime_state(source, target)
+            try:
+                with self.assertRaisesRegex(StateBackupError, "source changed during backup"):
+                    backup_runtime_state(source, target)
+            except AssertionError as exc:
+                with closing(sqlite3.connect(source)) as con:
+                    actual_status = con.execute(
+                        "SELECT status FROM runs WHERE run_id=?", ("BackupSourceChange",)
+                    ).fetchone()
+                raise AssertionError(
+                    f"{exc}; path_matches={Path(state_backup._path(source)).samefile(source)}, "
+                    f"source_fingerprints={source_fingerprints}, "
+                    f"committed_status={actual_status}"
+                ) from exc
 
         self.assertEqual(source_fingerprints, 2)
         self.assertFalse(target.exists())
