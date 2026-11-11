@@ -501,6 +501,7 @@ async function testSavedWorkflowLateReplyDoesNotOverwriteManualEdit() {
   ui.respond(list, {available:true, recipe_count:1,
     recipes:[{recipe_id:"a".repeat(24),workflow:"csv_to_sqlite"}]});
   await ui.flush();
+  await new Promise((resolve) => setImmediate(resolve));
   const item = ui.get("#saved-workflows").children[0].children[0];
   const pending = item.fire("click");
   const request = ui.requests.find((r) => r.url.startsWith("/api/workflows/load?"));
@@ -527,6 +528,7 @@ async function testSavedWorkflowNewestClickWinsOutOfOrderReplies() {
       {recipe_id:"b".repeat(24),workflow:"csv_filtered_import"},
     ]});
   await ui.flush();
+  await new Promise((resolve) => setImmediate(resolve));
   const children = ui.get("#saved-workflows").children;
   assert.equal(children.length, 2);
   const old = children[0].children[0].fire("click");
