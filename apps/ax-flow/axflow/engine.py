@@ -1,8 +1,11 @@
 """Typed workflow subset and independent SQLite-backed execution (synthetic MVP)."""
 from __future__ import annotations
 
+import errno
 import hashlib
 import csv
+import os
+import stat
 import io
 import json
 import math
@@ -27,6 +30,58 @@ NUMBER_TEXT = re.compile(r"^[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-
 
 class PlanError(ValueError):
     """Invalid workflow specification or unsupported operation."""
+
+
+@contextmanager
+def _run_claim(state_path: Path, run_id: str):
+    """Bounded OS lock for one deterministic local SQLite run ID.
+
+    Prevent two threads/processes from concurrently evaluating the same
+    partially checkpointed run after the claim row was reserved. Lock files
+    persist (never unlink during execution), so a second opener cannot lock
+    a replacement inode. A crashed process releases the operating-system lock.
+    This is local-only, not a distributed or external-side-effect guarantee.
+    """
+    digest = hashlib.sha256(run_id.encode("ascii")).hexdigest()[:16]
+    lock_path = state_path.with_name(f"{state_path.name}.axrun-{digest}.lock")
+    if lock_path.is_symlink():
+        raise PlanError("SQLite run claim lock must not be a symbolic link")
+    flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0)
+    flags |= getattr(os, "O_NONBLOCK", 0)
+    fd = os.open(lock_path, flags, 0o600)
+    with os.fdopen(fd, "r+b", buffering=0) as handle:
+        info = os.fstat(handle.fileno())
+        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+            raise PlanError("SQLite run claim lock must be a regular single-link file")
+        if handle.seek(0, os.SEEK_END) == 0:
+            handle.write(b"\\0")
+        deadline = time.monotonic() + 5.0
+        while True:
+            handle.seek(0)
+            try:
+                if os.name == "nt":
+                    import msvcrt
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+                else:
+                    import fcntl
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except OSError as exc:
+                if exc.errno not in (errno.EACCES, errno.EAGAIN):
+                    raise
+                if time.monotonic() >= deadline:
+                    raise StepTimeout("SQLite run claim lock exceeded its bounded wait") from exc
+                time.sleep(0.01)
+        try:
+            yield
+        finally:
+            handle.seek(0)
+            if os.name == "nt":
+                import msvcrt
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
 class ApprovalRequired(RuntimeError):
@@ -283,6 +338,13 @@ class Engine:
             raise PlanError("CSV workflows require an explicit --input-root")
         if any(s["op"] in {"sqlite_put", "sqlite_import_csv"} for s in plan["steps"]) and not approve_writes:
             raise ApprovalRequired("explicit --approve-writes required for local SQLite writes")
+        # Every attempt for the same run_id uses the same local OS lock.
+        # Approval and input validation remain side-effect-free before here.
+        with _run_claim(self.state_path, run_id):
+            return self._execute_claimed(plan, run_id, inject_stop_after_business)
+
+    def _execute_claimed(self, plan: dict, run_id: str,
+                         inject_stop_after_business: bool) -> object:
         digest = hashlib.sha256(canonical_json(plan).encode("utf-8")).hexdigest()
         with self._state() as con:
             # Reserve the claim transaction before reading so simultaneous processes
