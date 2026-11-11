@@ -1,3 +1,5 @@
+> **2026-11-11 KST CI 최종 판정 보정:** 기능 SHA `4f19b367f0573a553b0f89965dca7fab32a5c09d`의 [GitHub Actions #42972148842](https://github.com/hibi89/HAE/actions/runs/42972148842)는 **Windows/Ubuntu 둘 다 최종 FAILURE**, 공통 `Verify synthetic end-to-end Python suite` 단계 실패. 따라서 기존 문서의 "Windows 판정 대기"는 과거 중간 조회이며 최신 결과로 대체. 전체 CI PASS 또는 신규 14개 테스트가 Windows Native에서 PASS했다고 단정 금지. 73% 잠정/RELEASE HOLD 유지.
+
 # HAE P3 synthetic offline SQLite schema and Windows console diagnostics (2026-11-11 KST)
 
 ## Decision and boundary
