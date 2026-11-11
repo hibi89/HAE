@@ -9,6 +9,11 @@ const connection = document.querySelector("#connection");
 const message = document.querySelector("#message");
 const resultCard = document.querySelector("#result-card");
 const workflowPreset = document.querySelector("#workflow-preset");
+const catalogSaveConsent = document.querySelector("#workflow-save-consent");
+const catalogSaveButton = document.querySelector("#save-workflow");
+const catalogStatus = document.querySelector("#workflow-catalog-status");
+const catalogRefresh = document.querySelector("#refresh-workflows");
+const savedWorkflowsList = document.querySelector("#saved-workflows");
 const resultStatus = document.querySelector("#result-status");
 const resultTitle = document.querySelector("#result-title");
 const resultCopy = document.querySelector("#result-copy");
@@ -65,6 +70,8 @@ let dbvoraRequestVersion = 0;
 let assetAttestationVersion = 0;
 let registryReviewSha = "";
 let registryWriteInProgress = false;
+let catalogSaveInProgress = false;
+let catalogListVersion = 0;
 
 function requestKey() {
   return JSON.stringify([taskInput.value, csvInput.value]);
@@ -79,6 +86,7 @@ function updateRunButton() {
   approvalSection.hidden = !requiresApproval;
   runButton.disabled = executionInProgress || uploadInProgress || !previewKey || !previewId ||
     previewKey !== requestKey() || (requiresApproval && !approvalInput.checked);
+  updateCatalogSaveButton();
 }
 
 async function api(path, options = {}) {
@@ -528,6 +536,90 @@ function updateRegistryButton() {
     !registryConsent.checked || !/^[a-f0-9]{64}$/.test(registryReviewSha);
 }
 
+function updateCatalogSaveButton() {
+  catalogSaveButton.disabled = catalogSaveInProgress || executionInProgress ||
+    uploadInProgress || !catalogSaveConsent.checked || !previewId ||
+    previewKey !== requestKey();
+}
+
+async function loadSavedWorkflows() {
+  const version = ++catalogListVersion;
+  try {
+    const payload = await api("/api/workflows");
+    if (version !== catalogListVersion) return;
+    clearChildren(savedWorkflowsList);
+    if (payload.available !== true || !Array.isArray(payload.recipes)) {
+      catalogStatus.textContent = payload.error_code === "NOT_CONFIGURED"
+        ? "로컬 워크플로 저장소 미설정 · 저장 기능 비활성"
+        : "저장소 조회 불가";
+      return;
+    }
+    catalogStatus.textContent = "로컬 워크플로 " + payload.recipes.length + "개 · 실행 승인은 저장되지 않음";
+    for (const item of payload.recipes) {
+      if (typeof item.recipe_id !== "string" || !/^[a-f0-9]{24}$/.test(item.recipe_id)) continue;
+      const entry = document.createElement("li");
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "text-button";
+      button.textContent = "다시 열기 · " + item.recipe_id.slice(0, 12);
+      button.addEventListener("click", async () => {
+        if (executionInProgress) return;
+        try {
+          const recalled = await api("/api/workflows/load?recipe_id=" + item.recipe_id);
+          if (executionInProgress) return;
+          if (typeof recalled.task !== "string" || typeof recalled.csv_path !== "string" ||
+              recalled.needs_new_preview !== true || recalled.write_approved !== false) {
+            throw new Error("invalid saved recipe");
+          }
+          taskInput.value = recalled.task;
+          csvInput.value = recalled.csv_path;
+          workflowPreset.value = "";
+          invalidateEditedWorkflow();
+          setMessage("저장된 작업을 불러왔습니다. 현재 CSV로 다시 미리보기·승인 후 실행하세요.", "success");
+        } catch {
+          catalogStatus.textContent = "저장된 작업을 열 수 없습니다 · 원본 CSV 변경 여부 확인";
+        }
+      });
+      entry.appendChild(button);
+      savedWorkflowsList.appendChild(entry);
+    }
+  } catch {
+    if (version === catalogListVersion) {
+      catalogStatus.textContent = "로컬 워크플로 저장소를 조회할 수 없습니다";
+    }
+  }
+}
+
+async function saveReviewedWorkflow() {
+  if (catalogSaveInProgress || !catalogSaveConsent.checked || !previewId ||
+      previewKey !== requestKey() || executionInProgress) return;
+  const savedKey = previewKey;
+  const request = { task: taskInput.value, csv_path: csvInput.value,
+                    preview_id: previewId, approve_workflow_save: true };
+  catalogSaveInProgress = true;
+  updateCatalogSaveButton();
+  try {
+    const outcome = await api("/api/workflows/save", {
+      method: "POST", body: JSON.stringify(request),
+    });
+    if (savedKey === requestKey()) {
+      catalogStatus.textContent = (outcome.status === "SAVED" ||
+          outcome.status === "ALREADY_SAVED")
+        ? "합성 자동화 저장 완료 · 실행 승인 아님"
+        : "저장 보류";
+      loadSavedWorkflows();
+    }
+  } catch {
+    if (savedKey === requestKey()) {
+      catalogStatus.textContent = "워크플로 저장 실패 · 미리보기 또는 CSV 변경 여부 확인";
+    }
+  } finally {
+    catalogSaveInProgress = false;
+    catalogSaveConsent.checked = false;
+    updateCatalogSaveButton();
+  }
+}
+
 async function loadAssetRegistry() {
   try {
     const status = await api("/api/asset-registry");
@@ -683,6 +775,7 @@ function invalidateEditedWorkflow() {
   previewId = "";
   requiresApproval = true;
   approvalInput.checked = false;
+  catalogSaveConsent.checked = false;
   updateRunButton();
   resultCard.hidden = true;
   previewDetail.hidden = true;
@@ -908,7 +1001,12 @@ dbvoraRefreshButton.addEventListener("click", loadDbvora);
 assetVerifyButton.addEventListener("click", verifyDbvoraAsset);
 registryConsent.addEventListener("change", updateRegistryButton);
 registryRegisterButton.addEventListener("click", registerReviewedAsset);
+catalogSaveConsent.addEventListener("change", updateCatalogSaveButton);
+catalogSaveButton.addEventListener("click", saveReviewedWorkflow);
+catalogRefresh.addEventListener("click", loadSavedWorkflows);
 updateRegistryButton();
+updateCatalogSaveButton();
+loadSavedWorkflows();
 loadAssetRegistry();
 
 checkConnection();

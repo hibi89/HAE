@@ -29,6 +29,10 @@ from .asset_attestation import AssetAttestationError, attest_synthetic_dbvora_as
 from .asset_registry import (
     AssetRegistryError, read_synthetic_registry, register_synthetic_asset,
 )
+from .workflow_catalog import (
+    WorkflowCatalogError, list_synthetic_workflows,
+    save_synthetic_workflow, load_synthetic_workflow,
+)
 from .sovia_adapter import SOVIAUnavailable, reconcile as reconcile_sovia
 from .sovia_store import SOVIAStore, SOVIAStoreError
 from .planner import plan_request, requires_write_approval, workflow_name
@@ -92,6 +96,7 @@ def create_server(
     dbvora_url: str | None = None,
     dbvora_asset_source: Path | None = None,
     asset_registry_path: Path | None = None,
+    workflow_catalog_path: Path | None = None,
     synthetic_asset_allowed: bool = False,
     engine_backend: str = "axflow",
     sovia_root: Path | None = None,
@@ -132,6 +137,22 @@ def create_server(
             read_synthetic_registry(registry, synthetic=True)
         except AssetRegistryError as exc:
             raise PlanError("asset registry is unavailable or not initialized") from exc
+    catalog = None
+    if workflow_catalog_path is not None:
+        if synthetic_asset_allowed is not True:
+            raise PlanError("synthetic workflow catalog must be explicitly enabled")
+        catalog = Path(workflow_catalog_path).expanduser()
+        prohibited = {state, business}
+        if registry is not None:
+            prohibited.add(registry.resolve(strict=False))
+        if asset_source is not None:
+            prohibited.add(asset_source.resolve(strict=False))
+        if not catalog.is_absolute() or catalog.resolve(strict=False) in prohibited:
+            raise PlanError("workflow catalog must be an independent absolute file")
+        try:
+            list_synthetic_workflows(catalog, synthetic=True)
+        except WorkflowCatalogError as exc:
+            raise PlanError("synthetic workflow catalog unavailable or not initialized") from exc
 
     def backend_info(plan: dict) -> dict[str, object]:
         if engine_backend == "lightning-azent":
@@ -297,6 +318,36 @@ def create_server(
                 else:
                     self._send_json(200, report)
                 return
+            if parsed.path == "/api/workflows":
+                if parsed.query:
+                    self._send_json(400, {"error": "workflow list takes no query"})
+                    return
+                if catalog is None:
+                    self._send_json(200, {"available": False, "error_code": "NOT_CONFIGURED",
+                                          "release_gate": "HOLD"})
+                else:
+                    try:
+                        workflows = list_synthetic_workflows(catalog, synthetic=True)
+                        self._send_json(200, {"available": True, **workflows})
+                    except WorkflowCatalogError:
+                        self._send_json(200, {"available": False, "error_code": "WORKFLOW_CATALOG_HOLD",
+                                              "release_gate": "HOLD"})
+                return
+            if parsed.path == "/api/workflows/load":
+                query = parse_qs(parsed.query, keep_blank_values=True)
+                ids = query.get("recipe_id", [])
+                if set(query) != {"recipe_id"} or len(ids) != 1 or re.fullmatch(r"[0-9a-f]{24}", ids[0]) is None:
+                    self._send_json(400, {"error": "valid workflow recipe ID required"})
+                elif catalog is None:
+                    self._send_json(404, {"error": "local workflow catalog not configured"})
+                else:
+                    try:
+                        loaded = load_synthetic_workflow(catalog, ids[0], root,
+                                                          synthetic=True)
+                        self._send_json(200, loaded)
+                    except WorkflowCatalogError:
+                        self._send_json(409, {"error": "saved workflow source changed or unavailable"})
+                return
             if parsed.path == "/api/asset-registry":
                 if parsed.query:
                     self._send_json(400, {"error": "asset registry accepts no query"})
@@ -346,7 +397,7 @@ def create_server(
             parsed = urlsplit(self.path)
             route = parsed.path
             if route not in {"/api/upload", "/api/preview", "/api/run",
-                             "/api/asset-registry/register"}:
+                             "/api/asset-registry/register", "/api/workflows/save"}:
                 self._send_json(404, {"error": "route not found"})
                 return
             run_id = None
@@ -370,6 +421,36 @@ def create_server(
                 body = self._read_json(
                     max_bytes=MAX_UPLOAD_BODY_BYTES if route == "/api/upload" else MAX_BODY_BYTES
                 )
+                if route == "/api/workflows/save":
+                    if parsed.query:
+                        raise RequestError(400, "workflow save takes no query")
+                    self._require_fields(body, {"task", "csv_path", "preview_id",
+                                                "approve_workflow_save"})
+                    if catalog is None:
+                        raise RequestError(409, "workflow catalog is not configured")
+                    if body["approve_workflow_save"] is not True:
+                        raise RequestError(403, "explicit local workflow-save consent required")
+                    token = body["preview_id"]
+                    task = body["task"]
+                    source_file = body["csv_path"]
+                    if (not isinstance(token, str) or _PREVIEW_ID.fullmatch(token) is None
+                            or not isinstance(task, str) or not isinstance(source_file, str)):
+                        raise RequestError(400, "invalid workflow save review")
+                    preview = self.server.get_preview(token, task, source_file)
+                    if preview is None:
+                        raise RequestError(409, "a current matching preview is required")
+                    try:
+                        plan = plan_request(task, source_file)
+                        if str(backend_info(plan)["capability_fingerprint"]) != preview[2]:
+                            raise RequestError(409, "workflow backend changed after preview")
+                        receipt = save_synthetic_workflow(
+                            catalog, root, task, source_file, preview[1],
+                            synthetic=True, approve_save=True,
+                        )
+                    except WorkflowCatalogError:
+                        raise RequestError(409, "workflow source changed or is unsafe") from None
+                    self._send_json(200, receipt)
+                    return
                 if route == "/api/asset-registry/register":
                     if parsed.query:
                         raise RequestError(400, "registry registration accepts no query")

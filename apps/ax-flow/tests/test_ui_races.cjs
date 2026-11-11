@@ -446,6 +446,55 @@ async function testPresetCannotChangeTaskDuringExecution() {
   await running;
 }
 
+async function testSavedWorkflowRequiresPreviewAndOwnerSaveConsent() {
+  const ui = setup();
+  const button = ui.get("#save-workflow");
+  assert.equal(button.disabled, true);
+  assert.equal(ui.requests.filter(r => r.url === "/api/workflows/save").length, 0);
+  ui.get("#task").value = "Import this CSV into local SQLite";
+  ui.get("#csv-path").value = "data.csv";
+  const preview = ui.get("#preview").fire("click");
+  const request = ui.requests.find(r => r.url === "/api/preview");
+  ui.respond(request, {plan:{steps:[]},preview_id:"0123456789abcdef0123456789abcdef",
+    requires_approval:true,workflow:"csv_to_sqlite",engine_backend:{name:"HAE"}});
+  await preview;
+  assert.equal(button.disabled, true);
+  ui.get("#workflow-save-consent").checked = true;
+  await ui.get("#workflow-save-consent").fire("change");
+  assert.equal(button.disabled, false);
+  const saving = button.fire("click");
+  await button.fire("click");
+  const calls = ui.requests.filter(r => r.url === "/api/workflows/save");
+  assert.equal(calls.length, 1);
+  assert.equal(JSON.parse(calls[0].options.body).approve_workflow_save, true);
+  ui.respond(calls[0], {status:"SAVED",needs_new_preview:true});
+  await saving;
+  assert.equal(button.disabled, true);
+  assert.equal(ui.get("#workflow-save-consent").checked, false);
+  assert.match(ui.get("#workflow-catalog-status").textContent, /저장 완료/);
+}
+
+async function testSavedWorkflowReloadRequiresFreshPreview() {
+  const ui = setup();
+  const req = ui.requests.find(r => r.url === "/api/workflows");
+  assert.ok(req);
+  ui.respond(req, {available:true,recipe_count:1,recipes:[
+    {recipe_id:"abcdef012345abcdef012345",workflow:"csv_to_sqlite"}
+  ]});
+  await ui.flush();
+  await new Promise(resolve => setImmediate(resolve));
+  const entries = ui.get("#saved-workflows").children;
+  assert.equal(entries.length, 1);
+  const recall = entries[0].children[0].fire("click");
+  const load = ui.requests.find(r => r.url.startsWith("/api/workflows/load?"));
+  ui.respond(load, {task:"이 CSV 파일을 로컬 SQLite에 저장해줘",
+    csv_path:"data.csv",needs_new_preview:true,write_approved:false});
+  await recall;
+  assert.equal(ui.get("#csv-path").value, "data.csv");
+  assert.equal(ui.get("#run").disabled, true);
+  assert.equal(ui.get("#approval").checked, false);
+  assert.match(ui.get("#message").textContent, /미리보기/);
+}
 async function testDbvoraNewestResponseWins() {
   const ui = setup();
   const button = ui.get("#refresh-dbvora");
@@ -463,6 +512,8 @@ async function testDbvoraNewestResponseWins() {
 (async () => {
   await testRunRejectsMissingPreviewToken();
   await testDbvoraNewestResponseWins();
+  await testSavedWorkflowRequiresPreviewAndOwnerSaveConsent();
+  await testSavedWorkflowReloadRequiresFreshPreview();
   await testPresetSelectionNeedsNewReviewAndApproval();
   await testPresetCannotChangeTaskDuringExecution();
   await testAssetProofManualOnlyAndLatestResponseWins();
@@ -481,5 +532,5 @@ async function testDbvoraNewestResponseWins() {
   await testResumePreviewRejectsInvalidRunIdWithoutRequest();
   await testLiveReceiptRendersRedactedLaEvents();
   await testHistoryRestoresLaAuditWithoutSovia();
-  console.log("HAE simulated UI race tests: 20 PASS");
+  console.log("HAE simulated UI race tests: 22 PASS");
 })().catch((error) => { console.error(error); process.exitCode = 1; });

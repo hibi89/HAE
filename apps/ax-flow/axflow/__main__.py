@@ -46,6 +46,8 @@ def main() -> int:
                    help="serve only; explicit absolute synthetic SQLite path for read-only DBVORA asset verification")
     p.add_argument("--asset-registry", type=Path,
                    help="serve only; existing owner-initialized synthetic metadata registry")
+    p.add_argument("--workflow-catalog", type=Path,
+                   help="serve only; existing owner-initialized local synthetic workflow recipes")
     p.add_argument("--sovia-root", type=Path, help="optional local SOVIA source directory for post-execution advisory reconciliation")
     p.add_argument("--engine-backend", choices=("axflow", "lightning-azent"), default="axflow",
                    help="serve only; Lightning Azent is an explicit synthetic development backend")
@@ -55,7 +57,7 @@ def main() -> int:
     try:
         if not a.synthetic:
             raise PlanError("MVP restricted to synthetic fixtures; include --synthetic")
-        if a.command != "serve" and (a.dbvora_url is not None or a.dbvora_asset_source is not None or a.asset_registry is not None or a.sovia_root is not None):
+        if a.command != "serve" and (a.dbvora_url is not None or a.dbvora_asset_source is not None or a.asset_registry is not None or a.workflow_catalog is not None or a.sovia_root is not None):
             raise PlanError("--dbvora-url and --sovia-root are only valid with serve")
         if a.command != "serve" and a.engine_backend != "axflow":
             raise PlanError("--engine-backend is only valid with serve")
@@ -78,6 +80,7 @@ def main() -> int:
                 a.input_root, a.state, a.data, port=a.port, dbvora_url=a.dbvora_url,
                 dbvora_asset_source=a.dbvora_asset_source,
                 asset_registry_path=a.asset_registry,
+                workflow_catalog_path=a.workflow_catalog,
                 synthetic_asset_allowed=a.synthetic,
                 engine_backend=a.engine_backend, sovia_root=a.sovia_root,
             )

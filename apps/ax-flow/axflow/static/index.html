@@ -89,6 +89,17 @@
         </label>
         <button id="run" class="button button-primary" type="button" disabled>검증 후 실행</button>
         <p id="message" class="message" role="status" aria-live="polite"></p>
+        <div class="divider"></div>
+        <h3>검증한 합성 자동화 저장·다시 사용</h3>
+        <p class="hint">별도 로컬 저장소를 미리 초기화한 경우에만 이용할 수 있습니다. 작업 설명과 상대 CSV 경로, SHA 해시만 로컬에 저장하며 실행 승인이나 데이터 행은 저장하지 않습니다.</p>
+        <label class="approval" for="workflow-save-consent">
+          <input id="workflow-save-consent" type="checkbox">
+          <span>현재 미리보기를 로컬 워크플로 저장소에 보관하는 데 동의합니다.</span>
+        </label>
+        <button id="save-workflow" class="text-button" type="button" disabled>검증한 작업 흐름 저장</button>
+        <p id="workflow-catalog-status" class="hint" role="status" aria-live="polite">워크플로 저장소 조회 중…</p>
+        <button id="refresh-workflows" class="text-button" type="button">저장된 작업 새로고침</button>
+        <ul id="saved-workflows" class="recent-runs-list" aria-label="로컬 저장된 합성 자동화"></ul>
       </section>
 
       <section class="history-card" aria-labelledby="history-title">
