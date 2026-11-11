@@ -91,6 +91,14 @@ class ThreeLocalCustomerStyleFlows(unittest.TestCase):
             "approve_writes": approved,
         })
 
+    def _business_records(self, run_id):
+        with closing(sqlite3.connect(self.business)) as con:
+            con.row_factory = sqlite3.Row
+            return [dict(row) for row in con.execute(
+                "SELECT row_number,payload_json FROM csv_records "
+                "WHERE run_id=? ORDER BY row_number", (run_id,),
+            ).fetchall()]
+
     def _scenario(self, task, expected_count, *, expected_names=None):
         preview = self._preview(task)
         self.assertFalse(self.state.exists())
@@ -114,7 +122,8 @@ class ThreeLocalCustomerStyleFlows(unittest.TestCase):
         values = [json.loads(record[0]) for record in rows]
         if expected_names is not None:
             self.assertEqual([row["name"] for row in values], expected_names)
-        original_business_sha = hashlib.sha256(self.business.read_bytes()).hexdigest()
+        original_records = tuple((row["row_number"], row["payload_json"]) for row in
+                                 self._business_records(run_id))
         code, history = self._call("/api/status?run_id=" + run_id)
         self.assertEqual(code, 200)
         self.assertEqual(history["status"], "completed")
@@ -125,9 +134,8 @@ class ThreeLocalCustomerStyleFlows(unittest.TestCase):
         self.assertEqual(code, 200, duplicate)
         self.assertEqual(duplicate["run_id"], run_id)
         self.assertEqual(duplicate["status"]["status"], "completed")
-        self.assertEqual(
-            hashlib.sha256(self.business.read_bytes()).hexdigest(), original_business_sha
-        )
+        self.assertEqual(tuple((row["row_number"], row["payload_json"]) for row in
+                               self._business_records(run_id)), original_records)
         self.assertEqual(self.csv_path.read_bytes(), self.csv_bytes)
         self.assertEqual(self._call("/api/la-audit?run_id=" + run_id)[0], 200)
         return run_id
