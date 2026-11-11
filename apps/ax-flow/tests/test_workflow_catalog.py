@@ -1,6 +1,7 @@
 """Local owner-controlled synthetic recipe persistence and fail-closed reload."""
 from __future__ import annotations
 
+from contextlib import closing
 import hashlib
 import json
 import subprocess
@@ -108,7 +109,7 @@ class SyntheticWorkflowCatalogTests(unittest.TestCase):
 
     def test_unsupported_version_refused_without_migration(self):
         self.init()
-        with sqlite3.connect(self.catalog) as db:
+        with closing(sqlite3.connect(self.catalog)) as db, db:
             db.execute("PRAGMA user_version=99")
         with self.assertRaises(WorkflowCatalogError):
             self.save()
