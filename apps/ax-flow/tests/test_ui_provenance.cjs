@@ -57,6 +57,11 @@ async function main() {
     },
   };
 
+  let assetPayload = {
+    available: true, provider_protocol_verified: true, source_sha256: "a".repeat(64),
+    table_count: 2, source_path: "C:\\private\\should-not-display.sqlite",
+  };
+
   let payload = {
     available: true,
     db_id: "0123456789abcdef01234567",
@@ -80,6 +85,9 @@ async function main() {
     if (url === "/api/dbvora") {
       return { ok: true, status: 200, json: async () => payload };
     }
+    if (url === "/api/dbvora-asset") {
+      return { ok: true, status: 200, json: async () => assetPayload };
+    }
     throw new Error("Unexpected test request: " + url);
   };
 
@@ -93,6 +101,16 @@ async function main() {
   assert.doesNotMatch(provenance.textContent, /customer\.db|onerror|<img/i);
   assert.equal(provenance.children.length, 0, "untrusted provenance must not create DOM nodes");
 
+  await elements.get("#verify-dbvora-asset").listeners.click();
+  const evidence = elements.get("#dbvora-asset-attestation");
+  assert.match(evidence.textContent, /합성 DB 메타데이터 일치 확인/);
+  assert.match(evidence.textContent, /SHA256 a{12}/);
+  assert.doesNotMatch(evidence.textContent, /customer\.db|should-not-display|private/i);
+  assetPayload = { available: false, error_code: "ASSET_ATTESTATION_HOLD" };
+  await elements.get("#verify-dbvora-asset").listeners.click();
+  assert.match(evidence.textContent, /검증 보류/);
+  assert.doesNotMatch(evidence.textContent, /합성 DB 메타데이터 일치 확인/);
+
   payload = {
     available: false,
     error_code: "UNAVAILABLE",
@@ -100,6 +118,7 @@ async function main() {
   };
   await elements.get("#refresh-dbvora").listeners.click();
   assert.equal(provenance.textContent, "", "offline refresh must clear previously shown provenance");
+  assert.match(evidence.textContent, /검증 미실행/, "DBVORA refresh invalidates prior asset proof");
   assert.match(elements.get("#dbvora-status").className, /offline/);
   assert.match(elements.get("#dbvora-status").textContent, /꺼져 있거나 연결할 수 없습니다/);
 

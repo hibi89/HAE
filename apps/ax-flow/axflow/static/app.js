@@ -23,6 +23,8 @@ const dbvoraProvenance = document.querySelector("#dbvora-provenance");
 const dbvoraTables = document.querySelector("#dbvora-tables");
 const dbvoraRelations = document.querySelector("#dbvora-relations");
 const dbvoraRefreshButton = document.querySelector("#refresh-dbvora");
+const assetAttestation = document.querySelector("#dbvora-asset-attestation");
+const assetVerifyButton = document.querySelector("#verify-dbvora-asset");
 const previewDetail = document.querySelector("#preview-detail");
 const previewImpact = document.querySelector("#preview-impact");
 const approvalImpact = document.querySelector("#approval-impact");
@@ -56,6 +58,7 @@ let previewRequestVersion = 0;
 let uploadInProgress = false;
 let executionInProgress = false;
 let dbvoraRequestVersion = 0;
+let assetAttestationVersion = 0;
 
 function requestKey() {
   return JSON.stringify([taskInput.value, csvInput.value]);
@@ -417,6 +420,8 @@ function describeDbvoraProvenance(result) {
 }
 
 function renderDbvora(result) {
+  ++assetAttestationVersion;
+  assetAttestation.textContent = "선택한 합성 DB 자산 일치 검증 미실행";
   clearChildren(dbvoraTables);
   clearChildren(dbvoraRelations);
   if (!result.available) {
@@ -472,6 +477,35 @@ function renderDbvora(result) {
     relationList.appendChild(item);
   }
   dbvoraRelations.appendChild(relationList);
+}
+
+async function verifyDbvoraAsset() {
+  // Explicit user click only: never auto-probe an owner-selected DB on page load.
+  const version = ++assetAttestationVersion;
+  assetVerifyButton.disabled = true;
+  assetAttestation.textContent = "로컬 합성 DB 자산 일치 검증 중…";
+  try {
+    const proof = await api("/api/dbvora-asset");
+    if (version !== assetAttestationVersion) return;
+    if (proof.available === true && proof.provider_protocol_verified === true &&
+        typeof proof.source_sha256 === "string" && /^[a-f0-9]{64}$/.test(proof.source_sha256) &&
+        Number.isInteger(proof.table_count) && proof.table_count >= 1) {
+      // Do not display provider-supplied paths, SQL, identifiers or free text.
+      assetAttestation.textContent = "합성 DB 메타데이터 일치 확인 · 테이블 " +
+        proof.table_count + "개 · SHA256 " + proof.source_sha256.slice(0, 12) +
+        "… · 실제 고객/DBVORA 프로세스 인증은 미검증";
+    } else if (proof.error_code === "NOT_LINKED") {
+      assetAttestation.textContent = "소유자 지정 합성 DB 미연결 · 실행 시 --dbvora-asset-source 설정 필요";
+    } else {
+      assetAttestation.textContent = "자산 일치 검증 보류 · 연결 또는 메타데이터를 확인하세요";
+    }
+  } catch {
+    if (version === assetAttestationVersion) {
+      assetAttestation.textContent = "HAE 자산 검증 API를 확인할 수 없습니다";
+    }
+  } finally {
+    if (version === assetAttestationVersion) assetVerifyButton.disabled = false;
+  }
 }
 
 async function loadDbvora() {
@@ -790,6 +824,7 @@ historyCopyButton.addEventListener("click", async () => {
 });
 
 dbvoraRefreshButton.addEventListener("click", loadDbvora);
+assetVerifyButton.addEventListener("click", verifyDbvoraAsset);
 
 checkConnection();
 loadDbvora();

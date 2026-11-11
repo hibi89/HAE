@@ -321,6 +321,24 @@ async function testHistoryRestoresLaAuditWithoutSovia() {
   assert.equal(ui.get("#la-audit-events").children.length, 1);
   assert.ok(ui.get("#la-audit-result").textContent.includes("이벤트 3건"));
 }
+async function testAssetProofManualOnlyAndLatestResponseWins() {
+  const ui = setup();
+  assert.equal(ui.requests.filter((r) => r.url === "/api/dbvora-asset").length, 0,
+    "asset attestation must never run automatically on page load");
+  const button = ui.get("#verify-dbvora-asset");
+  const first = button.fire("click");
+  const second = button.fire("click");
+  const calls = ui.requests.filter((r) => r.url === "/api/dbvora-asset");
+  assert.equal(calls.length, 2);
+  ui.respond(calls[1], { available: false, error_code: "ASSET_ATTESTATION_HOLD" });
+  await second;
+  ui.respond(calls[0], { available: true, provider_protocol_verified: true,
+    source_sha256: "a".repeat(64), table_count: 2 });
+  await first;
+  assert.match(ui.get("#dbvora-asset-attestation").textContent, /검증 보류/);
+  assert.equal(button.disabled, false);
+}
+
 async function testDbvoraNewestResponseWins() {
   const ui = setup();
   const button = ui.get("#refresh-dbvora");
@@ -338,6 +356,7 @@ async function testDbvoraNewestResponseWins() {
 (async () => {
   await testRunRejectsMissingPreviewToken();
   await testDbvoraNewestResponseWins();
+  await testAssetProofManualOnlyAndLatestResponseWins();
   await testPreviewStaleFailure();
   await testExecutionIsSingleFlightAndNeedsFreshPreview();
   await testHistoryStaleFailure();
@@ -350,5 +369,5 @@ async function testDbvoraNewestResponseWins() {
   await testResumePreviewRejectsInvalidRunIdWithoutRequest();
   await testLiveReceiptRendersRedactedLaEvents();
   await testHistoryRestoresLaAuditWithoutSovia();
-  console.log("HAE simulated UI race tests: 14 PASS");
+  console.log("HAE simulated UI race tests: 15 PASS");
 })().catch((error) => { console.error(error); process.exitCode = 1; });
