@@ -1,3 +1,9 @@
+## 2026-11-12 P17/P18 — unverified 85%-target development, 70% credited / RELEASE HOLD
+
+A private Draft PR [#2](https://github.com/hibi89/HAE/pull/2) contains stronger completed HAE evidence and cached LA replay integrity guards, plus a deterministic unsigned synthetic `.pyz` builder/verifier and 21 new intended negative/E2E/package tests. **No full test run has executed on the new source SHA yet, so 85% is NOT claimed; credited progress remains 70%.** Existing `feature/lightning-azent` is unchanged. Run `python packages/lightning-azent/verify_local.py --expected-branch feature/la-p17-audit-evidence-20261112` on the exact clean feature checkout and verify PASS/FAIL/SKIP before changing readiness. New package: `build_portable_p18.py --output NEW_DIR/Lightning-Azent-0.1.0-synthetic-dev.pyz`, then `verify_portable_p18.py --archive ... --sha256-file ...`; it is **unsigned/non-release/no customer data**. [Exact gates and limitations](../../docs/lightning-azent/LA_P17_P18_EVIDENCE_AND_85_GATES_20261112.md).
+
+---
+
 ## Lightning Azent v0.1 native interface — Windows-verified MVP slice (2026-10-28 KST)
 
 ### Owner acceleration & plan-only preflight (2026-10-28)
