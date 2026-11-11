@@ -27,6 +27,8 @@ class FakeExecutor:
     def __init__(self):
         self.calls = []
         self.caps = capabilities()
+        self.step_count = 5
+        self.approval_receipts = []
 
     def capabilities(self):
         return self.caps
@@ -41,16 +43,24 @@ class FakeExecutor:
 
     def verify_receipts(self, plan, run_id):
         self.calls.append(('verify', run_id))
-        return {'verified': True}
+        return {'run_id': run_id, 'verified': True}
 
     def status(self, run_id):
         return {'run_id': run_id, 'status': 'completed',
-                'plan_sha256': self.valid_sha, 'steps_recorded': 5,
-                'step_outcomes': {'completed': 4, 'skipped': 1,
-                                  'failed': 0, 'running': 0}}
+                'plan_sha256': self.valid_sha, 'steps_recorded': self.step_count,
+                'step_outcomes': {'completed': self.step_count - 1, 'skipped': 1,
+                                  'failed': 0, 'running': 0}, 'error_type': None}
 
     def audit(self, run_id):
-        return {'events': []}
+        return {
+            'run_id': run_id, 'plan_sha256': self.valid_sha,
+            'events': [
+                {'event_type': 'run_started', 'occurred_at': '2026-11-12T00:00:00Z', 'details': {}},
+                {'event_type': 'run_completed', 'occurred_at': '2026-11-12T00:00:01Z',
+                 'details': {'step_count': self.step_count, 'output_sha256': 'a' * 64}},
+            ],
+            'approval_receipts': self.approval_receipts,
+        }
 
 
 class BridgeTests(unittest.TestCase):
@@ -203,6 +213,99 @@ class BridgeTests(unittest.TestCase):
                     **real_status(run_id), 'step_outcomes': bad}
                 with self.assertRaisesRegex(PlanError, 'step ledger'):
                     self.bridge.evidence(self.read, 'RunA')
+
+
+    def test_wrong_run_receipt_is_rejected(self):
+        self.executor.verify_receipts = lambda *args: {'verified': True, 'run_id': 'other'}
+        with self.assertRaisesRegex(PlanError, 'bind this run'):
+            self.bridge.evidence(self.read, 'RunA')
+
+    def test_wrong_run_audit_and_absent_completion_are_rejected(self):
+        real = self.executor.audit('RunA')
+        cases = [None, {}, {**real, 'run_id': 'other'},
+                 {**real, 'plan_sha256': '0' * 64},
+                 {**real, 'events': []},
+                 {**real, 'events': [real['events'][0]]},
+                 {**real, 'events': real['events'] + [
+                     {'event_type': 'run_failed', 'occurred_at': 'later', 'details': {}}]}]
+        for candidate in cases:
+            with self.subTest(candidate=candidate):
+                self.executor.audit = lambda _, candidate=candidate: candidate
+                with self.assertRaises(PlanError):
+                    self.bridge.evidence(self.read, 'RunA')
+
+    def test_corrupt_completion_metadata_refused(self):
+        original = self.executor.audit('RunA')
+        cases = [{'step_count': 0, 'output_sha256': 'a'*64},
+                 {'step_count': True, 'output_sha256': 'a'*64},
+                 {'step_count': 5, 'output_sha256': 'invalid'},
+                 {'step_count': 5, 'output_sha256': 'g'*64}]
+        for bad in cases:
+            with self.subTest(bad=bad):
+                changed = deepcopy(original)
+                changed['events'][-1]['details'] = bad
+                self.executor.audit = lambda _, changed=changed: changed
+                with self.assertRaisesRegex(PlanError, 'completion event'):
+                    self.bridge.evidence(self.read, 'RunA')
+
+    def test_malformed_event_fails_closed(self):
+        original = self.executor.audit('RunA')
+        for event in (None, {}, {'event_type': 'run_completed', 'details': []},
+                      {'event_type': 'run_completed', 'occurred_at': None, 'details': {}}):
+            with self.subTest(event=event):
+                candidate = deepcopy(original)
+                candidate['events'][-1] = event
+                self.executor.audit = lambda _, candidate=candidate: candidate
+                with self.assertRaisesRegex(PlanError, 'audit event'):
+                    self.bridge.evidence(self.read, 'RunA')
+
+    def test_readonly_unexpected_approval_refused(self):
+        candidate = self.executor.audit('RunA')
+        candidate['approval_receipts'] = [{'method': 'explicit-write-approval'}]
+        self.executor.audit = lambda _: candidate
+        with self.assertRaisesRegex(PlanError, 'approval receipts'):
+            self.bridge.evidence(self.read, 'RunA')
+
+    def test_write_receipt_scope_and_method_verified(self):
+        self.executor.valid_sha = self.bridge.review(self.write, 'RunA').plan_sha256
+        self.executor.step_count = len(self.write['steps'])
+        receipt = {
+            'method': 'explicit-write-approval',
+            'approved_at': '2026-11-12T00:00:00Z',
+            'scope': {'plan_sha256': self.executor.valid_sha,
+                      'write_steps': [{'step_id': x['id'], 'operation': x['op']}
+                                      for x in self.write['steps']
+                                      if x['op'] in ('sqlite_put', 'sqlite_import_csv')]}}
+        self.executor.approval_receipts = [deepcopy(receipt)]
+        self.assertTrue(self.bridge.evidence(self.write, 'RunA')['verified'])
+        cases = [[], [dict(receipt, method='silent')],
+                 [dict(receipt, scope={**receipt['scope'], 'plan_sha256': '0'*64})],
+                 [dict(receipt, scope={**receipt['scope'], 'write_steps': []})]]
+        for bad in cases:
+            with self.subTest(bad=bad):
+                self.executor.approval_receipts = bad
+                with self.assertRaisesRegex(PlanError, 'approval receipt'):
+                    self.bridge.evidence(self.write, 'RunA')
+
+    def test_completed_error_type_is_not_success(self):
+        original = self.executor.status
+        self.executor.status = lambda rid: {**original(rid), 'error_type': 'StepTimeout'}
+        with self.assertRaisesRegex(PlanError, 'retains an error'):
+            self.bridge.evidence(self.read, 'RunA')
+
+    def test_changed_status_during_audit_cannot_claim_success(self):
+        original = self.executor.status
+        self.executor.audited = False
+        self.executor.status = lambda rid: {**original(rid),
+            'steps_recorded': self.executor.step_count + int(self.executor.audited)}
+        audit = self.executor.audit
+        def changed(rid):
+            self.executor.audited = True
+            return audit(rid)
+        self.executor.audit = changed
+        with self.assertRaisesRegex(PlanError, 'changed during audit'):
+            self.bridge.evidence(self.read, 'RunA')
+
 
 
 if __name__ == '__main__':
