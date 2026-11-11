@@ -495,6 +495,56 @@ async function testSavedWorkflowReloadRequiresFreshPreview() {
   assert.equal(ui.get("#approval").checked, false);
   assert.match(ui.get("#message").textContent, /미리보기/);
 }
+async function testSavedWorkflowLateReplyDoesNotOverwriteManualEdit() {
+  const ui = setup();
+  const list = ui.requests.find((r) => r.url === "/api/workflows");
+  ui.respond(list, {available:true, recipe_count:1,
+    recipes:[{recipe_id:"a".repeat(24),workflow:"csv_to_sqlite"}]});
+  await ui.flush();
+  const item = ui.get("#saved-workflows").children[0].children[0];
+  const pending = item.fire("click");
+  const request = ui.requests.find((r) => r.url.startsWith("/api/workflows/load?"));
+  assert.ok(request);
+  ui.get("#task").value = "My newer manual CSV import";
+  await ui.get("#task").fire("input");
+  ui.get("#csv-path").value = "manual.csv";
+  await ui.get("#csv-path").fire("input");
+  ui.respond(request, {task:"obsolete saved task", csv_path:"obsolete.csv",
+    needs_new_preview:true, write_approved:false});
+  await pending;
+  assert.equal(ui.get("#task").value, "My newer manual CSV import");
+  assert.equal(ui.get("#csv-path").value, "manual.csv");
+  assert.equal(ui.get("#run").disabled, true);
+  assert.equal(ui.requests.filter(r => r.url === "/api/run").length, 0);
+}
+
+async function testSavedWorkflowNewestClickWinsOutOfOrderReplies() {
+  const ui = setup();
+  const list = ui.requests.find((r) => r.url === "/api/workflows");
+  ui.respond(list, {available:true, recipe_count:2,
+    recipes:[
+      {recipe_id:"a".repeat(24),workflow:"csv_to_sqlite"},
+      {recipe_id:"b".repeat(24),workflow:"csv_filtered_import"},
+    ]});
+  await ui.flush();
+  const children = ui.get("#saved-workflows").children;
+  assert.equal(children.length, 2);
+  const old = children[0].children[0].fire("click");
+  const newest = children[1].children[0].fire("click");
+  const requests = ui.requests.filter(r => r.url.startsWith("/api/workflows/load?"));
+  assert.equal(requests.length, 2);
+  ui.respond(requests[1], {task:"newest reviewed recipe", csv_path:"current.csv",
+    needs_new_preview:true, write_approved:false});
+  await newest;
+  ui.respond(requests[0], {task:"obsolete old recipe", csv_path:"obsolete.csv",
+    needs_new_preview:true, write_approved:false});
+  await old;
+  assert.equal(ui.get("#task").value, "newest reviewed recipe");
+  assert.equal(ui.get("#csv-path").value, "current.csv");
+  assert.equal(ui.get("#run").disabled, true);
+  assert.equal(ui.get("#approval").checked, false);
+}
+
 async function testDbvoraNewestResponseWins() {
   const ui = setup();
   const button = ui.get("#refresh-dbvora");
@@ -514,6 +564,8 @@ async function testDbvoraNewestResponseWins() {
   await testDbvoraNewestResponseWins();
   await testSavedWorkflowRequiresPreviewAndOwnerSaveConsent();
   await testSavedWorkflowReloadRequiresFreshPreview();
+  await testSavedWorkflowLateReplyDoesNotOverwriteManualEdit();
+  await testSavedWorkflowNewestClickWinsOutOfOrderReplies();
   await testPresetSelectionNeedsNewReviewAndApproval();
   await testPresetCannotChangeTaskDuringExecution();
   await testAssetProofManualOnlyAndLatestResponseWins();
@@ -532,5 +584,5 @@ async function testDbvoraNewestResponseWins() {
   await testResumePreviewRejectsInvalidRunIdWithoutRequest();
   await testLiveReceiptRendersRedactedLaEvents();
   await testHistoryRestoresLaAuditWithoutSovia();
-  console.log("HAE simulated UI race tests: 22 PASS");
+  console.log("HAE simulated UI race tests: 24 PASS");
 })().catch((error) => { console.error(error); process.exitCode = 1; });

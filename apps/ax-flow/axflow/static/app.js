@@ -72,6 +72,7 @@ let registryReviewSha = "";
 let registryWriteInProgress = false;
 let catalogSaveInProgress = false;
 let catalogListVersion = 0;
+let catalogLoadVersion = 0;
 
 function requestKey() {
   return JSON.stringify([taskInput.value, csvInput.value]);
@@ -563,10 +564,13 @@ async function loadSavedWorkflows() {
       button.className = "text-button";
       button.textContent = "다시 열기 · " + item.recipe_id.slice(0, 12);
       button.addEventListener("click", async () => {
-        if (executionInProgress) return;
+        if (executionInProgress || uploadInProgress) return;
+        // Resolve only the newest owner intent, never an old response that
+        // could replace a more recent edit, preview, upload or recipe selection.
+        const version = ++catalogLoadVersion;
         try {
           const recalled = await api("/api/workflows/load?recipe_id=" + item.recipe_id);
-          if (executionInProgress) return;
+          if (version !== catalogLoadVersion || executionInProgress || uploadInProgress) return;
           if (typeof recalled.task !== "string" || typeof recalled.csv_path !== "string" ||
               recalled.needs_new_preview !== true || recalled.write_approved !== false) {
             throw new Error("invalid saved recipe");
@@ -577,7 +581,9 @@ async function loadSavedWorkflows() {
           invalidateEditedWorkflow();
           setMessage("저장된 작업을 불러왔습니다. 현재 CSV로 다시 미리보기·승인 후 실행하세요.", "success");
         } catch {
-          catalogStatus.textContent = "저장된 작업을 열 수 없습니다 · 원본 CSV 변경 여부 확인";
+          if (version === catalogLoadVersion) {
+            catalogStatus.textContent = "저장된 작업을 열 수 없습니다 · 원본 CSV 변경 여부 확인";
+          }
         }
       });
       entry.appendChild(button);
@@ -767,6 +773,7 @@ resumePreviewButton.addEventListener("click", () => {
 });
 
 function invalidateEditedWorkflow() {
+  catalogLoadVersion += 1;
   uploadRequestVersion += 1;
   previewRequestVersion += 1;
   uploadInProgress = false;
@@ -805,6 +812,7 @@ workflowPreset.addEventListener("change", () => {
   }
 });
 csvFileInput.addEventListener("change", async () => {
+  catalogLoadVersion += 1;
   const uploadVersion = ++uploadRequestVersion;
   previewRequestVersion += 1;
   uploadInProgress = false;
