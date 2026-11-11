@@ -60,7 +60,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-dir", required=True, type=Path)
     args = parser.parse_args()
-    print("Portable HAE Windows bundle: " + str(repack(args.output_dir)))
+    result = repack(args.output_dir)
+    printable = str(result).encode("ascii", "backslashreplace").decode("ascii")
+    print("Portable HAE Windows bundle: " + printable)
     return 0
 
 

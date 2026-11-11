@@ -104,7 +104,7 @@ class PortableWindowsBundleTests(unittest.TestCase):
                     "--port", str(held_port), "--smoke",
                 ], cwd=root, env=env, capture_output=True, text=True, timeout=10)
                 self.assertNotEqual(unavailable.returncode, 0)
-                self.assertIn("is in use", unavailable.stderr)
+                self.assertIn("is unavailable", unavailable.stderr)
                 self.assertFalse((data / "business.db").exists())
 
             port = free_port()

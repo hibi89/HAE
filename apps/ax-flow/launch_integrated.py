@@ -249,6 +249,15 @@ def verify_bundle(package: Path) -> None:
     print("HAE + LA offline bundled HTTP/SQLite acceptance: 7/7 PASS", flush=True)
 
 
+def _console_safe_path(path: Path) -> str:
+    """Print a local path safely even when Windows stdout uses cp1252/mbcs.
+
+    Filesystem paths are not changed; only the diagnostic representation is
+    escaped when it contains characters outside ASCII. No hidden fallback.
+    """
+    return str(path).encode("ascii", "backslashreplace").decode("ascii")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data-dir", help="private local data directory (default: LOCALAPPDATA/HAE)")
@@ -298,7 +307,7 @@ def main(argv: list[str] | None = None) -> int:
             url = "http://127.0.0.1:" + str(args.port) + "/"
             wait_for_backend(url.rstrip("/"), server_thread)
             print("HAE + Lightning Azent ready: " + url, flush=True)
-            print("Synthetic CSV: " + str(root / "input" / "contacts.csv"), flush=True)
+            print("Synthetic CSV: " + _console_safe_path(root / "input" / "contacts.csv"), flush=True)
             if args.smoke:
                 print("HAE offline Windows bundle readiness: PASS", flush=True)
                 return 0

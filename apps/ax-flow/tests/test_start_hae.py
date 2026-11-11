@@ -41,8 +41,9 @@ class HaeStartTests(unittest.TestCase):
         self.ship()
         cmd, env, selected = self.select()
         self.assertEqual(selected, "integrated")
-        self.assertEqual(cmd, [sys.executable, str(self.app / "launch_integrated.py"),
-                               "--no-browser", "--port", "18473"])
+        self.assertEqual(cmd[0], sys.executable)
+        self.assertEqual(Path(cmd[1]).resolve(), (self.app / "launch_integrated.py").resolve())
+        self.assertEqual(cmd[2:], ["--no-browser", "--port", "18473"])
         self.assertEqual(env.get("LOCALAPPDATA"), self.env["LOCALAPPDATA"])
 
     def test_legacy_sqlite_is_not_silently_replaced_by_new_ledger(self):
@@ -73,7 +74,7 @@ class HaeStartTests(unittest.TestCase):
         cmd, env, selected = self.select()
         self.assertEqual(selected, "legacy")
         self.assertEqual(cmd[1:3], ["-m", "axflow.desktop_launcher"])
-        self.assertTrue(env["PYTHONPATH"].startswith(str(self.app)))
+        self.assertEqual(Path(env["PYTHONPATH"].split(os.pathsep, 1)[0]).resolve(), self.app.resolve())
 
     def test_incomplete_bundle_fails_closed(self):
         (self.app / "hae-integrated.pyz").write_bytes(b"partial")
@@ -120,7 +121,10 @@ class HaeStartTests(unittest.TestCase):
         commands = []
         with patch.object(launcher, "__file__", str(self.app / "start_hae.py")), patch.dict(os.environ, self.env, clear=True), patch.object(launcher.subprocess, "call", side_effect=lambda cmd, **kwargs: commands.append(cmd) or 0):
             self.assertEqual(launcher.main(["--verify"]), 0)
-        self.assertEqual(commands, [[sys.executable, str(self.app / "launch_integrated.py"), "--verify"]])
+        self.assertEqual(len(commands), 1)
+        self.assertEqual(commands[0][0], sys.executable)
+        self.assertEqual(Path(commands[0][1]).resolve(), (self.app / "launch_integrated.py").resolve())
+        self.assertEqual(commands[0][2:], ["--verify"])
 
     def test_doctor_cli_checks_real_zip_without_launching_server(self):
         (self.app / "launch_integrated.py").write_text("# launcher\n", encoding="utf-8")

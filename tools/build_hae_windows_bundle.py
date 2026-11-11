@@ -58,8 +58,9 @@ def main() -> int:
     parser.add_argument("--la-package", required=True, type=Path)
     parser.add_argument("--output-dir", required=True, type=Path)
     args = parser.parse_args()
-    print("HAE offline Windows bundle: " + str(
-        build_windows_bundle(args.output_dir, args.la_package)))
+    result = build_windows_bundle(args.output_dir, args.la_package)
+    printable = str(result).encode("ascii", "backslashreplace").decode("ascii")
+    print("HAE offline Windows bundle: " + printable)
     return 0
 
 
