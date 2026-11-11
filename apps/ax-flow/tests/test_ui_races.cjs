@@ -401,6 +401,51 @@ async function testRegistryReviewClearsAfterMapChange() {
   await ui.get("#register-dbvora-asset").fire("click");
   assert.equal(ui.requests.filter((r) => r.url === "/api/asset-registry/register").length, 0);
 }
+async function testPresetSelectionNeedsNewReviewAndApproval() {
+  const ui = setup();
+  ui.get("#csv-path").value = "offers.csv";
+  ui.get("#workflow-preset").value = "filter";
+  await ui.get("#workflow-preset").fire("change");
+  assert.match(ui.get("#task").value, /amount > 100/);
+  assert.equal(ui.get("#run").disabled, true);
+  const preview = ui.get("#preview").fire("click");
+  const request = ui.requests.find((r) => r.url === "/api/preview");
+  assert.ok(request);
+  ui.respond(request, { plan: {steps: []}, preview_id:"0123456789abcdef0123456789abcdef",
+    requires_approval:true, workflow:"csv_filtered_import", engine_backend:{name:"HAE"} });
+  await preview;
+  ui.get("#approval").checked = true;
+  await ui.get("#approval").fire("change");
+  assert.equal(ui.get("#run").disabled, false);
+  ui.get("#workflow-preset").value = "normalize";
+  await ui.get("#workflow-preset").fire("change");
+  assert.match(ui.get("#task").value, /Trim whitespace/);
+  assert.equal(ui.get("#run").disabled, true, "changing preset must invalidate old preview");
+  assert.equal(ui.get("#approval").checked, false, "changing preset must revoke old approval");
+}
+
+async function testPresetCannotChangeTaskDuringExecution() {
+  const ui = setup();
+  ui.get("#csv-path").value = "offers.csv";
+  ui.get("#workflow-preset").value = "full";
+  await ui.get("#workflow-preset").fire("change");
+  const preview = ui.get("#preview").fire("click");
+  const request = ui.requests.find((r) => r.url === "/api/preview");
+  ui.respond(request, {plan:{steps:[]},preview_id:"approved-preview",requires_approval:true,
+    workflow:"csv_to_sqlite",engine_backend:{name:"Lightning Azent"}});
+  await preview;
+  ui.get("#approval").checked = true;
+  await ui.get("#approval").fire("change");
+  const running = ui.get("#run").fire("click");
+  const before = ui.get("#task").value;
+  ui.get("#workflow-preset").value = "lookup";
+  await ui.get("#workflow-preset").fire("change");
+  assert.equal(ui.get("#task").value, before);
+  const call = ui.requests.find((r) => r.url === "/api/run");
+  ui.respond(call, {error:"synthetic controlled stop"}, 409);
+  await running;
+}
+
 async function testDbvoraNewestResponseWins() {
   const ui = setup();
   const button = ui.get("#refresh-dbvora");
@@ -418,6 +463,8 @@ async function testDbvoraNewestResponseWins() {
 (async () => {
   await testRunRejectsMissingPreviewToken();
   await testDbvoraNewestResponseWins();
+  await testPresetSelectionNeedsNewReviewAndApproval();
+  await testPresetCannotChangeTaskDuringExecution();
   await testAssetProofManualOnlyAndLatestResponseWins();
   await testRegistryRequiresManualReviewConsentAndNoDuplicateSubmission();
   await testRegistryReviewClearsAfterMapChange();
@@ -434,5 +481,5 @@ async function testDbvoraNewestResponseWins() {
   await testResumePreviewRejectsInvalidRunIdWithoutRequest();
   await testLiveReceiptRendersRedactedLaEvents();
   await testHistoryRestoresLaAuditWithoutSovia();
-  console.log("HAE simulated UI race tests: 18 PASS");
+  console.log("HAE simulated UI race tests: 20 PASS");
 })().catch((error) => { console.error(error); process.exitCode = 1; });

@@ -33,6 +33,16 @@
           <span class="scope-tag">지원 작업 4개</span>
         </div>
 
+        <label for="workflow-preset">합성 CSV 자동화 예시 선택</label>
+        <select id="workflow-preset" aria-describedby="workflow-preset-hint">
+          <option value="">직접 작업 설명 입력</option>
+          <option value="full">CSV 전체를 SQLite에 저장</option>
+          <option value="filter">금액 기준으로 행을 필터링해 저장</option>
+          <option value="normalize">name 열의 앞뒤 공백 제거 후 저장</option>
+          <option value="conditional">조건에 맞을 때만 저장</option>
+          <option value="lookup">저장 없이 CSV 행 찾기</option>
+        </select>
+        <p id="workflow-preset-hint" class="hint">예시를 선택해도 즉시 실행하지 않습니다. 현재 CSV와 열을 확인하고 미리보기·쓰기 승인을 별도로 진행합니다.</p>
         <label for="task">작업 설명</label>
         <textarea id="task" rows="2" maxlength="512">이 CSV 파일을 로컬 SQLite에 저장해줘</textarea>
         <p class="hint">예: “amount가 100 이상인 행만 저장”, “id가 11인 행 찾기”, “amount가 100 이상일 때만 저장”. 비교는 한 필드만 지원합니다.</p>

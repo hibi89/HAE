@@ -8,6 +8,7 @@ const planOutput = document.querySelector("#plan");
 const connection = document.querySelector("#connection");
 const message = document.querySelector("#message");
 const resultCard = document.querySelector("#result-card");
+const workflowPreset = document.querySelector("#workflow-preset");
 const resultStatus = document.querySelector("#result-status");
 const resultTitle = document.querySelector("#result-title");
 const resultCopy = document.querySelector("#result-copy");
@@ -673,24 +674,43 @@ resumePreviewButton.addEventListener("click", () => {
   return submitPreview(runId);
 });
 
-for (const input of [taskInput, csvInput]) {
-  input.addEventListener("input", () => {
-    uploadRequestVersion += 1;
-    previewRequestVersion += 1;
-    uploadInProgress = false;
-    previewButton.disabled = executionInProgress;
-    previewKey = "";
-    previewId = "";
-    requiresApproval = true;
-    approvalInput.checked = false;
-    updateRunButton();
-    resultCard.hidden = true;
-    previewDetail.hidden = true;
-    previewImpact.textContent = "";
-    approvalImpact.textContent = "미리보기를 먼저 확인하세요. 실제 고객 데이터는 이 MVP에서 사용하지 마세요.";
-    setMessage("입력이 변경되었습니다. 현재 입력으로 다시 미리보기를 실행하세요.", "error");
-  });
+function invalidateEditedWorkflow() {
+  uploadRequestVersion += 1;
+  previewRequestVersion += 1;
+  uploadInProgress = false;
+  previewButton.disabled = executionInProgress;
+  previewKey = "";
+  previewId = "";
+  requiresApproval = true;
+  approvalInput.checked = false;
+  updateRunButton();
+  resultCard.hidden = true;
+  previewDetail.hidden = true;
+  previewImpact.textContent = "";
+  approvalImpact.textContent = "미리보기를 먼저 확인하세요. 실제 고객 데이터는 이 MVP에서 사용하지 마세요.";
+  setMessage("입력이 변경되었습니다. 현재 입력으로 다시 미리보기를 실행하세요.", "error");
 }
+for (const input of [taskInput, csvInput]) {
+  input.addEventListener("input", invalidateEditedWorkflow);
+}
+const PRESET_TASKS = Object.freeze({
+  full: "이 CSV 파일을 로컬 SQLite에 저장해줘",
+  filter: "Import this CSV where amount > 100 into SQLite",
+  normalize: "Trim whitespace in the name column, then import this CSV into local SQLite",
+  conditional: "Import this CSV into SQLite only when amount > 100",
+  lookup: "Find CSV rows where amount > 100",
+});
+workflowPreset.addEventListener("change", () => {
+  if (executionInProgress) {
+    setMessage("현재 실행이 끝난 뒤 다른 자동화 예시를 선택하세요.", "error");
+    return;
+  }
+  const selected = workflowPreset.value;
+  if (Object.prototype.hasOwnProperty.call(PRESET_TASKS, selected)) {
+    taskInput.value = PRESET_TASKS[selected];
+    invalidateEditedWorkflow();
+  }
+});
 csvFileInput.addEventListener("change", async () => {
   const uploadVersion = ++uploadRequestVersion;
   previewRequestVersion += 1;
