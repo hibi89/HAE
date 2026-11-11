@@ -19,6 +19,8 @@ from urllib.request import Request, urlopen
 
 from axflow.schema_inventory import inspect_offline_schema
 from axflow.asset_attestation import attest_synthetic_dbvora_asset
+from axflow.business_recovery_chain import verify_synthetic_restore_chain
+from axflow.business_state_backup import backup_business_state, restore_business_state_pinned
 from axflow.dbvora_client import DbvoraClient
 from axflow.web import create_server
 
@@ -213,6 +215,46 @@ class HaeLaDbvoraAssetE2ETests(unittest.TestCase):
         audit = self.get("/api/la-audit?run_id=" + run_id)
         self.assertEqual(audit["run_id"], run_id)
         self.assertGreaterEqual(audit["total_events"], 1)
+
+    def test_la_sqlite_snapshot_restore_and_logical_proof_is_independent(self):
+        """Real LA execution then synthetic fresh-path SQLite backup/restore."""
+        run_id = self._execute_approved_synthetic_workflow()
+        self.provider.inventory = _contract_from_real_synthetic_sqlite(self.business)
+        source_sha = hashlib.sha256(self.business.read_bytes()).hexdigest()
+        owner_asset = self.get("/api/dbvora-asset")
+        self.assertTrue(owner_asset["available"], owner_asset)
+        self.assertEqual(owner_asset["source_sha256"], source_sha)
+
+        backup = self.root / "safe-fresh-backup.sqlite"
+        restored = self.root / "safe-fresh-restored.sqlite"
+        snapshot = backup_business_state(self.business, backup)
+        self.assertEqual(snapshot["source_sha256"], source_sha)
+        recovered = restore_business_state_pinned(
+            backup, restored, snapshot["artifact_sha256"],
+        )
+        self.assertEqual(recovered["source_sha256"], snapshot["artifact_sha256"])
+        proof = verify_synthetic_restore_chain(
+            self.business, backup, restored,
+            expected_source_sha256=source_sha,
+            expected_backup_sha256=snapshot["artifact_sha256"],
+            synthetic=True,
+        )
+        self.assertTrue(proof["independent_restore_verified"])
+        self.assertEqual(proof["source_sha256"], source_sha)
+        self.assertEqual(proof["table_count"], 1)
+        with closing(sqlite3.connect(restored)) as db:
+            rows = db.execute(
+                "SELECT name FROM csv_records ORDER BY row_idx"
+            ).fetchall()
+        self.assertEqual(rows, [
+            ("SyntheticPrivateEvidenceRow",),
+            ("SyntheticSecondRow",),
+        ])
+        serialized = json.dumps(proof)
+        self.assertNotIn("SyntheticPrivateEvidenceRow", serialized)
+        self.assertNotIn(str(self.root), serialized)
+        self.assertEqual(hashlib.sha256(self.business.read_bytes()).hexdigest(), source_sha)
+        self.assertEqual(self.get("/api/status?run_id=" + run_id)["status"], "completed")
 
     def test_provider_disconnect_does_not_erase_la_sqlite_or_retry_writes(self):
         run_id = self._execute_approved_synthetic_workflow()
