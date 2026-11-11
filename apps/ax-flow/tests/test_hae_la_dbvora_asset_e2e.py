@@ -176,6 +176,9 @@ class HaeLaDbvoraAssetE2ETests(unittest.TestCase):
 
     def test_genuine_la_sqlite_is_visible_through_hae_dbvora_contract(self):
         run_id = self._execute_approved_synthetic_workflow()
+        # Execution itself may probe DBVORA while its fixture is unavailable;
+        # assert only the independent inventory/disconnect requests below.
+        self.provider.requests.clear()
         before = hashlib.sha256(self.business.read_bytes()).hexdigest()
         self.provider.inventory = _contract_from_real_synthetic_sqlite(self.business)
         inventory = self.get("/api/dbvora")
@@ -200,6 +203,9 @@ class HaeLaDbvoraAssetE2ETests(unittest.TestCase):
 
     def test_provider_disconnect_does_not_erase_la_sqlite_or_retry_writes(self):
         run_id = self._execute_approved_synthetic_workflow()
+        # Execution itself may probe DBVORA while its fixture is unavailable;
+        # assert only the independent inventory/disconnect requests below.
+        self.provider.requests.clear()
         before = hashlib.sha256(self.business.read_bytes()).hexdigest()
         self.provider.healthy = False
         unavailable = self.get("/api/dbvora")
