@@ -1,3 +1,15 @@
+## 2026-11-12 KST — REA_APP corrupted-ZIP fix and Python zipapp candidate (10-part handoff)
+1. **Goal/stack:** P85→P95 REA_APP retail readiness, zero-network Python3.11+ stdlib companion for frozen P53 original.
+2. **Done/design:** Compared Windows EXE now (external deps/signing/OS risk) vs reproducible Python `.pyz` (selected zero-cost). Added `retail/build_zipapp.py` five-member deterministic Python zipapp with SHA256 source manifest, runs candidate→owner/ZIP, forbids overwrite. Fixed malformed DEFLATE unhandled `zlib.error` to controlled HOLD/exit2. Source analyzer unmodified.
+3. **Tests/evidence:** code/test SHA `53bc6edab84c4d2f78a35fe5fbb0e2be0d55f1e9`, exact Git Blobs four files matched local execution. Before fix two corrupt-archive tests **1 FAIL/1 ERROR**, after fix Python3.13.5 Linux **56 PASS/0 FAIL/0 SKIP** in normal and `-O`, compileall PASS. Actual .pyz run, checksum, buyer ZIP and immutable source verified on synthetic report fixtures.
+4. **Status:** Product 85% provisional remains, 95% NOT accepted, commercial RELEASE HOLD. No central 16-product score changes.
+5. **Blocker/pivot:** Full private P53 tree / exact @babel/parser7.29.9 cannot be mounted; `retail_qa/p53_acceptance.py` exit2 BLOCKED. No native Windows / GitHub CI or real Babel source-generated bundle accepted. Stop repetitive same-scope tests; execute full authorized original on suitable runner next.
+6. **Repo/branch/SHA:** `hibi89/HAE@feature/rea-app-kmong-owner-delivery-20261112` functional/test `53bc6edab84c4d2f78a35fe5fbb0e2be0d55f1e9`, audit `docs/REA_APP_P95_CORRUPT_ZIP_AND_PYZ_20261112.md`; prior source `043938bdb8ca4c...` rollback; original `REA_APP@2fe581b6` unchanged. Confirm docs HEAD later.
+7. **Env/Production:** local Linux Python3.13.5 only; `.pyz` requires Python and is NOT signed Windows EXE. Vercel/Production N/A, public release not performed.
+8. **Originals/privacy:** no customer source, auth, paid service, branch merge, visibility/security settings or license modifications. Output .pyz excludes P53 analyzer and all source reports, manifest is unsigned integrity only.
+9. **Next:** authorized full checkout + pinned Babel Gate R/QA and real 6/8 P53→candidate; then real Win10/11 Python3.11, NTFS junction and Edge/Chrome file:// test, buyer NOTICE/rights/support/pilot. Only then rescore 95; fees/releases require approval.
+10. **Timestamp/proof:** 2026-11-12 KST, four exact code/test blob hashes and 56 scoped local tests; P53 integration blocked and buyer Windows unverified.
+
 ## 2026-11-12 KST — REA_APP P95 NTFS reparse-point guard, 50 scoped PASS (10-part handoff)
 1. **Goal/stack:** Harden offline REA_APP P53 retail package path security toward P95, keeping frozen Python3.11+ source analyzer unchanged.
 2. **Done/decision:** Compared existing symlink-only checks (miss Windows NTFS junction metadata) versus one metadata + symlink guard (selected). Guard now covers raw source report files, source/output ancestors, ZIP creation/verification and rollback, with 9 simulated adversarial regression cases. No cloud/API.
