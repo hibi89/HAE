@@ -25,10 +25,24 @@ class DeliveryError(ValueError):
     pass
 
 
+def _is_link_or_reparse(path: Path) -> bool:
+    """Block POSIX links and Windows NTFS junction/reparse-point entries.
+
+    Missing paths (a new output target) are permitted, but any other filesystem
+    error must propagate and fail closed. Parent entries are inspected separately.
+    """
+    try:
+        metadata = path.lstat()
+    except FileNotFoundError:
+        return False
+    reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+    return bool(getattr(metadata, "st_file_attributes", 0) & reparse_flag) or path.is_symlink()
+
+
 def _regular_file(path: Path, limit: int = MAX_JSON_BYTES) -> bytes:
     # Do not follow a final symlink and do not read unbounded JSON.
     info = path.lstat()
-    if not stat.S_ISREG(info.st_mode) or info.st_size > limit or path.is_symlink():
+    if not stat.S_ISREG(info.st_mode) or info.st_size > limit or _is_link_or_reparse(path):
         raise DeliveryError(f"invalid or oversized regular file: {path.name}")
     flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0)
     fd = os.open(path, flags)
@@ -38,7 +52,7 @@ def _regular_file(path: Path, limit: int = MAX_JSON_BYTES) -> bytes:
                 or (opened.st_ino, opened.st_dev) != (info.st_ino, info.st_dev)):
             raise DeliveryError("file changed while opening")
         data = handle.read(limit + 1)
-    if len(data) > limit or path.is_symlink():
+    if len(data) > limit or _is_link_or_reparse(path):
         raise DeliveryError(f"unsafe or oversized file: {path.name}")
     return data
 
@@ -47,8 +61,8 @@ def _directory(path: Path) -> Path:
     path = path.expanduser().absolute()
     # Reject symlinked parents too, including an attacker-controlled input root.
     for part in (path, *path.parents):
-        if part.is_symlink():
-            raise DeliveryError("symbolic-link directory is not allowed")
+        if _is_link_or_reparse(part):
+            raise DeliveryError("symbolic-link/reparse-point directory is not allowed")
     if not path.is_dir():
         raise DeliveryError("input directory does not exist")
     return path.resolve(strict=True)
@@ -163,8 +177,8 @@ def _html(review: dict) -> bytes:
 def _validate_output_location(bundle: Path, output: Path) -> Path:
     output = output.expanduser().absolute()
     for part in (output, *output.parents):
-        if part.is_symlink():
-            raise DeliveryError("symbolic-link output path is not allowed")
+        if _is_link_or_reparse(part):
+            raise DeliveryError("symbolic-link/reparse-point output path is not allowed")
     if output == bundle or bundle in output.parents or output in bundle.parents:
         raise DeliveryError("delivery folder must be separate from source reports")
     if output.exists():
