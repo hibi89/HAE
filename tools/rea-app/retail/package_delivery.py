@@ -76,8 +76,8 @@ def _canonical_unsigned_payload(receipt: object, review: object, data: dict[str,
 def _safe_new_zip(path: Path, source_dir: Path, delivery_dir: Path) -> Path:
     output = path.expanduser().absolute()
     for parent in (output, *output.parents):
-        if parent.is_symlink():
-            raise owner.DeliveryError("symbolic-link archive path")
+        if owner._is_link_or_reparse(parent):
+            raise owner.DeliveryError("symbolic-link/reparse-point archive path")
     if output.suffix.lower() != ".zip":
         raise owner.DeliveryError("archive must have .zip extension")
     if output.exists() or not output.parent.is_dir():
@@ -132,8 +132,8 @@ def pack(bundle_path: Path, delivery_path: Path, zip_path: Path) -> None:
 def verify_zip(zip_path: Path, bundle_path: Path | None = None) -> None:
     path = zip_path.expanduser().absolute()
     for parent in (path, *path.parents):
-        if parent.is_symlink():
-            raise owner.DeliveryError("symbolic-link archive path")
+        if owner._is_link_or_reparse(parent):
+            raise owner.DeliveryError("symbolic-link/reparse-point archive path")
     raw = owner._regular_file(path, MAX_ARCHIVE)
     try:
         with zipfile.ZipFile(io.BytesIO(raw)) as z:
