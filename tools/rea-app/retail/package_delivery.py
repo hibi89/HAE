@@ -23,6 +23,54 @@ README = ("REA_APP 오프라인 고객 검수용 요약입니다.\n"
           "원본 코드/상세 경로/원본 보고서가 이 ZIP에 포함되지 않습니다.\n"
           "SHA-256 무결성은 별도 소유자 도구로 확인할 수 있으나 전자서명이나 판매 승인이 아닙니다.\n").encode("utf-8")
 MAX_ARCHIVE = 32 * 1024 * 1024
+COUNTS = frozenset((
+    "files_indexed", "source_files", "dependency_edges", "syntax_errors", "skipped_paths",
+    "added_files", "removed_files", "modified_files", "added_modules", "removed_modules",
+    "added_internal_dependencies", "removed_internal_dependencies", "added_contracts",
+    "removed_contracts", "changed_contracts", "exported_callable_contracts",
+))
+LIMITATIONS = [
+    "No source paths, code, secrets, source reports or original files are included.",
+    "Static JS/TS observations cannot prove runtime behavior or source reconstruction.",
+    "The owner must review rights, real Windows packaging, and any customer data.",
+]
+
+
+def _canonical_unsigned_payload(receipt: object, review: object, data: dict[str, bytes]) -> None:
+    """Check internal format; cannot authenticate an unsigned producer."""
+    if not isinstance(receipt, dict) or set(receipt) != {
+        "schema", "bundle_sha256", "delivery_sha256",
+    }:
+        raise owner.DeliveryError("unexpected receipt fields")
+    if not isinstance(review, dict) or set(review) != {
+        "schema", "assurance", "counts", "customer_release", "limitations",
+    }:
+        raise owner.DeliveryError("unexpected review fields")
+    counts = review.get("counts")
+    if not isinstance(counts, dict) or set(counts) != COUNTS or any(
+        type(value) is not int or not 0 <= value <= owner.MAX_COUNT
+        for value in counts.values()
+    ):
+        raise owner.DeliveryError("invalid review metrics")
+    if (review.get("assurance") !=
+            "summary_of_local_static_reports_only_not_runtime_or_legal_certification"
+            or review.get("customer_release") != "HOLD_PENDING_OWNER_ACCEPTANCE"
+            or review.get("limitations") != LIMITATIONS):
+        raise owner.DeliveryError("review assurance or HOLD changed")
+    if data["review.json"] != owner._encode(review):
+        raise owner.DeliveryError("noncanonical review JSON")
+    if data["review.html"] != owner._html(review):
+        raise owner.DeliveryError("HTML differs from review JSON")
+    if not isinstance(receipt.get("bundle_sha256"), dict) or set(receipt["bundle_sha256"]) != set(owner.FILES):
+        raise owner.DeliveryError("source report digests absent")
+    if any(not isinstance(value, str) or len(value) != 64
+           or any(char not in "0123456789abcdef" for char in value)
+           for value in receipt["bundle_sha256"].values()):
+        raise owner.DeliveryError("invalid SHA-256 source digest")
+    if not isinstance(receipt.get("delivery_sha256"), dict) or set(receipt["delivery_sha256"]) != set(owner.ARTIFACTS):
+        raise owner.DeliveryError("output digests absent")
+
+
 
 
 def _safe_new_zip(path: Path, source_dir: Path, delivery_dir: Path) -> Path:
@@ -90,14 +138,15 @@ def verify_zip(zip_path: Path, bundle_path: Path | None = None) -> None:
     if data["README.txt"] != README:
         raise owner.DeliveryError("README modified")
     try:
-        receipt = json.loads(data["manifest.json"])
-        review = json.loads(data["review.json"])
+        receipt = owner._parse_json_strict(data["manifest.json"])
+        review = owner._parse_json_strict(data["review.json"])
     except (ValueError, UnicodeError) as exc:
         raise owner.DeliveryError("invalid review/receipt JSON") from exc
     if not isinstance(receipt, dict) or receipt.get("schema") != owner.VERSION:
         raise owner.DeliveryError("receipt schema invalid")
     if not isinstance(review, dict) or review.get("schema") != owner.VERSION:
         raise owner.DeliveryError("review schema invalid")
+    _canonical_unsigned_payload(receipt, review, data)
     if receipt.get("delivery_sha256") != {n: owner._hash(data[n]) for n in owner.ARTIFACTS}:
         raise owner.DeliveryError("ZIP delivery hash mismatch")
     if not isinstance(receipt.get("bundle_sha256"), dict) or set(receipt["bundle_sha256"]) != set(owner.FILES):
