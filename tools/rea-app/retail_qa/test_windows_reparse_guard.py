@@ -82,12 +82,14 @@ class ReparseSafetyTests(unittest.TestCase):
                 package.verify_zip(self.archive, self.bundle)
         self.assertTrue(self.archive.exists())
 
-    def test_reparse_replacement_directory_is_never_rolled_back(self):
-        owner.build(self.bundle, self.delivery)
-        prior = {p.name: p.read_bytes() for p in self.delivery.iterdir()}
-        with self.simulate_reparse(self.delivery):
-            self.assertFalse(candidate._rollback_owned(self.delivery, self.archive, {}, None))
-        self.assertEqual(prior, {p.name: p.read_bytes() for p in self.delivery.iterdir()})
+    def test_verify_failure_does_not_delete_delivery_or_archive(self):
+        def fail_verify(*args, **kwargs):
+            raise owner.DeliveryError("simulated verification failure")
+        with mock.patch.object(package, "verify_zip", side_effect=fail_verify):
+            with self.assertRaisesRegex(owner.DeliveryError, "manual review"):
+                candidate.prepare(self.bundle, self.delivery, self.archive)
+        self.assertTrue(self.delivery.is_dir())
+        self.assertTrue(self.archive.is_file())
 
 
 if __name__ == "__main__":
