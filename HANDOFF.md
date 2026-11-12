@@ -1,3 +1,15 @@
+## 2026-11-12 KST — REA_APP P95 original-integrated gate ready, execution BLOCKED (10-part handoff)
+1. Goal/stack: improve P85→P95 customer-bundle acceptance for frozen REA_APP P53, Python3.11+/Node20+ pinned @babel/parser7.29.9.
+2. Decision/work: Original parser rewrite (higher risk) vs isolated read-only full-checkout acceptance harness (selected). New p53_acceptance.py runs original 25-blob Gate R then actual synthetic 6/8 P53 bundle→retail review/ZIP, source SHA/bytes and deterministic reruns; separate two preflight unit tests. No remote call.
+3. Executed: feature code/test SHA `f0dbf651a7ee45a131cf23d125f727bfb428860c`, new Git Blobs exact 2/2. Linux Python3.13.5 retail scoped **41 PASS / 0 FAIL / 0 SKIP**, compileall PASS. Direct original harness exit **2 BLOCKED** because original P53 source checkout absent. Native Windows/Babel/Gate R not executed.
+4. State: 85% provisional retained, 95% NOT CERTIFIED, RELEASE HOLD. No invented P53 PASS or customer release.
+5. Failure/stop-pivot: private full git clone blocked by DNS; connector file-level read/write supports code parity but cannot mount whole original. file:// actual Chromium ERR_BLOCKED_BY_ADMINISTRATOR. Run on authorized full checkout instead of repeating test-count increments. Hosted private CI cost unapproved.
+6. Repos/SHAs: `hibi89/HAE@feature/rea-app-kmong-owner-delivery-20261112` tested new code `f0dbf651a7ee45a131cf23d125f727bfb428860c`, detailed doc `docs/REA_APP_P95_P53_GATE_HARNESS_20261112.md`; original REA_APP@2fe581b6/P53 reviewed 1ae3dac2 unaffected, docs HEAD verify after update.
+7. Environment: Linux Python3.13.5 scoped, Vercel/Production N/A, native Windows10/11, locked Node/Babel + installed wheel NOT RUN at new SHA.
+8. Backup/privacy: original, customer sources, tokens, other branches, third-party licenses, paid runners, access, deployment preserved; normal Git SHA rollback.
+9. Next: full authorized repo `cd tools/rea-app; python verify_gate_r.py; python -m unittest discover -s retail_qa -p 'test_*.py' -v; python retail_qa/p53_acceptance.py` with pinned parser, then real Windows file:// and buyer rights/pilot, only then re-score 95; billing/real data/releases require approval.
+10. KST / proof: 2026-11-12; local 41 scoped PASS + expected P53 BLOCKED exit2, GitHub verified 2 source blobs. Entire P53 E2E NOT VERIFIED.
+
 ## 2026-11-12 KST — REA_APP candidate one-command P95 progress (10-part handoff)
 1. **Goal/stack:** P85→P95 REA_APP optional offline customer-review companion, Python3.11+ source v1 summaries, frozen P53 original preserved.
 2. **Work/decision:** Compared original analyzer+installer A (high regression/Windows scope) with independent customer candidate B (selected low-cost). New `retail/candidate_cli.py` provides report validation/build→verify→pack→verify-zip→source-backed final check/SHA in one CLI. On errors, rollback only exact byte+inode own outputs, leaving suspicious changes for manual inspection.
