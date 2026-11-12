@@ -1,3 +1,9 @@
+## 2026-11-12 KST — REA_APP P95 partial: corrupted ZIP crash fixed + runnable Python .pyz candidate, 56 scoped PASS
+- Private feature code/tests SHA `53bc6edab84c4d2f78a35fe5fbb0e2be0d55f1e9`: repaired unhandled `zlib.error` on a damaged ZIP DEFLATE member (formerly CLI traceback/exit1, now safe HOLD/exit2); 2 real byte-tamper regressions.
+- Added reproducible stdlib-only internal `build_zipapp.py` with fixed 5-member source-SHA manifest and four tests. Generated `.pyz` actually executed from a clean temporary working directory, produced source-verified buyer review ZIP, rerun into existing paths blocked, original synthetic reports untouched. Candidate .pyz SHA256 `18dd72be46ee4c37be60ad9d96ca73c469001747f0c7fe209a20e99e4a928dae`.
+- Linux Python3.13.5 local **56 PASS/0 FAIL/0 SKIP** normal and **56 PASS** `-O`, compileall PASS; four altered/new file Git Blobs exact match. Original P53 Gate R/Babel real-bundle harness **exit2 BLOCKED** due full private source absence; real Windows/file://, buyer license, hosted CI and signing NOT RUN.
+- **REA_APP 85% provisional unchanged; P95 NOT accepted, RELEASE HOLD/SALE NO-GO**. Frozen P53 original, customer data, other branches, production and paid CI untouched. [Evidence](docs/REA_APP_P95_CORRUPT_ZIP_AND_PYZ_20261112.md).
+
 ## 2026-11-12 KST — REA_APP P95 Windows reparse-path security, 50 scoped PASS; 85% retained
 - Feature code/test SHA `043938bdb8ca4c3802de16622898f4ed93d30004` hardens independent retail file input, source/output directory ancestors, ZIP path checks and conditional rollback against NTFS reparse-point/junction flags as well as POSIX symlinks. Frozen P53 REA_APP engine untouched.
 - Exact four remote Git Blobs match local executed source/test bytes. Linux Python3.13.5 `python -m unittest discover -s retail_qa -p 'test_*.py' -v`: **50 PASS / 0 FAIL / 0 SKIP**, same **50 PASS** under `python -O`; compileall PASS. Nine new **simulated** reparse-flag/path regressions, not native Windows.
