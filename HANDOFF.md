@@ -1,3 +1,16 @@
+## 2026-11-12 KST — REA_APP Kmong engineering P85 provisional / separate retail companion (10-point handoff)
+
+1. **Goal/tech:** Existing P53 frozen REA_APP v0.3.0 stays unchanged; 70→85 weighted engineering target, offline Python3.11+ owner review only.
+2. **Work/design:** Compared original Gate R analyzer changes vs isolated zero-dependency companion; chose separate tools/rea-app/retail/owner_delivery.py and package_delivery.py. Adds source-free Korean 9-metric HTML/JSON, original v1 three-report SHA validation, reproducible 4-file ZIP, owner independent verifier. No code/source paths/customer reports bundled.
+3. **Tests:** Exact local source Git blob parity: owner 0b1f3798457ab049afb540b1b9e7b3d7d7402178, ZIP 59d3356e77df6e6e81fced8a983671b5e81f8433, QA 887a2587805994dfa6df4e28ac79337c8621675b. Local Python3.13.5 23 PASS/0 FAIL/0 SKIP, Chromium set_content 9 rows/0 JS errors/0 requests. Browser file:// blocked by administrator; full original Gate R/QA/Windows NOT RUN at this SHA.
+4. **Status:** Engineering 85% **provisional** (70+5+4+3+2+1 subjective weighted scope), customer sale NO-GO and RELEASE HOLD; original P53 internal MVP remains independently accepted. No 100% claim.
+5. **Faults/pivot:** Two temporary fixture errors and test-setup issue corrected before clean 23 PASS. Container cannot git-clone private repo via DNS. Original CLI source unaffected; no unsafe npm/paid Actions bypass.
+6. **Repo/path:** hibi89/HAE@feature/rea-app-kmong-owner-delivery-20261112 from original REA_APP@2fe581b683f6a49779e71058cddbfd165871593a. Full report docs/REA_APP_KMONG_P85_OWNER_DELIVERY_20261112.md and companion README/test files.
+7. **Production:** N/A local offline tool, no Vercel, no production; Python3.13.5 synthetic only. Customer Win10/11 not tested.
+8. **Original/assets/security:** Source, original Git branch, wheel, Gate R pinned blobs, credentials, external data and user files preserved, rollback via feature parent Git. No public private source.
+9. **Next/gates:** Full authenticated checkout original Gate R/QA + new retail_qa at exact feature, real bundle/ZIP integration, physical Windows file://, legal/PII/license, owner commercial GO before any release or branch merge. No paid CI or external transfers without approval.
+10. **Time/evidence:** 2026-11-12 KST; exact local code/test SHA parity and synthetic scoped only. Document evidence at docs/REA_APP_KMONG_P85_OWNER_DELIVERY_20261112.md; final HEAD verify after write.
+
 ## REA_APP v0.3.0 internal MVP release handoff — 2026-10-28 KST
 
 1. **Goal/confirmed scope/stack:** Stop expanding the internal REA_APP source-analysis utility, freeze the bounded read-only JS/TS CLI as an internal MVP for public-document/evidence-based Lightning Azent research. Python >=3.11; Node >=20, pinned `@babel/parser@7.29.9`; `bundle` produces 6 reports or 8 with Mermaid diagrams.
