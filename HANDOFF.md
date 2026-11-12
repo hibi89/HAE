@@ -1,3 +1,15 @@
+## 2026-11-12 KST — REA_APP P95 NTFS reparse-point guard, 50 scoped PASS (10-part handoff)
+1. **Goal/stack:** Harden offline REA_APP P53 retail package path security toward P95, keeping frozen Python3.11+ source analyzer unchanged.
+2. **Done/decision:** Compared existing symlink-only checks (miss Windows NTFS junction metadata) versus one metadata + symlink guard (selected). Guard now covers raw source report files, source/output ancestors, ZIP creation/verification and rollback, with 9 simulated adversarial regression cases. No cloud/API.
+3. **Tests:** Private functional+QA commit `043938bdb8ca4c3802de16622898f4ed93d30004`; 4 modified/new Git Blobs exactly equal executed local bytes. Linux Python3.13.5 50 PASS/0 FAIL/0 SKIP normal, 50 PASS/0 FAIL/0 SKIP with `-O`, compileall PASS. Real NTFS junction on physical Windows NOT tested.
+4. **State:** Prior provisional 85% unchanged, 95% NOT CERTIFIED, commercial RELEASE HOLD / sale NO-GO; other 15 central items untouched.
+5. **Failure/blocker/stop-pivot:** `p53_acceptance.py` exit2 BLOCKED (original checkout/locked Babel absent); container github.com DNS unavailable. Local simulated Windows metadata checks are not native Windows evidence. Avoid repeating superficial test additions; next authorized full P53/Windows validation.
+6. **Repo/branch/SHA:** Private `hibi89/HAE@feature/rea-app-kmong-owner-delivery-20261112`, source `043938bdb8ca4c3802de16622898f4ed93d30004`; [detail](docs/REA_APP_P95_REPARSE_SAFETY_20261112.md); original `REA_APP@2fe581b6` and reviewed P53 `1ae3dac2` untouched. Docs SHA confirm after edits.
+7. **Production/runtime:** Vercel N/A offline. Linux Python3.13.5 only; Windows10/11 real NTFS, Edge/Chrome file://, full GitHub CI/wheel NOT RUN.
+8. **Backup/security:** Normal prior Git commit rollback, no original engine or customer source change, no token/license/access/paid runner/deploy change.
+9. **Next:** Authorized full P53 checkout → `python verify_gate_r.py` and `python retail_qa/p53_acceptance.py` with exact Babel7.29.9, native Windows junction/file:// and ZIP customer trial, rights/NOTICE, then re-score 95 only on executed proof. Any paid CI/real-data transfer/release require owner approval.
+10. **Date/limit:** 2026-11-12 KST, GitHub exact four-source parity + Linux 50 scope; original and native Windows remain BLOCKED/UNVERIFIED.
+
 ## 2026-11-12 KST — REA_APP P95 original-integrated gate ready, execution BLOCKED (10-part handoff)
 1. Goal/stack: improve P85→P95 customer-bundle acceptance for frozen REA_APP P53, Python3.11+/Node20+ pinned @babel/parser7.29.9.
 2. Decision/work: Original parser rewrite (higher risk) vs isolated read-only full-checkout acceptance harness (selected). New p53_acceptance.py runs original 25-blob Gate R then actual synthetic 6/8 P53 bundle→retail review/ZIP, source SHA/bytes and deterministic reruns; separate two preflight unit tests. No remote call.
