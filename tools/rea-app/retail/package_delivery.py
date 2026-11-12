@@ -135,6 +135,17 @@ def verify_zip(zip_path: Path, bundle_path: Path | None = None) -> None:
             data = {name: z.read(name) for name in ZIP_NAMES}
     except (zipfile.BadZipFile, RuntimeError, OSError) as exc:
         raise owner.DeliveryError("invalid ZIP data") from exc
+    # Reject hidden data outside ZIP members, alternate headers/metadata,
+    # and ZIP comments. The delivery writer is intentionally deterministic.
+    expected_stream = io.BytesIO()
+    with zipfile.ZipFile(expected_stream, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as canonical:
+        for name in ZIP_NAMES:
+            meta = zipfile.ZipInfo(name, date_time=(2020, 1, 1, 0, 0, 0))
+            meta.compress_type = zipfile.ZIP_DEFLATED
+            meta.external_attr = (0o100600 << 16)
+            canonical.writestr(meta, data[name], compress_type=zipfile.ZIP_DEFLATED, compresslevel=6)
+    if expected_stream.getvalue() != raw:
+        raise owner.DeliveryError("noncanonical ZIP bytes: hidden payload or altered metadata")
     if data["README.txt"] != README:
         raise owner.DeliveryError("README modified")
     try:
