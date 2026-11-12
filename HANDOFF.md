@@ -1,3 +1,15 @@
+## 2026-11-12 KST — REA_APP candidate one-command P95 progress (10-part handoff)
+1. **Goal/stack:** P85→P95 REA_APP optional offline customer-review companion, Python3.11+ source v1 summaries, frozen P53 original preserved.
+2. **Work/decision:** Compared original analyzer+installer A (high regression/Windows scope) with independent customer candidate B (selected low-cost). New `retail/candidate_cli.py` provides report validation/build→verify→pack→verify-zip→source-backed final check/SHA in one CLI. On errors, rollback only exact byte+inode own outputs, leaving suspicious changes for manual inspection.
+3. **Tests:** Source SHA `78f0906cb0e713733c1543728e75ed3641e9b2d2`, all five Git blob identities matched local executed files, Linux Python3.13.5 **39 PASS/0 FAIL/0 SKIP**, compileall PASS; seven new tests incl existing target preservation and concurrent replacement. Real local subprocess and ZIP writes tested on synthetic report fixtures.
+4. **State:** REA_APP **85% provisional unchanged**, 95% NOT CERTIFIED, RELEASE HOLD/SALE NO-GO; central 16 active rows should remain unchanged except REA_APP evidence.
+5. **Blockers/pivot:** Private full git clone DNS fails, original Gate R/QA/Babel bundle unavailable in this environment. Chromium local file:// ERR_BLOCKED_BY_ADMINISTRATOR, not equivalent to physical Windows browser; no paid CI dispatch. Stop repeated superficial tests; next run authorized original E2E.
+6. **Repo/branch/SHA:** `hibi89/HAE@feature/rea-app-kmong-owner-delivery-20261112` tested function+QA `78f0906cb0e713733c1543728e75ed3641e9b2d2`, report `docs/REA_APP_P95_SINGLE_COMMAND_CANDIDATE_20261112.md`. Original REA_APP SHA `2fe581b683f6a49779e71058cddbfd165871593a` and P53 `1ae3dac263a1a5c866434c8418fe7dbb1d3f1d48` unchanged. Docs SHA read back after update.
+7. **Production/runtime:** No Vercel/Production (N/A). Linux Python3.13.5 scoped; Windows native/Node/Babel and real customer package NOT RUN.
+8. **Backup/security:** Normal Git ancestry rollback; no original assets, user customer code/secrets, license, access, paid runner or deployment modified.
+9. **Next:** Full authorized private checkout original Gate R+QA + 39 retail scoped suite, real P53 synthetic bundle→candidate CLI, physical Win10/11 file:// buyer acceptance, rights/NOTICE/signing/pilot. Rescore 95 only after true integration evidence.
+10. **Date/scope:** 2026-11-12 KST. Exact 5 Git blobs, 39/39 synthetic Linux scoped; full analyzer, Windows, CI, buyer and legal status unverified.
+
 ## 2026-11-12 KST — REA_APP P95 ZIP security verification (10-item handoff)
 1. Goal/stack: P85→P95 retail offline Python3.11+ handoff based on frozen REA_APP v0.3.0, no original analyzer edits.
 2. Done/decision: Compared integrated P53+Windows (cost/risk) vs isolated retail ZIP bytes/race hardening (selected). Canonical 4-member archive bytes check prevents hidden extra bytes, and pack rechecks captured bytes against freshly read three original reports; two negative regressions including P53-shaped schema test.
