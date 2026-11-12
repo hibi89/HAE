@@ -1,3 +1,5 @@
+> **2026-11-12 P95 hardening in progress:** ZIP without `--bundle` now validates the strict, fixed-format review JSON ↔ generated HTML and HOLD fields in addition to unsigned hashes. **It still cannot prove provenance/authenticity**; use `verify-zip --bundle` against the owner's retained original reports. Six extra regression tests are committed, but the 29-case suite and original Gate R have not been run at the new feature SHA. Status remains **85% provisional / RELEASE HOLD**. See `docs/REA_APP_KMONG_P95_HARDENING_PARTIAL_20261112.md`.
+
 # REA_APP offline owner delivery — engineering P85 candidate
 
 This is an **optional** zero-network, Python 3.11+ companion for REA_APP v0.3.0's **existing** six/eight-report bundle. The original analyzer, source-pinned Gate R, pinned Babel/Node dependency, and frozen CLI remain unchanged. No analyzed source code, raw reports or source paths are included in the customer ZIP.
