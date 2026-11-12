@@ -1,3 +1,9 @@
+## 2026-11-12 KST — REA_APP P95 candidate one-command verification, 39 scoped PASS
+- Private `hibi89/HAE@feature/rea-app-kmong-owner-delivery-20261112` functional+test SHA `78f0906cb0e713733c1543728e75ed3641e9b2d2`: added independent `candidate_cli.py` for original-report validation → owner HTML/JSON build/verify → source-bound canonical ZIP → final SHA256 in one command, no overwrite and conservative rollback of only byte+inode-matched self-created files.
+- Linux Python3.13.5 exact local Git Blob parity five files; `python -m unittest discover -s retail_qa -p 'test_*.py' -v` **39 PASS / 0 FAIL / 0 SKIP**, `python -m compileall -q retail retail_qa` PASS. Seven new source-preservation/CLI/error/rollback acceptance tests.
+- Scope synthetic v1 report fixtures and real filesystem/subprocess/ZIP only. P53 original analyzer Gate R/QA, actual Babel-generated six/eight-report input, native Windows10/11 file://, customer pilot, GitHub hosted CI **NOT RUN**; `file://` browser test in sandbox blocked by admin.
+- **85% provisional retained; 95% NOT ACCEPTED, RELEASE HOLD.** No original analyzer/other branches, customer source, paid API or Production changes. [Evidence](docs/REA_APP_P95_SINGLE_COMMAND_CANDIDATE_20261112.md).
+
 ## 2026-11-12 KST — REA_APP P95 ZIP hardening, exact Git blob 32/32 PASS
 - Verified code+QA `31011f67eb8cacd56a5533e4602531ad38c47483`: canonical whole-ZIP bytes block hidden trailing payload, and revalidate exact ZIP-member bytes against fresh source reports after preflight to prevent TOCTOU. Added regression and synthetic P53 schema-shaped test.
 - Local Linux Python3.13.5 **32 PASS / 0 FAIL / 0 SKIP**, compileall PASS. Exact Git source blobs 3/3 matched local executed files. Pre-fix crafted trailing-byte ZIP incorrectly accepted; injected post-preflight swap reproduced FAIL and now blocked.
