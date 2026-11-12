@@ -237,6 +237,84 @@ class OfflineDeliveryTests(unittest.TestCase):
                               "--archive",str(self.archive)],capture_output=True,text=True)
         self.assertEqual(b.returncode,0,b.stderr)
 
+    def test_delivery_extra_file_blocks_owner_verification(self):
+        self.handoff()
+        (self.delivery / "unexpected.txt").write_text("unapproved")
+        with self.assertRaises(owner.DeliveryError):
+            owner.verify(self.bundle, self.delivery)
+        with self.assertRaises(owner.DeliveryError):
+            package.pack(self.bundle, self.delivery, self.archive)
+
+    def test_duplicate_report_json_key_rejected(self):
+        path = self.bundle / "source-map.json"
+        data = path.read_bytes()
+        path.write_bytes(data.replace(b'"schema_version":', b'"schema_version":"fake","schema_version":', 1))
+        with self.assertRaises(owner.DeliveryError):
+            owner.build(self.bundle, self.delivery)
+
+    def test_unsigned_zip_html_mismatch_rejected(self):
+        self.handoff(); package.pack(self.bundle, self.delivery, self.archive)
+        with zipfile.ZipFile(self.archive) as z:
+            data = {name: z.read(name) for name in package.ZIP_NAMES}
+        data["review.html"] = data["review.html"].replace(b"<!doctype html>", b"<!doctype html><!-- forged -->")
+        receipt = owner._parse_json_strict(data["manifest.json"])
+        receipt["delivery_sha256"]["review.html"] = owner._hash(data["review.html"])
+        data["manifest.json"] = owner._encode(receipt)
+        with zipfile.ZipFile(self.archive, "w") as z:
+            for name in package.ZIP_NAMES:
+                z.writestr(name, data[name])
+        with self.assertRaises(owner.DeliveryError):
+            package.verify_zip(self.archive)
+
+    def test_unsigned_zip_release_hold_cannot_be_changed(self):
+        self.handoff(); package.pack(self.bundle, self.delivery, self.archive)
+        with zipfile.ZipFile(self.archive) as z:
+            data = {name: z.read(name) for name in package.ZIP_NAMES}
+        review = owner._parse_json_strict(data["review.json"])
+        review["customer_release"] = "APPROVED"
+        data["review.json"] = owner._encode(review)
+        data["review.html"] = owner._html(review)
+        receipt = owner._parse_json_strict(data["manifest.json"])
+        for name in owner.ARTIFACTS:
+            receipt["delivery_sha256"][name] = owner._hash(data[name])
+        data["manifest.json"] = owner._encode(receipt)
+        with zipfile.ZipFile(self.archive, "w") as z:
+            for name in package.ZIP_NAMES:
+                z.writestr(name, data[name])
+        with self.assertRaises(owner.DeliveryError):
+            package.verify_zip(self.archive)
+
+    def test_unsigned_zip_bad_source_digest_format_rejected(self):
+        self.handoff(); package.pack(self.bundle, self.delivery, self.archive)
+        with zipfile.ZipFile(self.archive) as z:
+            data = {name: z.read(name) for name in package.ZIP_NAMES}
+        receipt = owner._parse_json_strict(data["manifest.json"])
+        receipt["bundle_sha256"]["source-map.json"] = "not-a-sha256"
+        data["manifest.json"] = owner._encode(receipt)
+        with zipfile.ZipFile(self.archive, "w") as z:
+            for name in package.ZIP_NAMES:
+                z.writestr(name, data[name])
+        with self.assertRaises(owner.DeliveryError):
+            package.verify_zip(self.archive)
+
+    def test_unsigned_zip_negative_count_rejected(self):
+        self.handoff(); package.pack(self.bundle, self.delivery, self.archive)
+        with zipfile.ZipFile(self.archive) as z:
+            data = {name: z.read(name) for name in package.ZIP_NAMES}
+        review = owner._parse_json_strict(data["review.json"])
+        review["counts"]["files_indexed"] = -1
+        data["review.json"] = owner._encode(review)
+        data["review.html"] = owner._html(review)
+        receipt = owner._parse_json_strict(data["manifest.json"])
+        for name in owner.ARTIFACTS:
+            receipt["delivery_sha256"][name] = owner._hash(data[name])
+        data["manifest.json"] = owner._encode(receipt)
+        with zipfile.ZipFile(self.archive, "w") as z:
+            for name in package.ZIP_NAMES:
+                z.writestr(name, data[name])
+        with self.assertRaises(owner.DeliveryError):
+            package.verify_zip(self.archive)
+
 
 if __name__ == "__main__":
     unittest.main()
