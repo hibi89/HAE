@@ -18,7 +18,7 @@ from axflow.planner import plan_request
 from lightning_azent import LAExecutor
 from lightning_azent.engine import PlanError
 from lightning_azent.hae_bridge import HAEBridge
-from lightning_azent.sovia_projection import export_local_synthetic_projection
+from sovia_projection_private import export_local_synthetic_projection
 
 TASK = "Import this CSV file into local SQLite"
 FINGERPRINT = "a" * 64

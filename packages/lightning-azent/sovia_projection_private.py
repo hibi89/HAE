@@ -11,9 +11,9 @@ from __future__ import annotations
 
 import re
 
-from .contract import prepare_plan
-from .engine import PlanError
-from .hae_bridge import HAEBridge
+from lightning_azent.contract import prepare_plan
+from lightning_azent.engine import PlanError
+from lightning_azent.hae_bridge import HAEBridge
 
 PUBLIC_SCHEMA = "sovia.la_minimal_projection.synthetic.v1"
 PUBLIC_SOURCE_KIND = "DECLARED_LA_LIKE_SYNTHETIC"
