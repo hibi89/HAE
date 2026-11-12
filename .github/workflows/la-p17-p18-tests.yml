@@ -50,6 +50,16 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}/apps/ax-flow${{ runner.os == 'Windows' && ';' || ':' }}${{ github.workspace }}/packages/lightning-azent
         run: python -B -m unittest discover -s apps/ax-flow/tests -v
+      - name: Checkout exact public SOVIA P40 source-only contract
+        uses: actions/checkout@v4
+        with:
+          repository: hibi89/SOVIA_sovereign
+          ref: 63c9a329de71470089e0a866e802a20ce9a48ad6
+          path: .sovia-public-p40
+          persist-credentials: false
+      - name: P41 real local HAE-to-LA SQLite receipt into SOVIA P40 cross-check
+        shell: bash
+        run: python -I -B packages/lightning-azent/verify_sovia_p41_roundtrip.py --public-source .sovia-public-p40
       - name: Build and verify standalone unsigned synthetic LA zipapp
         shell: bash
         run: |
