@@ -1,3 +1,15 @@
+## 2026-11-12 KST — REA_APP P95 ZIP security verification (10-item handoff)
+1. Goal/stack: P85→P95 retail offline Python3.11+ handoff based on frozen REA_APP v0.3.0, no original analyzer edits.
+2. Done/decision: Compared integrated P53+Windows (cost/risk) vs isolated retail ZIP bytes/race hardening (selected). Canonical 4-member archive bytes check prevents hidden extra bytes, and pack rechecks captured bytes against freshly read three original reports; two negative regressions including P53-shaped schema test.
+3. Tests: Git blob 3/3 exact for source at `31011f67eb8cacd56a5533e4602531ad38c47483`; Linux Python3.13.5 `python -m unittest discover -s retail_qa -p 'test_*.py' -v` **32 PASS / 0 FAIL / 0 SKIP**, compileall PASS. Pre-fix swapped-byte 1 FAIL then repaired; appended hidden data bypass reproduced and fixed.
+4. State: 85% provisional retained, P95 NOT ACHIEVED; RELEASE HOLD; all active Kmong 16 scores unchanged.
+5. Blockers/stop-pivot: Private repository git clone DNS unavailable; original Gate R and native Windows no authorized runtime. Actual `file://` Chromium ERR_BLOCKED_BY_ADMINISTRATOR. Avoid claiming full buyer P95.
+6. Repo/branch/SHA: Private `hibi89/HAE@feature/rea-app-kmong-owner-delivery-20261112` tested source `31011f67eb8cacd56a5533e4602531ad38c47483`, evidence `docs/REA_APP_P95_ZIP_SECURITY_RETEST_20261112.md`; prior patch `a9093418`; original `REA_APP@2fe581b6` unchanged. Docs HEAD resolve after update.
+7. Production/env: Vercel N/A; Linux Python local synthetic only; GitHub Actions not triggered, no paid service.
+8. Source/backup/security: original code and other branches kept; Git rewind via previous commit non-force, no user secrets/source, access change, permission, license or external transmission.
+9. Next: run original Gate R+QA and 32 scoped QA at authorized full checkout; P53 actual bundle to ZIP end-to-end, native Win10/11 file://, licensing/buyer pilot/approval then P95 reevaluation.
+10. Date/proof: 2026-11-12 KST; exact three-file Git blob parity and 32/32 subset; overall product 95 unverified.
+
 ## 2026-11-12 KST — REA_APP P95 scoped hardening partial (10-item handoff)
 1. **Goal/stack:** P85→P95 offline retail verification for frozen Python3.11+ REA_APP P53. Original static analyzer and buyer data unchanged.
 2. **Implemented/design:** Selected separate companion B over editing original analyzer A (lower regression/cost). Canonical unsigned ZIP schema/count/HOLD/HTML/JSON checks, strict duplicate-key JSON parsing, unexpected delivery extras fail-closed, six new negative regressions; no runtime external actions.
