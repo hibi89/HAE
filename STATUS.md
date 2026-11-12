@@ -1,3 +1,9 @@
+## 2026-11-12 KST — REA_APP P95 ZIP hardening, exact Git blob 32/32 PASS
+- Verified code+QA `31011f67eb8cacd56a5533e4602531ad38c47483`: canonical whole-ZIP bytes block hidden trailing payload, and revalidate exact ZIP-member bytes against fresh source reports after preflight to prevent TOCTOU. Added regression and synthetic P53 schema-shaped test.
+- Local Linux Python3.13.5 **32 PASS / 0 FAIL / 0 SKIP**, compileall PASS. Exact Git source blobs 3/3 matched local executed files. Pre-fix crafted trailing-byte ZIP incorrectly accepted; injected post-preflight swap reproduced FAIL and now blocked.
+- Real Chromium `file://` attempted: ERR_BLOCKED_BY_ADMINISTRATOR, NOT VERIFIED. Original Gate R/QA/Babel/real six/eight-report bundle, native Windows, GitHub Actions and buyer pilot NOT RUN. **85% provisional unchanged; P95 NOT certified, RELEASE HOLD.**
+- Product evidence: [P95 security retest](docs/REA_APP_P95_ZIP_SECURITY_RETEST_20261112.md); original REA_APP and other branches, production, paid service and customer sources unchanged.
+
 ## 2026-11-12 KST — REA_APP P95 scoped hardening partial, 85% unchanged
 - Source/test code SHA `c3f83af41240d0aefd6d9b26611b70068871ada9`: strict JSON duplicate-key rejection, review ZIP canonical HTML/JSON, fixed HOLD state, 16 bounded counts/SHA digest validation and 6 new regression cases.
 - Local isolated logic mirror 10 PASS / 0 FAIL. **Exact GitHub source 29-case retail_qa and original Gate R/QA NOT RUN**; GitHub combined status 0, PR workflow runs 0, private checkout DNS unavailable; Windows/file://, original synthetic P53 bundle E2E and buyer/licensing NOT VERIFIED.
