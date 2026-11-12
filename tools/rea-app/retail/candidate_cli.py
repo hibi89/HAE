@@ -1,4 +1,4 @@
-"""Single-command offline REA_APP delivery candidate with conservative rollback.
+"""Single-command offline REA_APP delivery candidate with fail-closed output preservation.
 
 This is NOT a commercial release or a signature. Input reports remain read-only.
 """
