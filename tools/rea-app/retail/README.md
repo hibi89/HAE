@@ -1,3 +1,5 @@
+> **2026-11-12 P95 safety retest:** whole ZIP is now compared against canonical deterministic bytes (hidden appended bytes prohibited); after owner preflight, `pack` revalidates the exact member bytes against fresh source report hashes/recalculated review. Linux exact-Git-blob scoped suite **32/32 PASS** at code SHA `31011f67eb8cacd56a5533e4602531ad38c47483`, not a full original Gate R/Windows/real buyer validation. Commercial progress remains **85% provisional / P95 NOT CERTIFIED / RELEASE HOLD**. [Evidence](docs/REA_APP_P95_ZIP_SECURITY_RETEST_20261112.md).
+
 > **2026-11-12 P95 hardening in progress:** ZIP without `--bundle` now validates the strict, fixed-format review JSON ↔ generated HTML and HOLD fields in addition to unsigned hashes. **It still cannot prove provenance/authenticity**; use `verify-zip --bundle` against the owner's retained original reports. Six extra regression tests are committed, but the 29-case suite and original Gate R have not been run at the new feature SHA. Status remains **85% provisional / RELEASE HOLD**. See `docs/REA_APP_KMONG_P95_HARDENING_PARTIAL_20261112.md`.
 
 # REA_APP offline owner delivery — engineering P85 candidate
