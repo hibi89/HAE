@@ -1,4 +1,4 @@
-"""Synthetic candidate CLI end-to-end and conservative rollback acceptance."""
+"""Synthetic candidate CLI end-to-end and fail-closed output preservation."""
 from __future__ import annotations
 
 import subprocess
@@ -62,12 +62,14 @@ class CandidateTests(unittest.TestCase):
         self.assertFalse(self.delivery.exists())
         self.assertFalse(self.archive.exists())
 
-    def test_postpack_verify_failure_rolls_back_own_outputs(self):
+    def test_postpack_verify_failure_preserves_outputs_for_review(self):
+        original = {p.name: p.read_bytes() for p in self.bundle.iterdir()}
         with mock.patch.object(package, "verify_zip", side_effect=owner.DeliveryError("synthetic fail")):
-            with self.assertRaises(owner.DeliveryError):
+            with self.assertRaisesRegex(owner.DeliveryError, "outputs left untouched"):
                 candidate.prepare(self.bundle, self.delivery, self.archive)
-        self.assertFalse(self.delivery.exists())
-        self.assertFalse(self.archive.exists())
+        self.assertTrue(self.delivery.is_dir())
+        self.assertTrue(self.archive.is_file())
+        self.assertEqual(original, {p.name: p.read_bytes() for p in self.bundle.iterdir()})
 
     def test_replacement_during_failure_is_preserved(self):
         def replacement(*args, **kwargs):
