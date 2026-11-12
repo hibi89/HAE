@@ -1,3 +1,8 @@
+## 2026-11-12 KST — REA_APP Kmong 85% provisional engineering, RELEASE HOLD
+- Feature feature/rea-app-kmong-owner-delivery-20261112 independent retail/ + retail_qa/ customer summary HTML/JSON, original-three-report SHA pin, deterministic ZIP and independent verifier. Existing REA_APP P53 Gate R, original engine, wheel untouched.
+- Exact GitHub code/test blob parity; local Python3.13.5 23 PASS/0 FAIL/0 SKIP, Chromium HTML injected view 9 rows/0 JS errors/0 requests. Direct file:// ERR_BLOCKED_BY_ADMINISTRATOR, full original Gate R/QA/Windows/buyer NOT RUN.
+- Subjective engineering 70→85 (+15) bounded delivery layer; sale NO-GO/RELEASE HOLD, not 100%; detailed report docs/REA_APP_KMONG_P85_OWNER_DELIVERY_20261112.md. No deployment, paid CI, original files, permission change, customer source upload.
+
 ## REA_APP v0.3.0 INTERNAL MVP ACCEPTED / FROZEN — 2026-10-28 KST
 
 - **RELEASE DECISION:** The user-directed local backend/CLI MVP is accepted for `docs/TARGET_BLUEPRINT_V1.md` acceptance **A** on supported synthetic JS/TS. This is not HAE/Lightning Azent completion, real customer use or general-purpose source recovery.
