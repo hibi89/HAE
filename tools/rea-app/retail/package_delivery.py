@@ -125,9 +125,10 @@ def pack(bundle_path: Path, delivery_path: Path, zip_path: Path) -> None:
                     meta.compress_type = zipfile.ZIP_DEFLATED
                     meta.external_attr = (0o100600 << 16)
                     z.writestr(meta, contents[name], compress_type=zipfile.ZIP_DEFLATED, compresslevel=6)
-    except Exception:
-        archive.unlink(missing_ok=True)
-        raise
+    except Exception as exc:
+        # Never unlink after a failed write: another writer may have replaced
+        # the just-created archive path. Preserve partial output for review.
+        raise owner.DeliveryError("ZIP write failed; partial archive left untouched for manual review") from exc
 
 
 def verify_zip(zip_path: Path, bundle_path: Path | None = None) -> None:
