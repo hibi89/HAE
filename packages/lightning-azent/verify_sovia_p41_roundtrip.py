@@ -1,10 +1,7 @@
-"""P41 cross-repo OFFLINE synthetic acceptance in PRIVATE HAE CI.
+"""P43 private exact-SHA real HAE→LA SQLite steps to PUBLIC SOVIA P40.
 
-Consumes exact public SOVIA P40 source checkout pinned by the workflow.
-Actual first-party LA runs a fabricated local CSV through its SQLite engine.
-The untrusted, source-free minimal projection is then checked by SOVIA's
-real public P40 verifier; no private code or record is sent to public GitHub.
-This proves a synthetic technical adapter contract, NOT human/authenticity.
+No upload of private code or customer data. The public repo is checked out
+into this PRIVATE CI workspace at a pinned commit. Synthetic source only.
 """
 from __future__ import annotations
 
@@ -42,6 +39,7 @@ from lightning_azent import LAExecutor
 from lightning_azent.engine import PlanError
 from lightning_azent.hae_bridge import HAEBridge
 from sovia_projection_private import export_local_synthetic_projection
+from sovia_semantic_projection_private import project_completed_synthetic_steps
 
 TASK = "Import this CSV file into local SQLite"
 
@@ -50,109 +48,104 @@ def run(public_source: Path) -> dict:
     public = Path(public_source).resolve()
     if not public.is_dir():
         raise RuntimeError("PUBLIC_SOVIA_CHECKOUT_REQUIRED")
-    sovia_owner = _load(public / "sovia_la_owner_review.py", "_private_p41_public_owner")
-    sovia_check = _load(public / "sovia_la_minimal_projection.py", "_private_p41_public_check")
-    with TemporaryDirectory(prefix="la-sovia-actual-synthetic-roundtrip-") as tmp:
+    owner_review = _load(public / "sovia_la_owner_review.py", "_p43_public_owner")
+    minimal = _load(public / "sovia_la_minimal_projection.py", "_p43_public_minimal")
+    with TemporaryDirectory(prefix="la-sovia-p43-semantic-") as tmp:
         root = Path(tmp)
-        review = root / "public-review"
-        public_plan = public / "examples/demo_la_plan_review.json"
-        policy = public / "examples/demo_policy.json"
-        observations = public / "examples/demo_la_observations.json"
-        produced = sovia_owner.create_bundle(public_plan, policy, observations, review)
-        if produced["status"] != "SYNTHETIC_REVIEW_BUNDLE_CREATED_NOT_AUTHENTICATED":
-            raise RuntimeError("PUBLIC_REVIEW_NOT_CREATED")
-        baseline = json.loads((review / "review.json").read_text("utf-8"))
-        fingerprint = baseline["plan_fingerprint_sha256"]
-
-        original = root / "tiny-public-synthetic.csv"
-        original.write_bytes(b"id,amount\n1,7\n2,8\n")
-        original_hash = hashlib.sha256(original.read_bytes()).hexdigest()
-        state = root / "la-runtime.sqlite"
-        business = root / "la-business.sqlite"
+        source = root / "synthetic-orders.csv"
+        source.write_bytes(b"id,amount\n1,7\n2,8\n")
+        original_hash = hashlib.sha256(source.read_bytes()).hexdigest()
+        state, business = root / "runtime.sqlite", root / "business.sqlite"
         bridge = HAEBridge(LAExecutor(state, business, root))
-        owner = HAEConsumer(bridge)
-        run_id = "SyntheticSOVIAActualP41"
-        plan = plan_request(TASK, original.name)
-        preview = owner.preview(TASK, original.name, run_id)
-        if not (preview["requires_write_approval"] is True
-                and preview["approved"] is False and not state.exists()):
-            raise RuntimeError("UNAUTHORIZED_RUN_CREATED_PRE_EXECUTION")
-        owner.execute(TASK, original.name, run_id, synthetic=True,
-                      owner_confirmed=True,
-                      confirmed_request_sha256=preview["request_sha256"])
+        consumer = HAEConsumer(bridge)
+        run_id = "SyntheticSemanticP43"
+        plan = plan_request(TASK, source.name)
+        preview = consumer.preview(TASK, source.name, run_id)
+        if not (preview["requires_write_approval"] and not preview["approved"]
+                and not state.exists()):
+            raise RuntimeError("IMPLICIT_LA_SQLITE_EXECUTION_DETECTED")
+        consumer.execute(TASK, source.name, run_id, synthetic=True,
+                         owner_confirmed=True,
+                         confirmed_request_sha256=preview["request_sha256"])
         if not state.is_file() or not business.is_file():
-            raise RuntimeError("REAL_LA_SQLITE_EXECUTION_MISSING")
-        projection = export_local_synthetic_projection(
+            raise RuntimeError("REAL_LA_SQLITE_NOT_EXECUTED")
+
+        projection = project_completed_synthetic_steps(
+            bridge, plan, run_id, synthetic_acknowledged=True)
+        text = json.dumps(projection, sort_keys=True)
+        for prohibited in (run_id, source.name, "amount", "request_sha256",
+                           original_hash, "source_file", "sqlite3.Connection"):
+            if prohibited in text:
+                raise RuntimeError("PRIVATE_LA_DATA_PROJECTION_LEAK")
+        plan_file = root / "redacted-plan.json"
+        policy_file = root / "redacted-policy.json"
+        events_file = root / "redacted-observations.json"
+        for path, key in ((plan_file, "plan"), (policy_file, "policy"),
+                          (events_file, "observations")):
+            path.write_text(json.dumps(projection[key], sort_keys=True), encoding="utf-8")
+        output = root / "sovia-review"
+        result = owner_review.create_bundle(plan_file, policy_file, events_file, output)
+        if result["status"] != "SYNTHETIC_REVIEW_BUNDLE_CREATED_NOT_AUTHENTICATED":
+            raise RuntimeError("REAL_SEMANTIC_SOVIA_RECONCILE_NOT_CREATED")
+        review = json.loads((output / "review.json").read_text("utf-8"))
+        if (review["planned_steps"] != 2 or review["observed_events"] != 2 or
+                review["matched_step_ids"] != 2 or
+                review["reconciliation_finding_count"] != 0 or
+                review["plan_risk_finding_count"] < 1):
+            raise RuntimeError("LA_AUDIT_TO_SOVIA_STEP_SEMANTICS_MISMATCH")
+
+        minimal_doc = export_local_synthetic_projection(
             bridge, plan, run_id,
-            sovia_plan_fingerprint_sha256=fingerprint,
+            sovia_plan_fingerprint_sha256=review["plan_fingerprint_sha256"],
             synthetic_acknowledged=True)
-        projection_raw = json.dumps(projection, sort_keys=True, separators=(",", ":"))
-        if any(value in projection_raw for value in (
-                run_id, original.name, "amount", "sqlite_import_csv", "run_id",
-                "request_sha256", original_hash)):
-            raise RuntimeError("PRIVATE_SOURCE_EXPORTED")
-        public_input = root / "minimal-public-projection.json"
-        public_input.write_text(projection_raw, encoding="utf-8")
-        checked = sovia_check.compare_minimal_projection(
-            public_input, review, acknowledge=True)
-        if (checked["status"] != "REVIEW_REQUIRED_NOT_AUTHENTICATED" or
-                checked["plan_fingerprint_claim_matches"] is not True or
-                "PLAN_FINGERPRINT_MISMATCH" in checked["reasons"] or
-                "PLANNED_STEP_COUNT_MISMATCH" in checked["reasons"] or
-                checked["real_la_integration_verified"] is not False or
-                checked["cross_run_identity_verified"] is not False or
-                checked["execution_authorized"] is not False):
-            raise RuntimeError("FIRST_PARTY_MINIMAL_CROSSCHECK_FAILED")
-        if "SOVIA_RISK_FINDINGS_PRESENT" not in checked["reasons"]:
-            raise RuntimeError("PUBLIC_RISK_FINDINGS_WERE_LOST")
+        minimal_path = root / "minimal-projection.json"
+        minimal_path.write_text(json.dumps(minimal_doc, sort_keys=True), encoding="utf-8")
+        evaluated = minimal.compare_minimal_projection(minimal_path, output,
+                                                        acknowledge=True)
+        if (evaluated["status"] != "REVIEW_REQUIRED_NOT_AUTHENTICATED" or
+                evaluated["plan_fingerprint_claim_matches"] is not True or
+                evaluated["real_la_integration_verified"] is not False or
+                evaluated["cross_run_identity_verified"] is not False or
+                evaluated["review_risk_count"] < 1):
+            raise RuntimeError("LA_MINIMAL_SOVIA_RISK_FALSE_CLEAR")
 
-        wrong = dict(projection)
-        wrong["plan_fingerprint_sha256"] = "0" * 64 if fingerprint != "0" * 64 else "f" * 64
-        public_input.write_text(json.dumps(wrong), encoding="utf-8")
-        mismatch = sovia_check.compare_minimal_projection(
-            public_input, review, acknowledge=True)
-        if "PLAN_FINGERPRINT_MISMATCH" not in mismatch["reasons"]:
-            raise RuntimeError("FOREIGN_PLAN_CLAIM_NOT_DETECTED")
-
-        # Runtime business tamper must block any new public projection.
-        with closing(sqlite3.connect(business)) as con:
-            con.execute("DELETE FROM csv_records WHERE row_number=2")
-            con.commit()
+        # Missing a genuine LA step audit event must fail source export
+        # before a new SOVIA reconciliation can be produced.
+        with closing(sqlite3.connect(state)) as conn:
+            conn.execute(
+                "DELETE FROM audit_events WHERE run_id=? AND event_type='step_completed' "
+                "AND details_json LIKE ?", (run_id, '%"step_id":"input"%'))
+            conn.commit()
         try:
-            export_local_synthetic_projection(
-                bridge, plan, run_id,
-                sovia_plan_fingerprint_sha256=fingerprint,
-                synthetic_acknowledged=True)
+            project_completed_synthetic_steps(
+                bridge, plan, run_id, synthetic_acknowledged=True)
         except PlanError:
-            tamper_blocked = True
+            missing_event_rejected = True
         else:
-            tamper_blocked = False
-        if not tamper_blocked:
-            raise RuntimeError("TAMPERED_REAL_SQLITE_ACCEPTED")
-        if original_hash != hashlib.sha256(original.read_bytes()).hexdigest():
-            raise RuntimeError("ORIGINAL_SYNTHETIC_INPUT_MODIFIED")
+            missing_event_rejected = False
+        if not missing_event_rejected:
+            raise RuntimeError("MISSING_FIRST_PARTY_STEP_EVENT_FALSE_MATCH")
+        if hashlib.sha256(source.read_bytes()).hexdigest() != original_hash:
+            raise RuntimeError("ORIGINAL_SYNTHETIC_SOURCE_MODIFIED")
         return {
-            "status": "FIRST_PARTY_LA_SQLITE_TO_PUBLIC_SOVIA_P40_SYNTHETIC_PASS",
-            "first_party_la_sqlite_executed": True,
-            "original_input_unchanged": True,
-            "private_payload_exported": False,
-            "public_sovia_risk_findings_retained": True,
-            "mismatched_sovia_claim_refused": True,
-            "tampered_la_receipt_refused": True,
-            "plan_identity_authenticated": False,
-            "source_authenticated": False,
-            "human_consent_authenticated": False,
-            "customer_acceptance_verified": False,
+            "status": "REAL_SYNTHETIC_LA_SQLITE_STEPS_TO_SOVIA_AUDIT_PASS",
+            "actual_first_party_la_sqlite": True,
+            "matched_sanitized_step_count": review["matched_step_ids"],
+            "unapproved_la_write_still_flagged_by_sovia_policy": True,
+            "original_source_unchanged": True,
+            "missing_la_step_event_rejected": True,
+            "raw_private_data_exported": False,
+            "human_identity_authenticated": False,
+            "real_customer_scope_verified": False,
             "commercial_release_approved": False,
         }
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="Private synthetic first-party LA -> public SOVIA CI")
-    parser.add_argument("--public-source", required=True)
-    args = parser.parse_args(argv)
-    result = run(Path(args.public_source))
-    print(json.dumps(result, sort_keys=True))
+    p = argparse.ArgumentParser(description="PRIVATE CI synthetic real LA→SOVIA semantic parity")
+    p.add_argument("--public-source", required=True)
+    args = p.parse_args(argv)
+    print(json.dumps(run(Path(args.public_source)), sort_keys=True))
     return 0
 
 
