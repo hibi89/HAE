@@ -1,3 +1,15 @@
+## [2026-11-13 KST] HAE 최종설계 대비 항목별 감사 / 인수인계 10항
+1. **목표/확정 기술:** 자연어→실 LLM 해석→HAE IR→LA 범용 플로우 자동 구성·에러 왕복→SOVIA/DBVORA→승인 실행/복구. 정본 `main/docs/ECOSYSTEM_CANONICAL.md` 및 `feature/axflow-mvp/REQUIREMENTS.md`.
+2. **완료/결정:** [R-01..R-13 근거 추적표](docs/HAE_FINAL_BLUEPRINT_TRACE_20261113.md) 신규 작성. 현재 CSV 5종 규칙/planner·로컬 IR/SQLite·승인·재개 코드는 보존하고 범용/AI 기능과 혼용하지 않는다. 소스 코드는 변경하지 않았다.
+3. **검증:** 기능 이전 SHA `2384e9d245ca60fc9b2055e9b82c4541b33bd6bd`, [Actions 42990527614](https://github.com/hibi89/HAE/actions/runs/42990527614) Windows/Ubuntu Python 각각 264PASS/2FAIL/7SKIP, Node UI24PASS; 2 FAIL은 배송 번들 parity. 이번 감사 신규 실행 0. 최종 정확 HEAD 전체 수용 E2E 미실행.
+4. **상태:** 공식 최종설계 완성률 `UNASSESSED`, 종전 85%는 과거 기술 마일스톤. 실제 LLM/범용 자동설계/교정/실 OAuth/독립 SOVIA/DBVORA·고객 Win10/11 부족. RELEASE HOLD.
+5. **오류/원인/대안:** 해커톤형 CSV MVP P85와 전체 최종설계 혼용. 코드 보존 + 추가 AI 계획 계약과 LA step registry·버전/승인 스키마를 분리 설계하고 fixture 검증→실 통합으로 단계 확대. 배송 원본 ZIP 덮어쓰기·CI FAIL 무시·무단 재시도 금지.
+6. **저장소·브랜치/SHA:** `hibi89/HAE@feature/axflow-mvp`, 검토 시작 HEAD `8d50927697b18b60163dccf6ff859070a7661901`; 정확한 문서 후속 커밋은 GitHub branch HEAD로 확인. 핵심 `apps/ax-flow/axflow/planner.py`, `web.py`, `la_adapter.py`, `docs/HAE_FINAL_BLUEPRINT_TRACE_20261113.md`.
+7. **서비스·환경:** 로컬 HAE/Python3.11+Node22, Vercel/Production 미적용. CLI/브라우저 신규 테스트 미실행, 과거 CI 링크만 증거.
+8. **원본/백업·권한:** 코드·시크릿·CSV/DB·고객 자료·원래 패키지/브랜치·요금/권한/배포 변경 0. Git 이력으로 문서 복구 가능.
+9. **다음 단계/승인:** AI 해석↔LA IR/오류 왕복 계약 및 단계별 안전한 변경안을 기존 기능과 분리 설계; SOVIA/DBVORA 합성 독립 E2E, 기존 2 FAIL 복구 테스트; 실제 모델 호출·외부 자료/비용·권한 변경 및 100점 가중치 승인 전에는 공식 퍼센트 산정 금지. 해총 원장과 동기화.
+10. **시각·범위:** 2026-11-13 KST. GitHub 원격 소스·설계·기존 CI 증거 대조, 실 테스트·고객·배포 미실행. 본 문서 갱신은 제품 완성·출시 아님.
+
 ## 2026-11-11 KST — HAE P9 85% 잠정 유지, UI 및 Windows HTTP 안정성 회귀 (10-point handoff)
 
 1. **목표·용도·요구·기술:** HAE local-first Python3.11/Lightning Azent/SQLite 합성 고객형 자동화 제품. 검증된 85% 잠정 목표 유지; 새 점수 부여 없이 저장된 작업 UI 경합·Windows HTTP 회귀 보강. 모든 라이브 고객/외부 권한/배포 RELEASE HOLD.
