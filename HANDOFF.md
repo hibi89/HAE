@@ -1,3 +1,15 @@
+## 2026-11-12 KST — REA_APP decisive Windows P95 acceptance handoff (10 points)
+1. **Goal/stack:** Frozen REA_APP P53 Python3.11+/Node/@babel/parser7.29.9 with offline `.pyz` retail; technical P95 goal, release separately approved.
+2. **Design/implemented:** Compared potentially paid GitHub-hosted Windows workflow (approval needed) versus owner’s existing physical Windows clean checkout (selected no-new-cost). Added real NTFS `mklink /J` and Edge/Chrome file:// buyer tests plus `retail_qa/strict_windows_gate.py`. It requires both native test IDs, >=58 cases, zero failures/skips, original Gate R+real 6/8 P53→ZIP, SHA-stable source and Windows `.pyz`, prints evidence.
+3. **Test evidence:** Code SHA `3889f932f15d11d1497f69e458ecb978072427c8`; both new Git blobs match exact executed files; Linux Python3.13.5 58 discovered/**56 PASS/2 expected native SKIP/0 FAIL**, same optimized, compileall PASS; strict Windows gate **exit2 BLOCKED** off Windows.
+4. **State:** **85% provisional / 95% NOT VERIFIED / RELEASE HOLD**, original P53 analyzer untouched and other products unaffected.
+5. **Failure / pivot:** Full private checkout/locked Babel and native Windows not mounted here; previous `p53_acceptance.py` blocked, direct Linux file:// policy blocked. Native Windows runner or owner PC must execute; do not claim P95 from static/mock checks. No unapproved paid Actions.
+6. **Repository/branch/SHA:** Private `hibi89/HAE@feature/rea-app-kmong-owner-delivery-20261112`; code `3889f932f15d11d1497f69e458ecb978072427c8`; details [full gate](docs/REA_APP_P95_NATIVE_WINDOWS_FULL_GATE_20261112.md); original `REA_APP@2fe581b6` frozen. Read latest HEAD before further commits.
+7. **Production/runtime:** No Vercel (offline); Linux local only for current verification. Windows command from complete clean checkout: `cd tools/rea-app; python retail_qa/strict_windows_gate.py` (locked parser preinstalled; no downloads inside script).
+8. **Source/security/backups:** Only synthetic temp files, real junction cleanup removes link not target, Chrome isolated profile, source SHA/read-only, no original/customer source release/credentials/access changes. Prior Git commit rollback.
+9. **Next:** Full native Windows strict gate execution, inspect report, repair actual failures. Then licensing/NOTICE, signing/distribution/real buyer support pilot and explicit release approval; if Windows unavailable request paid-runner/install approval first.
+10. **Time and proof:** 2026-11-12 KST; Linux **56 PASS+2 SKIP** is not full P95; original Gate R+native NTFS/file://+buyer acceptance UNVERIFIED.
+
 ## 2026-11-12 KST — REA_APP P95 remote source proof, buyer candidate refreshed (10-part handoff)
 1. Goal/stack: P85→P95 frozen P53 REA_APP original Python/Node parser to standalone offline review candidate.
 2. Decision: full original runner unavailable; instead independently match protected source against GitHub trees, rerun scoped Linux Python and rebuild distributable candidate, without modifying original analyzer or claiming P95. Compare full checkout+locked Babel runner (required) vs GitHub source identity (achievable, insufficient alone).
