@@ -1,3 +1,15 @@
+## 2026-11-12 KST — REA_APP P95 remote source proof, buyer candidate refreshed (10-part handoff)
+1. Goal/stack: P85→P95 frozen P53 REA_APP original Python/Node parser to standalone offline review candidate.
+2. Decision: full original runner unavailable; instead independently match protected source against GitHub trees, rerun scoped Linux Python and rebuild distributable candidate, without modifying original analyzer or claiming P95. Compare full checkout+locked Babel runner (required) vs GitHub source identity (achievable, insufficient alone).
+3. Evidence: remote original P53 source 25/25 exact Git blob matches and no unknown executable source; 11/11 retail local file blobs match remote; Linux Python3.13.5 56/56 PASS normal+optimized, 12/12 Python3.11 syntax only. Offline `.pyz` SHA256 18dd72be46ee4c37be60ad9d96ca73c469001747f0c7fe209a20e99e4a928dae, 10,453 bytes; `--help` works; old scoped customer ZIP end-to-end tests cover synthetic reports.
+4. State: product **85% provisional**, P95 NOT achieved / RELEASE HOLD; central active 16 values unchanged.
+5. Block: private git/npm DNS unavailable, original Gate R real Python/Node and locked Babel7.29.9 not executed, `p53_acceptance.py` exit2 BLOCKED. Native Windows/Edge file:// and buyer/legal not verified. Do not equate hash identity with runtime acceptance.
+6. Repo/branch/source: `hibi89/HAE@feature/rea-app-kmong-owner-delivery-20261112` most recent functional QA SHA `53bc6edab84c4d2f78a35fe5fbb0e2be0d55f1e9`; audit `docs/REA_APP_P95_P53_IMMUTABILITY_AND_PYZ_AUDIT_20261112.md`; current docs HEAD confirm. Original `REA_APP@2fe581b6` preserved; original P53 trees listed in audit.
+7. Production: N/A offline Python `.pyz`, not EXE; no Vercel. Linux Python3.13.5 only, Windows runtime not tested.
+8. Backup/security: prior Git SHA available for rollback, unchanged analyzer/main/other branches, no customer files/secrets/API/payments/permissions/licensing/deployment changes; temporary .pyz not commercial release.
+9. Next gates: authorized full checkout + verified pinned Babel7.29.9 `python verify_gate_r.py`; `python retail_qa/p53_acceptance.py`; actual Win10/11 file:// and junction, rights/NOTICE/support/controlled buyer pilot. Paid CI/release/customer data needs advance authorization. Only then re-score P95.
+10. Evidence date: 2026-11-12 KST; Git 25+11 hash parity and 56-case Linux scoped suite verified; full P53/Windows/CI unverified.
+
 ## 2026-11-12 KST — REA_APP corrupted-ZIP fix and Python zipapp candidate (10-part handoff)
 1. **Goal/stack:** P85→P95 REA_APP retail readiness, zero-network Python3.11+ stdlib companion for frozen P53 original.
 2. **Done/design:** Compared Windows EXE now (external deps/signing/OS risk) vs reproducible Python `.pyz` (selected zero-cost). Added `retail/build_zipapp.py` five-member deterministic Python zipapp with SHA256 source manifest, runs candidate→owner/ZIP, forbids overwrite. Fixed malformed DEFLATE unhandled `zlib.error` to controlled HOLD/exit2. Source analyzer unmodified.
