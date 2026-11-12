@@ -86,9 +86,16 @@ class SemanticLAProjectionP43Tests(unittest.TestCase):
             row = db.execute(
                 "SELECT run_id,plan_hash,event_type,occurred_at,details_json "
                 "FROM audit_events WHERE event_type='step_completed' LIMIT 1").fetchone()
-            db.execute(
-                "INSERT INTO audit_events(run_id,plan_hash,event_type,occurred_at,details_json) "
-                "VALUES (?,?,?,?,?)", row)
+            terminal = db.execute(
+                "SELECT run_id,plan_hash,event_type,occurred_at,details_json "
+                "FROM audit_events WHERE event_type='run_completed' "
+                "ORDER BY event_id DESC LIMIT 1").fetchone()
+            # Keep the LA terminal event last, to test the independent SOVIA
+            # step-uniqueness gate rather than LA's earlier terminal guard.
+            for event in (row, terminal):
+                db.execute(
+                    "INSERT INTO audit_events(run_id,plan_hash,event_type,occurred_at,details_json) "
+                    "VALUES (?,?,?,?,?)", event)
             db.commit()
         with self.assertRaisesRegex(PlanError, "duplicate completed"):
             self.project()
