@@ -203,11 +203,11 @@ def build(bundle_path: Path, output_path: Path) -> None:
                 handle.write(contents[name])
         with (output / "manifest.json").open("xb") as handle:
             handle.write(manifest)
-    except Exception:
-        for name in (*ARTIFACTS, "manifest.json"):
-            (output / name).unlink(missing_ok=True)
-        output.rmdir()
-        raise
+    except Exception as exc:
+        # Never unlink a path after a write failure: a concurrent process can
+        # replace the just-created output folder with a junction/symlink to
+        # unrelated data. Preserve any partial output for human inspection.
+        raise DeliveryError("output write failed; partial directory left untouched for manual review") from exc
 
 
 def verify(bundle_path: Path, delivery_path: Path) -> None:
