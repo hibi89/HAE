@@ -62,6 +62,18 @@ def _encode(value: object) -> bytes:
     return (json.dumps(value, ensure_ascii=False, sort_keys=True, indent=2) + "\n").encode("utf-8")
 
 
+def _parse_json_strict(data: bytes) -> object:
+    """Reject ambiguous duplicate JSON keys at every depth."""
+    def object_pairs(pairs: list[tuple[str, object]]) -> dict:
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise DeliveryError("duplicate JSON key")
+            result[key] = value
+        return result
+    return json.loads(data, object_pairs_hook=object_pairs)
+
+
 def _count(mapping: dict, name: str) -> int:
     value = mapping.get(name)
     if type(value) is not int or not (0 <= value <= MAX_COUNT):
@@ -75,7 +87,7 @@ def _load(bundle: Path) -> tuple[list[dict], dict[str, str]]:
     for filename, schema in zip(FILES, SCHEMAS):
         data = _regular_file(bundle / filename)
         try:
-            report = json.loads(data)
+            report = _parse_json_strict(data)
         except (UnicodeError, json.JSONDecodeError) as exc:
             raise DeliveryError(f"invalid JSON: {filename}") from exc
         if not isinstance(report, dict) or report.get("schema_version") != schema:
@@ -189,11 +201,14 @@ def verify(bundle_path: Path, delivery_path: Path) -> None:
     delivery = _directory(delivery_path)
     if bundle == delivery or bundle in delivery.parents or delivery in bundle.parents:
         raise DeliveryError("overlapping source and delivery")
+    expected_names = {*ARTIFACTS, "manifest.json"}
+    if {item.name for item in delivery.iterdir()} != expected_names:
+        raise DeliveryError("unexpected files in owner delivery")
     reports, source_hashes = _load(bundle)
     expected = _review(reports)
     data = _regular_file(delivery / "manifest.json")
     try:
-        manifest = json.loads(data)
+        manifest = _parse_json_strict(data)
     except (UnicodeError, json.JSONDecodeError) as exc:
         raise DeliveryError("invalid manifest") from exc
     if not isinstance(manifest, dict) or manifest.get("schema") != VERSION:
