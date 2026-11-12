@@ -12,6 +12,7 @@ import os
 import stat
 import sys
 import zipfile
+import zlib
 from pathlib import Path
 
 import owner_delivery as owner
@@ -149,7 +150,7 @@ def verify_zip(zip_path: Path, bundle_path: Path | None = None) -> None:
                 if item.is_dir() or stat.S_ISLNK(item.external_attr >> 16):
                     raise owner.DeliveryError("directory/symlink ZIP entries forbidden")
             data = {name: z.read(name) for name in ZIP_NAMES}
-    except (zipfile.BadZipFile, RuntimeError, OSError) as exc:
+    except (zipfile.BadZipFile, RuntimeError, OSError, EOFError, zlib.error) as exc:
         raise owner.DeliveryError("invalid ZIP data") from exc
     # Reject hidden data outside ZIP members, alternate headers/metadata,
     # and ZIP comments. The delivery writer is intentionally deterministic.
