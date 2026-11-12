@@ -205,6 +205,15 @@ class OfflineDeliveryTests(unittest.TestCase):
         with self.assertRaises(owner.DeliveryError):
             package.verify_zip(self.archive)
 
+    def test_zip_hidden_trailing_payload_rejected(self):
+        self.handoff(); package.pack(self.bundle, self.delivery, self.archive)
+        with self.archive.open("ab") as handle:
+            handle.write(b"\nFORBIDDEN_SECRET_OUTSIDE_ZIP_CENTRAL_DIRECTORY\n")
+        with self.assertRaises(owner.DeliveryError):
+            package.verify_zip(self.archive, self.bundle)
+        with self.assertRaises(owner.DeliveryError):
+            package.verify_zip(self.archive)
+
     def test_zip_unexpected_path_rejected(self):
         self.handoff();package.pack(self.bundle,self.delivery,self.archive)
         with zipfile.ZipFile(self.archive,"a") as z:
