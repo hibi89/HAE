@@ -1,3 +1,8 @@
+## 2026-11-12 KST — REA_APP P95 scoped hardening partial, 85% unchanged
+- Source/test code SHA `c3f83af41240d0aefd6d9b26611b70068871ada9`: strict JSON duplicate-key rejection, review ZIP canonical HTML/JSON, fixed HOLD state, 16 bounded counts/SHA digest validation and 6 new regression cases.
+- Local isolated logic mirror 10 PASS / 0 FAIL. **Exact GitHub source 29-case retail_qa and original Gate R/QA NOT RUN**; GitHub combined status 0, PR workflow runs 0, private checkout DNS unavailable; Windows/file://, original synthetic P53 bundle E2E and buyer/licensing NOT VERIFIED.
+- **85% provisional retained, 95 NOT achieved, RELEASE HOLD / sale NO-GO**. No original REA_APP/main/LA branch changes, production, paid CI, customer data or external transmission. Evidence: [P95 partial audit](docs/REA_APP_KMONG_P95_HARDENING_PARTIAL_20261112.md).
+
 ## 2026-11-12 KST — REA_APP Kmong 85% provisional engineering, RELEASE HOLD
 - Feature feature/rea-app-kmong-owner-delivery-20261112 independent retail/ + retail_qa/ customer summary HTML/JSON, original-three-report SHA pin, deterministic ZIP and independent verifier. Existing REA_APP P53 Gate R, original engine, wheel untouched.
 - Exact GitHub code/test blob parity; local Python3.13.5 23 PASS/0 FAIL/0 SKIP, Chromium HTML injected view 9 rows/0 JS errors/0 requests. Direct file:// ERR_BLOCKED_BY_ADMINISTRATOR, full original Gate R/QA/Windows/buyer NOT RUN.
