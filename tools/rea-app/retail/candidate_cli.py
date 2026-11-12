@@ -30,7 +30,9 @@ def _rollback_owned(delivery: Path, archive: Path, snapshot: dict[str, tuple[int
             if _file_identity(archive) != zip_snapshot:
                 return False
             archive.unlink()
-        if delivery.is_dir() and not delivery.is_symlink():
+        if owner._is_link_or_reparse(delivery):
+            return False  # A replaced folder must not be traversed or deleted.
+        if delivery.is_dir():
             if {p.name for p in delivery.iterdir()} != set(snapshot):
                 return False
             for name in snapshot:
