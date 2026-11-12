@@ -1,3 +1,15 @@
+## 2026-11-12 KST — REA_APP P95 scoped hardening partial (10-item handoff)
+1. **Goal/stack:** P85→P95 offline retail verification for frozen Python3.11+ REA_APP P53. Original static analyzer and buyer data unchanged.
+2. **Implemented/design:** Selected separate companion B over editing original analyzer A (lower regression/cost). Canonical unsigned ZIP schema/count/HOLD/HTML/JSON checks, strict duplicate-key JSON parsing, unexpected delivery extras fail-closed, six new negative regressions; no runtime external actions.
+3. **Evidence:** Code/test SHA `c3f83af41240d0aefd6d9b26611b70068871ada9`; local *isolated mirror of inserted logic* 10 PASS/0FAIL, NOT full checked-out GitHub tests. New retail_qa suite would contain 29 cases, **NOT RUN**. GitHub statuses0/PR runs0; historical P85 scoped23 PASS cannot be transferred to new SHA.
+4. **State:** **85% provisional unchanged; 95% NOT CERTIFIED**, RELEASE HOLD / SALE NO-GO. Physical Windows and customer acceptance unverified.
+5. **Blockers/pivot:** Container git ls-remote failed github.com DNS; connector writes/reads work but cannot create authenticated executable checkout. Need approved runner or owner machine, do not repeat blind CI/redeploy or mark success.
+6. **Repo/branch/SHAs:** Private `hibi89/HAE@feature/rea-app-kmong-owner-delivery-20261112` source `c3f83af41240d0aefd6d9b26611b70068871ada9`; prior P85 docs baseline `48162883fe4e0e84e08e4c0b99d86e76d00dbc35`; evidence `docs/REA_APP_KMONG_P95_HARDENING_PARTIAL_20261112.md`; original `REA_APP@2fe581b683f6a49779e71058cddbfd165871593a` unchanged. Current documentation SHA verify after writes.
+7. **Deployment/env:** Vercel/Production N/A. Local Python isolated 10 checks, no Node/Babel or Windows suite at new SHA.
+8. **Backup/security:** Original source, wheel, other branches, user files, credentials, license, paid API/runner, access and deployment unchanged. Non-force Git commits can revert.
+9. **Next:** Authorized exact-SHA full Gate R+QA+29 retail_qa, real pinned synthetic bundle/ZIP E2E, physical Windows file:// and clean buyer unpack/rights/pilot; only then rescore 95 with owner approval for cost/real customer data/release.
+10. **Time/limit:** 2026-11-12 KST, GitHub code commit verified; local isolated logic only, no complete private source execution; central hub 85% remains.
+
 ## 2026-11-12 KST — REA_APP Kmong engineering P85 provisional / separate retail companion (10-point handoff)
 
 1. **Goal/tech:** Existing P53 frozen REA_APP v0.3.0 stays unchanged; 70→85 weighted engineering target, offline Python3.11+ owner review only.
