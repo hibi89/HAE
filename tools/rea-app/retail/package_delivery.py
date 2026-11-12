@@ -98,6 +98,22 @@ def pack(bundle_path: Path, delivery_path: Path, zip_path: Path) -> None:
         "review.html": owner._regular_file(delivery / "review.html"),
         "review.json": owner._regular_file(delivery / "review.json"),
     }
+    # Rebind precisely the bytes that will enter the ZIP to the original
+    # source reports. Earlier owner.verify may race with a later file swap.
+    reports, fresh_digests = owner._load(source)
+    expected_review = owner._review(reports)
+    if (contents["review.json"] != owner._encode(expected_review)
+            or contents["review.html"] != owner._html(expected_review)):
+        raise owner.DeliveryError("delivery contents changed after owner verification")
+    expected_manifest = owner._encode({
+        "schema": owner.VERSION,
+        "bundle_sha256": fresh_digests,
+        "delivery_sha256": {
+            name: owner._hash(contents[name]) for name in owner.ARTIFACTS
+        },
+    })
+    if contents["manifest.json"] != expected_manifest:
+        raise owner.DeliveryError("receipt changed after owner verification")
     # O_EXCL guards concurrent writers; no preexisting file is overwritten.
     fd = os.open(archive, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     try:
