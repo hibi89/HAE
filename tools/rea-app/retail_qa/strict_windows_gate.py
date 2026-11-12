@@ -42,9 +42,22 @@ def run() -> dict[str, object]:
     if _cmd(["git", "status", "--porcelain", "--untracked-files=no"], ROOT):
         raise RuntimeError("BLOCKED: tracked source modifications not allowed")
     suite = unittest.defaultTestLoader.discover(str(ROOT / "retail_qa"), pattern="test_*.py")
+    def all_test_ids(node):
+        for item in node:
+            if isinstance(item, unittest.TestSuite):
+                yield from all_test_ids(item)
+            else:
+                yield item.id()
+    discovered = set(all_test_ids(suite))
+    required_native = {
+        "test_windows_native_acceptance.NativeWindowsAcceptanceTests.test_real_ntfs_junction_is_rejected_without_touching_target",
+        "test_windows_native_acceptance.NativeWindowsAcceptanceTests.test_real_edge_or_chrome_renders_local_review_file",
+    }
+    if len(discovered) < 58 or not required_native.issubset(discovered):
+        raise RuntimeError("BLOCKED: missing required retail/native Windows tests")
     print("RUN retail QA and real native Windows junction/browser gates", flush=True)
     result = unittest.TextTestRunner(verbosity=2).run(suite)
-    if not result.wasSuccessful() or result.skipped:
+    if not result.wasSuccessful() or result.skipped or result.testsRun != len(discovered):
         raise RuntimeError(f"BLOCKED: retail tests run={result.testsRun}, "
                            f"errors={len(result.errors)}, failures={len(result.failures)}, "
                            f"skips={len(result.skipped)}; all must pass")
