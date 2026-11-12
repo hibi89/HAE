@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import os
 import stat
 import sys
 from pathlib import Path
@@ -22,30 +21,6 @@ def _file_identity(path: Path) -> tuple[int, int, bytes]:
     return info.st_dev, info.st_ino, owner._regular_file(path)
 
 
-def _rollback_owned(delivery: Path, archive: Path, snapshot: dict[str, tuple[int, int, bytes]],
-                    zip_snapshot: tuple[int, int, bytes] | None) -> bool:
-    """Remove only exact byte-and-inode matches. Never delete a replacement."""
-    try:
-        if zip_snapshot is not None and archive.exists():
-            if _file_identity(archive) != zip_snapshot:
-                return False
-            archive.unlink()
-        if owner._is_link_or_reparse(delivery):
-            return False  # A replaced folder must not be traversed or deleted.
-        if delivery.is_dir():
-            if {p.name for p in delivery.iterdir()} != set(snapshot):
-                return False
-            for name in snapshot:
-                if _file_identity(delivery / name) != snapshot[name]:
-                    return False
-            for name in snapshot:
-                (delivery / name).unlink()
-            delivery.rmdir()
-        return True
-    except (OSError, owner.DeliveryError):
-        return False
-
-
 def prepare(bundle_path: Path, delivery_path: Path, archive_path: Path) -> str:
     source = owner._directory(bundle_path)
     delivery = owner._validate_output_location(source, delivery_path)
@@ -55,11 +30,7 @@ def prepare(bundle_path: Path, delivery_path: Path, archive_path: Path) -> str:
     # All inputs must be valid before any final output is created.
     owner._review(owner._load(source)[0])
     owner.build(source, delivery)
-    snapshot: dict[str, tuple[int, int, bytes]] = {}
-    zip_snapshot = None
     try:
-        snapshot = {name: _file_identity(delivery / name)
-                    for name in (*owner.ARTIFACTS, "manifest.json")}
         owner.verify(source, delivery)
         package.pack(source, delivery, archive)
         zip_snapshot = _file_identity(archive)
@@ -68,10 +39,10 @@ def prepare(bundle_path: Path, delivery_path: Path, archive_path: Path) -> str:
         if _file_identity(archive) != zip_snapshot:
             raise owner.DeliveryError("archive changed after final verification")
         return hashlib.sha256(zip_snapshot[2]).hexdigest()
-    except (OSError, owner.DeliveryError):
-        if not _rollback_owned(delivery, archive, snapshot, zip_snapshot):
-            raise owner.DeliveryError("HOLD: partial outputs require manual review; none overwritten")
-        raise
+    except (OSError, owner.DeliveryError) as exc:
+        # Deleting even byte-checked files has a check-then-unlink race if
+        # another writer replaces a path. Leave outputs untouched on HOLD.
+        raise owner.DeliveryError("HOLD: candidate verification failed; generated outputs left untouched for manual review") from exc
 
 
 def main(argv: list[str] | None = None) -> int:
