@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - feature/la-p17-audit-evidence-20261112
+      - feature/sovia-la-projection-p41-20261112
     paths:
       - 'packages/lightning-azent/**'
       - 'apps/ax-flow/**'
