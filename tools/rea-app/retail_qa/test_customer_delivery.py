@@ -7,6 +7,7 @@ import sys
 import tempfile
 import unittest
 import warnings
+from unittest import mock
 import zipfile
 from pathlib import Path
 
@@ -204,6 +205,46 @@ class OfflineDeliveryTests(unittest.TestCase):
         self.archive.write_bytes(self.archive.read_bytes()[:120])
         with self.assertRaises(owner.DeliveryError):
             package.verify_zip(self.archive)
+
+    def test_pack_rechecks_bytes_after_owner_preflight(self):
+        self.handoff()
+        original_reader = owner._regular_file
+        calls = 0
+        def swapped_read(path, limit=owner.MAX_JSON_BYTES):
+            nonlocal calls
+            result = original_reader(path, limit)
+            if path == self.delivery / "review.html":
+                calls += 1
+                if calls == 2:
+                    return result + b"<!-- concurrent modification -->"
+            return result
+        with mock.patch.object(owner, "_regular_file", side_effect=swapped_read):
+            with self.assertRaises(owner.DeliveryError):
+                package.pack(self.bundle, self.delivery, self.archive)
+        self.assertFalse(self.archive.exists())
+
+    def test_p53_extended_summary_schema_roundtrip(self):
+        now = self.inputs["source-map.json"]["summary"]
+        now.update(packages=1, internal_edges=1, external_edges=0,
+                   exports=1, call_sites=2, file_accesses=0,
+                   function_contracts=1, resolved_call_edges=0,
+                   value_flow_edges=0, diagnostics=0)
+        impact = self.inputs["change-impact.json"]
+        impact["snapshots"]["current"] = dict(now)
+        impact["snapshots"]["baseline"] = {**now, "files_indexed": 2}
+        impact["summary"].update(direct_dependent_records=0,
+            transitive_dependent_records=0, impacted_entrypoint_records=0,
+            module_package_changes=0, added_packages=0,
+            removed_packages=0, changed_packages=0)
+        self.inputs["source-map.json"].update(tool_version="0.3.0", parser="babel", limits={"max_files":5000})
+        self.inputs["functional-contracts.json"].update(
+            source_map_schema="rea-app-source-map/v1", assurance="static_syntax_evidence_only")
+        self.write_inputs()
+        self.handoff()
+        package.pack(self.bundle, self.delivery, self.archive)
+        package.verify_zip(self.archive, self.bundle)
+        self.assertEqual(json.loads((self.delivery / "review.json").read_text())
+            ["counts"]["files_indexed"], 3)
 
     def test_zip_hidden_trailing_payload_rejected(self):
         self.handoff(); package.pack(self.bundle, self.delivery, self.archive)
