@@ -1,3 +1,15 @@
+## [2026-11-13 KST] LA 최종설계 CI 추적 초안 인수인계 10항
+1. **목표/설계:** 자연어·실 LLM→LA 범용 자동 계획/검증/양방향 수정→승인 실행·복구→SOVIA·DBVORA 연동 등 owner 확정 HAE 코어 중 LA 책임.
+2. **수정/결정:** `docs/lightning-azent/evidence/LA_FINAL_BLUEPRINT_CI_TRACE_DRAFT_20261113.json`에 감사 ID LA-T01..T08 8개·source/test blob/정확 기능 CI run을 연결. ID는 사용자 승인 요구항이 아니므로 가중치/공식 manifest 작성·공식률 산정 금지.
+3. **테스트:** 이전 기능 SHA `c32e27c8156a4ed27d6f2bca7752e7a4eccf6dc7` [CI #43124013493](https://github.com/hibi89/HAE/actions/runs/43124013493) Ubuntu205/Windows206 로컬 합성 PASS; 대표 Ubuntu 7 case OK, 1 case unmapped. 이번 문서 변경에서 새 제품 CI 0.
+4. **상태:** 추적 8/8 초안, 공식 최종률 UNASSESSED, 실 LLM↔범용 플로·수정, 독립 SOVIA/DBVORA·OAuth/실 고객 Windows 미검증, RELEASE HOLD.
+5. **오류/대안:** `main/docs/ECOSYSTEM_CANONICAL.md` feature 파일 없음, local-only blueprint hash 불충분. main SHA/blob 고정하고 별도 정본 인증 설계 우선. 과거 합성 PASS를 85% 공식률로 승격 금지.
+6. **저장소/SHA/경로:** `hibi89/HAE@feature/la-p17-audit-evidence-20261112` 이전 HEAD `cde06dcea7f105e7d5f539ffe385aed5fc5f1220`, 기능 CI SHA `c32e27c8156a4ed27d6f2bca7752e7a4eccf6dc7`, 정본 main SHA `ff763ba...`. 본 doc 커밋 SHA 추후 원격 확인.
+7. **Production/환경:** hosted Windows/Ubuntu Python3.11 local synthetic only, 고객 API/Vercel/Production 미적용.
+8. **원본/백업/권한:** 기존 코드·시크릿·고객데이터·배포·수치·제품 표시 불변, Git 부모 이력 복구 가능.
+9. **다음 작업/승인:** 사용자 원 설계 전체에서 LA 책임 수용항 고정·100점 승인, 정본 해시/실 CI 진위 검증, 실제 LLM 계획/수정·SOVIA/DBVORA 격리 E2E. 토큰/외부전송/비용/보안권한 변경 사전 승인.
+10. **2026-11-13 KST 확인 범위:** source/test blob·기존 GH Actions 로그 검증, 신규 제품 E2E 0/실 고객 0/공식 점수 0.
+
 ## [2026-11-13 KST] LA 최종설계 추적 감사 / 인수인계 10항
 1. **목표/용도:** HAE가 해석한 자연어 의도·조건을 LA가 버전 IR/노드·분기·데이터 이동 워크플로로 자동 설계·검증, 안전 실행·복구하며 SOVIA/DBVORA를 통합한다. 정본 `main/docs/ECOSYSTEM_CANONICAL.md`.
 2. **진척/결정:** [LA-T01..T08 추적 감사](docs/lightning-azent/LA_FINAL_BLUEPRINT_TRACE_20261113.md) 신규 작성. 11개 로컬 연산·실행/재개 기능은 인정하지만 범용 AI 계획 완성과 구분. 코드 수정 없음.

@@ -1,0 +1,224 @@
+{
+  "schema_version": 1,
+  "kind": "EVIDENCE_TRACE_DRAFT_NOT_APPROVED_MANIFEST",
+  "as_of_kst": "2026-11-13",
+  "repo": "hibi89/HAE",
+  "product": "Lightning Azent",
+  "tracked_branch": "feature/la-p17-audit-evidence-20261112",
+  "branch_head_before_documentation": "cde06dcea7f105e7d5f539ffe385aed5fc5f1220",
+  "original_blueprint": {
+    "repo": "hibi89/HAE",
+    "ref": "main",
+    "head_sha_observed": "ff763ba8ec6002a01a0b08a02146e98193174e50",
+    "path": "docs/ECOSYSTEM_CANONICAL.md",
+    "git_blob_sha": "0d31062b0e3c6a570b37a35ace6fbfbe59ec2116",
+    "in_this_feature_branch": false
+  },
+  "requirement_source": {
+    "ref": "feature/la-p17-audit-evidence-20261112",
+    "path": "REQUIREMENTS.md",
+    "git_blob_sha": "a86e57c46c64a89fa7fa386549262a5298d3e169",
+    "audit_id_count": 8,
+    "note": "LA-T01..T08 are auditor-created tracing IDs, not owner-approved standalone LA final-design requirements."
+  },
+  "functional_ci": {
+    "run_id": 43124013493,
+    "url": "https://github.com/hibi89/HAE/actions/runs/43124013493",
+    "head_sha": "c32e27c8156a4ed27d6f2bca7752e7a4eccf6dc7",
+    "overall_conclusion": "success",
+    "ubuntu_synthetic_tests_passed": 205,
+    "windows_synthetic_tests_passed": 206,
+    "scope": "synthetic-local-only",
+    "note": "Representative cases observed OK in Ubuntu job logs; overall success does not certify final blueprint."
+  },
+  "official_final_completion": "UNASSESSED",
+  "owner_approved_weight_total": null,
+  "owner_approved_acceptance_matrix": false,
+  "official_manifest_path": "docs/final_blueprint_evidence.json",
+  "official_manifest_present": false,
+  "warnings": [
+    "This is not the automatic gate manifest and is not an approved 100-point rubric.",
+    "LA-T01..T08 are auditor IDs, not evidence of owner-approved all-final requirements.",
+    "Representative case PASS is not whole requirement acceptance.",
+    "External connectors, real LLM iterative plan repair, independent SOVIA/DBVORA, customer Windows and release acceptance remain unproven.",
+    "Main-only canonical file is not locally present in feature checkout."
+  ],
+  "requirements": [
+    {
+      "id": "LA-T01",
+      "id_type": "AUDITOR_TRACE_ID_NOT_APPROVED_FINAL_REQUIREMENT",
+      "official_acceptance": "UNASSESSED",
+      "weight_approved": false,
+      "coverage_scope": "LIMITED_OR_NOT_MAPPED",
+      "scope_observed": "typed IR/version and bounded operations; dynamic general flow synthesis unproven",
+      "source_at_functional_ci": {
+        "sha": "c32e27c8156a4ed27d6f2bca7752e7a4eccf6dc7",
+        "path": "packages/lightning-azent/lightning_azent/contract.py",
+        "blob_sha": "579a6df724ec34a84d8ad3dc1803c6b8642906b4"
+      },
+      "representative_test": {
+        "path": "packages/lightning-azent/tests/test_native_contract.py",
+        "blob_sha": "3cfa354cb9b57772207b386189c212263a5c6962",
+        "case_name": "test_native_and_legacy_branch_parity_without_input_mutation",
+        "observed_outcome": "OK",
+        "github_actions_run": 43124013493,
+        "run_head_sha": "c32e27c8156a4ed27d6f2bca7752e7a4eccf6dc7",
+        "overall_run_conclusion": "success"
+      },
+      "source_case_pass_not_whole_requirement": true
+    },
+    {
+      "id": "LA-T02",
+      "id_type": "AUDITOR_TRACE_ID_NOT_APPROVED_FINAL_REQUIREMENT",
+      "official_acceptance": "UNASSESSED",
+      "weight_approved": false,
+      "coverage_scope": "LIMITED_OR_NOT_MAPPED",
+      "scope_observed": "explicit external-action capability exclusion; no real LLM -> LA correction round trip",
+      "source_at_functional_ci": {
+        "sha": "c32e27c8156a4ed27d6f2bca7752e7a4eccf6dc7",
+        "path": "packages/lightning-azent/lightning_azent/contract.py",
+        "blob_sha": "579a6df724ec34a84d8ad3dc1803c6b8642906b4"
+      },
+      "representative_test": {
+        "path": "packages/lightning-azent/tests/test_native_contract.py",
+        "blob_sha": "3cfa354cb9b57772207b386189c212263a5c6962",
+        "case_name": "test_capabilities_truthfully_omit_external_actions",
+        "observed_outcome": "OK",
+        "github_actions_run": 43124013493,
+        "run_head_sha": "c32e27c8156a4ed27d6f2bca7752e7a4eccf6dc7",
+        "overall_run_conclusion": "success"
+      },
+      "source_case_pass_not_whole_requirement": true
+    },
+    {
+      "id": "LA-T03",
+      "id_type": "AUDITOR_TRACE_ID_NOT_APPROVED_FINAL_REQUIREMENT",
+      "official_acceptance": "UNASSESSED",
+      "weight_approved": false,
+      "coverage_scope": "LIMITED_OR_NOT_MAPPED",
+      "scope_observed": "bound plan-hash and local owner consent; external OAuth brokerage not proven",
+      "source_at_functional_ci": {
+        "sha": "c32e27c8156a4ed27d6f2bca7752e7a4eccf6dc7",
+        "path": "packages/lightning-azent/lightning_azent/hae_bridge.py",
+        "blob_sha": "57171040eb9623f75091e0e4ed16806c9623cd5c"
+      },
+      "representative_test": {
+        "path": "packages/lightning-azent/tests/test_hae_bridge.py",
+        "blob_sha": "13806ad3e0e299a380ebf450f6b66baef9572e81",
+        "case_name": "test_changed_valid_plan_invalidates_confirmation",
+        "observed_outcome": "OK",
+        "github_actions_run": 43124013493,
+        "run_head_sha": "c32e27c8156a4ed27d6f2bca7752e7a4eccf6dc7",
+        "overall_run_conclusion": "success"
+      },
+      "source_case_pass_not_whole_requirement": true
+    },
+    {
+      "id": "LA-T04",
+      "id_type": "AUDITOR_TRACE_ID_NOT_APPROVED_FINAL_REQUIREMENT",
+      "official_acceptance": "UNASSESSED",
+      "weight_approved": false,
+      "coverage_scope": "LIMITED_OR_NOT_MAPPED",
+      "scope_observed": "real local SQLite rows from synthetic CSV; no general external connectors",
+      "source_at_functional_ci": {
+        "sha": "c32e27c8156a4ed27d6f2bca7752e7a4eccf6dc7",
+        "path": "packages/lightning-azent/lightning_azent/runtime.py",
+        "blob_sha": "0205b91f7575cfbf4ff01518e407c9e372b11e38"
+      },
+      "representative_test": {
+        "path": "packages/lightning-azent/tests/test_hae_to_la_e2e.py",
+        "blob_sha": "d61078cbbe5e557ae2b601a5119c3ecd59f86bb3",
+        "case_name": "test_cached_execute_checks_actual_business_rows_not_only_run_status",
+        "observed_outcome": "OK",
+        "github_actions_run": 43124013493,
+        "run_head_sha": "c32e27c8156a4ed27d6f2bca7752e7a4eccf6dc7",
+        "overall_run_conclusion": "success"
+      },
+      "source_case_pass_not_whole_requirement": true
+    },
+    {
+      "id": "LA-T05",
+      "id_type": "AUDITOR_TRACE_ID_NOT_APPROVED_FINAL_REQUIREMENT",
+      "official_acceptance": "UNASSESSED",
+      "weight_approved": false,
+      "coverage_scope": "LIMITED_OR_NOT_MAPPED",
+      "scope_observed": "local scheduler restart and replay idempotency; no long-running customer service",
+      "source_at_functional_ci": {
+        "sha": "c32e27c8156a4ed27d6f2bca7752e7a4eccf6dc7",
+        "path": "packages/lightning-azent/lightning_azent/runtime.py",
+        "blob_sha": "0205b91f7575cfbf4ff01518e407c9e372b11e38"
+      },
+      "representative_test": {
+        "path": "packages/lightning-azent/tests/test_scheduler_runtime_recovery.py",
+        "blob_sha": "da412de1aab2aefc8625507fcaac29621aede855",
+        "case_name": "test_process_death_after_commit_replays_same_tick_without_duplicate",
+        "observed_outcome": "OK",
+        "github_actions_run": 43124013493,
+        "run_head_sha": "c32e27c8156a4ed27d6f2bca7752e7a4eccf6dc7",
+        "overall_run_conclusion": "success"
+      },
+      "source_case_pass_not_whole_requirement": true
+    },
+    {
+      "id": "LA-T06",
+      "id_type": "AUDITOR_TRACE_ID_NOT_APPROVED_FINAL_REQUIREMENT",
+      "official_acceptance": "UNASSESSED",
+      "weight_approved": false,
+      "coverage_scope": "LIMITED_OR_NOT_MAPPED",
+      "scope_observed": "local audit integrity checks only; independent SOVIA preflight/after-action not proven",
+      "source_at_functional_ci": {
+        "sha": "c32e27c8156a4ed27d6f2bca7752e7a4eccf6dc7",
+        "path": "packages/lightning-azent/lightning_azent/hae_bridge.py",
+        "blob_sha": "57171040eb9623f75091e0e4ed16806c9623cd5c"
+      },
+      "representative_test": {
+        "path": "packages/lightning-azent/tests/test_hae_bridge.py",
+        "blob_sha": "13806ad3e0e299a380ebf450f6b66baef9572e81",
+        "case_name": "test_changed_status_during_audit_cannot_claim_success",
+        "observed_outcome": "OK",
+        "github_actions_run": 43124013493,
+        "run_head_sha": "c32e27c8156a4ed27d6f2bca7752e7a4eccf6dc7",
+        "overall_run_conclusion": "success"
+      },
+      "source_case_pass_not_whole_requirement": true
+    },
+    {
+      "id": "LA-T07",
+      "id_type": "AUDITOR_TRACE_ID_NOT_APPROVED_FINAL_REQUIREMENT",
+      "official_acceptance": "UNASSESSED",
+      "weight_approved": false,
+      "coverage_scope": "LIMITED_OR_NOT_MAPPED",
+      "scope_observed": "local SQLite runner exists; independent DBVORA service integration/restore unverified",
+      "source_at_functional_ci": {
+        "sha": "c32e27c8156a4ed27d6f2bca7752e7a4eccf6dc7",
+        "path": "packages/lightning-azent/lightning_azent/runtime.py",
+        "blob_sha": "0205b91f7575cfbf4ff01518e407c9e372b11e38"
+      },
+      "representative_test": null,
+      "source_case_pass_not_whole_requirement": true
+    },
+    {
+      "id": "LA-T08",
+      "id_type": "AUDITOR_TRACE_ID_NOT_APPROVED_FINAL_REQUIREMENT",
+      "official_acceptance": "UNASSESSED",
+      "weight_approved": false,
+      "coverage_scope": "LIMITED_OR_NOT_MAPPED",
+      "scope_observed": "synthetic capability-denial/security boundary; customer Windows release not proven",
+      "source_at_functional_ci": {
+        "sha": "c32e27c8156a4ed27d6f2bca7752e7a4eccf6dc7",
+        "path": "packages/lightning-azent/lightning_azent/contract.py",
+        "blob_sha": "579a6df724ec34a84d8ad3dc1803c6b8642906b4"
+      },
+      "representative_test": {
+        "path": "packages/lightning-azent/tests/test_native_contract.py",
+        "blob_sha": "3cfa354cb9b57772207b386189c212263a5c6962",
+        "case_name": "test_capabilities_truthfully_omit_external_actions",
+        "observed_outcome": "OK",
+        "github_actions_run": 43124013493,
+        "run_head_sha": "c32e27c8156a4ed27d6f2bca7752e7a4eccf6dc7",
+        "overall_run_conclusion": "success"
+      },
+      "source_case_pass_not_whole_requirement": true
+    }
+  ]
+}

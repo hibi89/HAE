@@ -1,3 +1,9 @@
+## [2026-11-13 KST] 해총 LA-T01..T08 CI 증거 정규화 (최종설계 공식률 별도)
+- [LA-T01..T08 추적 초안](docs/lightning-azent/evidence/LA_FINAL_BLUEPRINT_CI_TRACE_DRAFT_20261113.json)은 **감사자 임시 ID 8개**이며 사용자 확정 최종 요구 ID·가중치가 아니다. 기능 SHA `c32e27c8156a4ed27d6f2bca7752e7a4eccf6dc7`의 Git blob 및 대표 Ubuntu CI case 로그 연결, 7개 로컬 관련 대표 case OK·1개 대응 case 미지정. 어떤 항목도 제품 최종 수용 PASS로 선언하지 않는다.
+- [Actions #43124013493](https://github.com/hibi89/HAE/actions/runs/43124013493) SHA `c32e27c8156a4ed27d6f2bca7752e7a4eccf6dc7`, Ubuntu205 / Windows206 합성 테스트 PASS, 두 job SUCCESS. 계약 능력 `scope=synthetic-local-only`, `external_connectors=[]`, OAuth·external-side-effects·webhook은 미지원. 실 LLM↔LA 범용 설계·왕복수정/실 독립 SOVIA·DBVORA 고객 E2E 입증 불가.
+- `main/docs/ECOSYSTEM_CANONICAL.md` 정본은 feature branch에 존재하지 않음(404). main 정본 HEAD `ff763ba8ec6002a01a0b08a02146e98193174e50`, blob `0d31062b0e3c6a570b37a35ace6fbfbe59ec2116` 메타데이터만 확인. 범위를 임의 복사하거나 T01..T08에 100점 가중치 부여 금지.
+- 기존 85% 역사값, 공식률 UNASSESSED, [작업중], RELEASE HOLD 유지; 소스/원본/토큰/워크플로/Production/권한·과금 불변. `KMONG_HUB_SYNC_PENDING`, 해총에는 비밀 없는 요약만 전달.
+
 > **[2026-11-13 KST | LA 최종설계 절대기준 요구별 근거 감사 / 공식 완성률 UNASSESSED]** 정본 `main/docs/ECOSYSTEM_CANONICAL.md`(LA 자동 워크플로 설계·검증·실행, SOVIA/DBVORA 필수 연동) 대비 [8개 감사 추적 ID](docs/lightning-azent/LA_FINAL_BLUEPRINT_TRACE_20261113.md)로 코드/테스트 대조. 소스 검토 HEAD `feature/la-p17-audit-evidence-20261112@14d8c0f44509626f647692d4dc3a09e1f99bd2b6`. `contract.py`는 11개 제한된 op·IR·synthetic-local-only, `runtime.py` 실행·재개·스케줄·영수증; 실 LLM→범용 DAG 자동 생성/오류 왕복·실 외부 커넥터·독립 SOVIA/DBVORA는 미검증. [기존 Actions #43124013493](https://github.com/hibi89/HAE/actions/runs/43124013493) 기능 SHA `c32e27c8156a4ed27d6f2bca7752e7a4eccf6dc7`, Linux205/Windows206 PASS·0FAIL, **신규 CI 0**. 종전 85%는 합성 로컬 엔지니어링 이력; 공식 100점 승인 가중치·최종 E2E 부재로 `UNASSESSED`. RELEASE HOLD.
 
 ## 2026-11-12 KST — Lightning Azent 85% provisional engineering VERIFIED (70→85 +15pp); RELEASE HOLD
