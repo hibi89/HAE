@@ -1,3 +1,15 @@
+## [2026-11-13 약 15:03 KST] AZENTFLOW AX P50 acceptance handoff — 10항
+1. **목표/용도/확정기술:** Freelancer 기업형 AZENTFLOW AX의 `0→50` 구간: HAE 한국어/템플릿→버전 고정 IR→Lightning Azent 독립 실행→승인 로컬 SQLite/감사. 최종 100% 정본 축소 금지.
+2. **완료/결정:** 기존 HAE/LA 실행 소스·고객 데이터 무변경, `test_azentflow_p50_acceptance.py` 3개 실제 합성 HTTP 수용 추가. 복제 엔진(유지비·원본 분기·검증 위험) 대신 기존 HAE↔LA 버전 계약 adapter를 검증하는 최소 테스트(로컬·무 API 요금) 선택. 예고된 첫 test `run` 명 충돌 1회 교정.
+3. **테스트/정확 범위:** 코드 SHA `91963ae3ba656b384c2c5db092c9bc6cdcdc1e39`; [Actions #43375517050](https://github.com/hibi89/HAE/actions/runs/43375517050) Ubuntu/Windows 각 신규 P50 **3/3 PASS**, 독립 LA HTTP smoke 6/6, adapter 5/5; 전체 Python 각 276: 267 PASS/2 FAIL/7 SKIP, UI Node24 PASS. 실제 2 FAIL은 기존 배송 ZIP/pyz 소스 패리티. Python 전체 CI FAILURE, 녹색 주장 금지.
+4. **완료/진행/대기/차단:** P50 기술 경로 수용시험 통과. **공식 100점 최종완성률 UNASSESSED**, 증빙 기반 전체 분모/사용자 승인 가중치 미완. 50→70·출고 패리티·실 고객/OAuth/DBVORA/SOVIA RELEASE HOLD.
+5. **오류/시도/원인/대안/재시도금지:** 첫 기능 커밋 `1d1523f8...`의 `unittest.TestCase.run` 충돌로 신규 시험 미기동; `execute_preview`로 변경한 `91963ae3...` 재실행 실제 PASS. 출고물 mismatch 2건은 이전 원본 CI와 동일; force push/테스트 skip/바이너리 무백업 덮어쓰기 금지. 파일 보관 후 정상 빌드와 번들 실제 비교 필요.
+6. **저장소/브랜치/SHA/경로:** `hibi89/HAE@feature/axflow-mvp`, 기능/테스트 SHA `91963ae3ba656b384c2c5db092c9bc6cdcdc1e39`; 독립 LA 조회 `feature/lightning-azent@36f9882eb50e0de9e85eedb320a5778c8321cda5`, `apps/ax-flow/tests/test_azentflow_p50_acceptance.py`, `apps/ax-flow/axflow/{web,la_adapter,planner}.py`. 원본 HAE 이전 HEAD `e0a177808b1ee5b3c27c45a63ee6473961a86fc5`; 문서 후속 SHA는 readback 필요.
+7. **Production/실행/환경:** GitHub-hosted Python3.11, Windows/Ubuntu CI; `cd apps/ax-flow && python -m unittest discover -s tests -p test_azentflow_p50_acceptance.py -v` (실 LA package staged 필요), 전체 `python -m unittest discover -s tests -v`. Vercel Production N/A; 고객 서비스 미배포.
+8. **원본/백업/보안:** 소스·고객/비밀 데이터·설정/권한·대상 DB 원본 수정 0, 합성 행만 임시 디렉터리. Git 이전 커밋/이력 복구 가능. 동적 LA checkout이 SHA-불변 pin과 동일하다고 주장 금지.
+9. **다음 우선순위/승인/완료기준:** 제품 `Freelancer@product/hae-la-automation` 및 해총 `kmong-productization` 동기화. 공식 %는 100점 요구별 검증과 승인 가중치 확보 전 UNASSESSED. 50→70 2워크플로·재시작·경합·UI, 원본 패키지 재현·Windows 설치; 고객/비용/원본 덮어쓰기는 사전 승인.
+10. **갱신시각/증빙/문서기준:** 2026-11-13 약 15:03 KST, Actions #43375517050 두 job 로그와 해당 테스트/기능 SHA, HAE/LA 원격 ref 조회. 본 문서 추가 후 HEAD 재조회; 전체 CI 녹색/실 고객·상용·DBVORA/SOVIA 미검증.
+
 ## [2026-11-13 KST] HAE 최종설계 CI 추적 초안 인수인계 10항
 1. **목표/기술/승인 설계:** 사용자 확정 전체 최종설계(HAE 자연어→실 LLM→LA 범용 계획/교정→승인·실행→SOVIA·DBVORA 독립 연동), 기존 13 R-ID 100% 기준.
 2. **결정/변경:** `docs/evidence/HAE_FINAL_BLUEPRINT_CI_TRACE_DRAFT_20261113.json`에 13개 id/실제 기능 코드 blob/대표 테스트 case/기능 CI SHA·FAIL 기록; 승인 없는 공식 manifest/가중치 생성 보류.
