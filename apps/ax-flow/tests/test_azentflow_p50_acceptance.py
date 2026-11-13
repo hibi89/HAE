@@ -91,7 +91,7 @@ class AzentflowP50Acceptance(unittest.TestCase):
         self.assertEqual(status, 200, preview)
         return preview
 
-    def run(self, preview, approve):
+    def execute_preview(self, preview, approve):
         return self.post("/api/run", {
             "task": TASK, "csv_path": "synthetic.csv",
             "preview_id": preview["preview_id"], "approve_writes": approve,
@@ -112,12 +112,12 @@ class AzentflowP50Acceptance(unittest.TestCase):
         self.assertTrue(preview["requires_approval"])
         self.assertFalse(self.state.exists(), "plan preview created runtime ledger")
         self.assertFalse(self.business.exists(), "plan preview created customer data DB")
-        status, _ = self.run(preview, approve=False)
+        status, _ = self.execute_preview(preview, approve=False)
         self.assertEqual(status, 403, "unapproved business write was not rejected")
         self.assertFalse(self.state.exists())
         self.assertFalse(self.business.exists())
 
-        status, completed = self.run(preview, approve=True)
+        status, completed = self.execute_preview(preview, approve=True)
         self.assertEqual(status, 200, completed)
         self.assertEqual(completed["status"]["status"], "completed")
         self.assertEqual(completed["backend"]["name"], "Lightning Azent")
@@ -148,9 +148,9 @@ class AzentflowP50Acceptance(unittest.TestCase):
 
     def test_p50_replay_does_not_repeat_business_write(self):
         preview = self.preview()
-        status, first = self.run(preview, approve=True)
+        status, first = self.execute_preview(preview, approve=True)
         self.assertEqual(status, 200, first)
-        status, second = self.run(preview, approve=True)
+        status, second = self.execute_preview(preview, approve=True)
         self.assertEqual(status, 200, second)
         self.assertEqual(second["run_id"], first["run_id"])
         self.assertEqual(second["result"], first["result"])
@@ -167,7 +167,7 @@ class AzentflowP50Acceptance(unittest.TestCase):
     def test_p50_source_mutation_invalidates_approval_without_write(self):
         preview = self.preview()
         self.source.write_bytes(b"id,name\n99,SyntheticChanged\n")
-        status, _ = self.run(preview, approve=True)
+        status, _ = self.execute_preview(preview, approve=True)
         self.assertEqual(status, 409, "stale source digest did not fail closed")
         self.assertFalse(self.state.exists(), "stale input produced a runtime run")
         self.assertFalse(self.business.exists(), "stale input modified business DB")
