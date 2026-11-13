@@ -279,9 +279,9 @@ class AzentflowP85Acceptance(unittest.TestCase):
         self.assertFalse(audit["truncated"])
         self.assertNotIn("SyntheticA", json.dumps(audit))
         self.assertNotIn("contacts.csv", json.dumps(audit))
-        self.assertEqual(response["integration"]["workflow_status"], "completed")
-        self.assertTrue(response["integration"]["audit_persisted"])
-        self.assertTrue(response["integration"]["dbvora"]["available"])
+        self.assertEqual(response["workflow_status"], "completed")
+        self.assertTrue(response["audit_persisted"])
+        self.assertTrue(response["dbvora"]["available"])
         self.assertEqual(len(self.rows_by_run(run_id)), 2)
 
         from lightning_azent import LAExecutor
@@ -297,15 +297,16 @@ class AzentflowP85Acceptance(unittest.TestCase):
 
     def test_p85_interval_schedule_denies_unapproved_or_out_of_bounds_without_databases(self):
         from lightning_azent import LAExecutor
+        from lightning_azent.engine import ApprovalRequired, PlanError
         plan = plan_request(IMPORT_TASK, "contacts.csv")
         plan["trigger"] = {"type": "interval", "every_seconds": 1}
         executor = LAExecutor(self.state, self.data, self.inputs)
-        with self.assertRaises(Exception):
+        with self.assertRaises(ApprovalRequired):
             # LA's schedule() may return an iterator; force its consumption.
             list(executor.schedule(plan, "AzentP85", max_runs=1, approve_writes=False))
         self.assertFalse(self.state.exists())
         self.assertFalse(self.data.exists())
-        with self.assertRaises(Exception):
+        with self.assertRaises(PlanError):
             list(executor.schedule(plan, "AzentP85", max_runs=1001, approve_writes=True))
         self.assertFalse(self.state.exists())
         self.assertFalse(self.data.exists())
