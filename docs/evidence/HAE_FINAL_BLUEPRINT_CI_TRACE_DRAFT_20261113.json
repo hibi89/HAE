@@ -1,0 +1,345 @@
+{
+  "schema_version": 1,
+  "kind": "EVIDENCE_TRACE_DRAFT_NOT_APPROVED_MANIFEST",
+  "as_of_kst": "2026-11-13",
+  "repo": "hibi89/HAE",
+  "product": "HAE",
+  "tracked_branch": "feature/axflow-mvp",
+  "branch_head_before_documentation": "019ffce2529ad18087d81451dbda00fe17617d65",
+  "original_blueprint": {
+    "repo": "hibi89/HAE",
+    "ref": "main",
+    "head_sha_observed": "ff763ba8ec6002a01a0b08a02146e98193174e50",
+    "path": "docs/ECOSYSTEM_CANONICAL.md",
+    "git_blob_sha": "0d31062b0e3c6a570b37a35ace6fbfbe59ec2116",
+    "in_this_feature_branch": false
+  },
+  "requirement_source": {
+    "ref": "feature/axflow-mvp",
+    "path": "REQUIREMENTS.md",
+    "git_blob_sha": "a86e57c46c64a89fa7fa386549262a5298d3e169",
+    "requirement_ids": "R-01..R-13"
+  },
+  "functional_ci": {
+    "run_id": 42990527614,
+    "url": "https://github.com/hibi89/HAE/actions/runs/42990527614",
+    "head_sha": "2384e9d245ca60fc9b2055e9b82c4541b33bd6bd",
+    "overall_conclusion": "failure",
+    "ubuntu_python": {
+      "passed": 264,
+      "failed": 2,
+      "skipped": 7
+    },
+    "windows_python": {
+      "passed": 264,
+      "failed": 2,
+      "skipped": 7
+    },
+    "note": "Representative tests extracted from Ubuntu job log; two shipped-package parity tests FAIL on both OS. Exact latest feature HEAD functionality not retested."
+  },
+  "official_final_completion": "UNASSESSED",
+  "owner_approved_weight_total": null,
+  "owner_approved_acceptance_matrix": false,
+  "official_manifest_path": "docs/final_blueprint_evidence.json",
+  "official_manifest_present": false,
+  "warnings": [
+    "This is NOT the official verifier manifest and does not contain a guessed 100-point rubric.",
+    "Per-case OK is not whole-requirement acceptance; many tests use synthetic local scope.",
+    "Product main-only canonical blueprint is absent from this feature branch; current local-file hash gate cannot check it directly.",
+    "Real LLM -> general LA planning -> correction -> independent SOVIA/DBVORA and customer OAuth E2E are not proven.",
+    "Prior HAE feature CI overall failure prevents whole-suite PASS claims."
+  ],
+  "requirements": [
+    {
+      "id": "HAE-R01",
+      "id_type": "OWNER_REQUIREMENT_FROM_FEATURE_REQUIREMENTS",
+      "final_acceptance": "UNASSESSED",
+      "weight_approved": false,
+      "coverage_scope": "LIMITED_OR_NOT_MAPPED",
+      "scope_observed": "rule-based Korean/English CSV intent only; not LLM",
+      "source_at_functional_ci": {
+        "sha": "2384e9d245ca60fc9b2055e9b82c4541b33bd6bd",
+        "path": "apps/ax-flow/axflow/planner.py",
+        "blob_sha": "4697817ad2f2fbdf174d335a3f1fcde154480668"
+      },
+      "representative_test": {
+        "path": "apps/ax-flow/tests/test_planner.py",
+        "blob_sha": "d590d76e1a3d2a7542d9f964d08c2b2e58ae45ed",
+        "case_name": "test_supported_english_and_korean_requests_generate_the_same_ir",
+        "observed_outcome": "OK",
+        "github_actions_run": 42990527614,
+        "run_head_sha": "2384e9d245ca60fc9b2055e9b82c4541b33bd6bd",
+        "overall_run_conclusion": "failure"
+      },
+      "source_case_pass_not_whole_requirement": true
+    },
+    {
+      "id": "HAE-R02",
+      "id_type": "OWNER_REQUIREMENT_FROM_FEATURE_REQUIREMENTS",
+      "final_acceptance": "UNASSESSED",
+      "weight_approved": false,
+      "coverage_scope": "LIMITED_OR_NOT_MAPPED",
+      "scope_observed": "synthetic upload/browser path; full XLSX/PDF intake unproven",
+      "source_at_functional_ci": {
+        "sha": "2384e9d245ca60fc9b2055e9b82c4541b33bd6bd",
+        "path": "apps/ax-flow/axflow/web.py",
+        "blob_sha": "db24bdc8f0ec5bcc8f7b421f7b0ab3678b638e91"
+      },
+      "representative_test": {
+        "path": "apps/ax-flow/tests/test_web.py",
+        "blob_sha": "c9bbdf8818ba58ddb02fa16ce7161240b9de4d8b",
+        "case_name": "test_browser_run_writes_synthetic_rows_and_returns_redacted_status",
+        "observed_outcome": "OK",
+        "github_actions_run": 42990527614,
+        "run_head_sha": "2384e9d245ca60fc9b2055e9b82c4541b33bd6bd",
+        "overall_run_conclusion": "failure"
+      },
+      "source_case_pass_not_whole_requirement": true
+    },
+    {
+      "id": "HAE-R03",
+      "id_type": "OWNER_REQUIREMENT_FROM_FEATURE_REQUIREMENTS",
+      "final_acceptance": "UNASSESSED",
+      "weight_approved": false,
+      "coverage_scope": "LIMITED_OR_NOT_MAPPED",
+      "scope_observed": "bounded IR validation; generic connector plans absent",
+      "source_at_functional_ci": {
+        "sha": "2384e9d245ca60fc9b2055e9b82c4541b33bd6bd",
+        "path": "apps/ax-flow/axflow/engine.py",
+        "blob_sha": "74d50a0b4822f8ed704506e947fc7444d8130157"
+      },
+      "representative_test": {
+        "path": "apps/ax-flow/tests/test_engine.py",
+        "blob_sha": "2996a08af067046e7109df43b9aede71a912748c",
+        "case_name": "test_cli_rejects_malformed_or_ambiguous_json_and_missing_paths",
+        "observed_outcome": "OK",
+        "github_actions_run": 42990527614,
+        "run_head_sha": "2384e9d245ca60fc9b2055e9b82c4541b33bd6bd",
+        "overall_run_conclusion": "failure"
+      },
+      "source_case_pass_not_whole_requirement": true
+    },
+    {
+      "id": "HAE-R04",
+      "id_type": "OWNER_REQUIREMENT_FROM_FEATURE_REQUIREMENTS",
+      "final_acceptance": "UNASSESSED",
+      "weight_approved": false,
+      "coverage_scope": "LIMITED_OR_NOT_MAPPED",
+      "scope_observed": "local deterministic CLI and SQLite synthetic execution only",
+      "source_at_functional_ci": {
+        "sha": "2384e9d245ca60fc9b2055e9b82c4541b33bd6bd",
+        "path": "apps/ax-flow/axflow/engine.py",
+        "blob_sha": "74d50a0b4822f8ed704506e947fc7444d8130157"
+      },
+      "representative_test": {
+        "path": "apps/ax-flow/tests/test_engine.py",
+        "blob_sha": "2996a08af067046e7109df43b9aede71a912748c",
+        "case_name": "test_cli_csv_to_sqlite_vertical_path",
+        "observed_outcome": "OK",
+        "github_actions_run": 42990527614,
+        "run_head_sha": "2384e9d245ca60fc9b2055e9b82c4541b33bd6bd",
+        "overall_run_conclusion": "failure"
+      },
+      "source_case_pass_not_whole_requirement": true
+    },
+    {
+      "id": "HAE-R05",
+      "id_type": "OWNER_REQUIREMENT_FROM_FEATURE_REQUIREMENTS",
+      "final_acceptance": "UNASSESSED",
+      "weight_approved": false,
+      "coverage_scope": "LIMITED_OR_NOT_MAPPED",
+      "scope_observed": "external OAuth and secure broker unimplemented/unverified",
+      "source_at_functional_ci": {
+        "sha": "2384e9d245ca60fc9b2055e9b82c4541b33bd6bd",
+        "path": "apps/ax-flow/axflow/planner.py",
+        "blob_sha": "4697817ad2f2fbdf174d335a3f1fcde154480668"
+      },
+      "representative_test": null,
+      "source_case_pass_not_whole_requirement": true
+    },
+    {
+      "id": "HAE-R06",
+      "id_type": "OWNER_REQUIREMENT_FROM_FEATURE_REQUIREMENTS",
+      "final_acceptance": "UNASSESSED",
+      "weight_approved": false,
+      "coverage_scope": "LIMITED_OR_NOT_MAPPED",
+      "scope_observed": "local LA recovery stamp; LLM plan patch/repair not proven",
+      "source_at_functional_ci": {
+        "sha": "2384e9d245ca60fc9b2055e9b82c4541b33bd6bd",
+        "path": "apps/ax-flow/axflow/la_adapter.py",
+        "blob_sha": "76ab9f9cd4f842a7c4c428e3a40df015c09f6c6f"
+      },
+      "representative_test": {
+        "path": "apps/ax-flow/tests/test_la_history_recovery.py",
+        "blob_sha": "c7686e9fc70fb093c0d4fadfd8d0d683d0198b70",
+        "case_name": "test_replay_recovers_history_stamp_after_exit_between_la_commit_and_hae_stamp",
+        "observed_outcome": "OK",
+        "github_actions_run": 42990527614,
+        "run_head_sha": "2384e9d245ca60fc9b2055e9b82c4541b33bd6bd",
+        "overall_run_conclusion": "failure"
+      },
+      "source_case_pass_not_whole_requirement": true
+    },
+    {
+      "id": "HAE-R07",
+      "id_type": "OWNER_REQUIREMENT_FROM_FEATURE_REQUIREMENTS",
+      "final_acceptance": "UNASSESSED",
+      "weight_approved": false,
+      "coverage_scope": "LIMITED_OR_NOT_MAPPED",
+      "scope_observed": "local workflow catalog restart/consent; full production state not certified",
+      "source_at_functional_ci": {
+        "sha": "2384e9d245ca60fc9b2055e9b82c4541b33bd6bd",
+        "path": "apps/ax-flow/axflow/workflow_catalog.py",
+        "blob_sha": "5af922234aab984a054f2cb663017faa120048bc"
+      },
+      "representative_test": {
+        "path": "apps/ax-flow/tests/test_workflow_catalog.py",
+        "blob_sha": "7d65e6404c7901ed9e8eb124985f5711df6a0482",
+        "case_name": "test_explicit_init_and_restart_reload_no_exec",
+        "observed_outcome": "OK",
+        "github_actions_run": 42990527614,
+        "run_head_sha": "2384e9d245ca60fc9b2055e9b82c4541b33bd6bd",
+        "overall_run_conclusion": "failure"
+      },
+      "source_case_pass_not_whole_requirement": true
+    },
+    {
+      "id": "HAE-R08",
+      "id_type": "OWNER_REQUIREMENT_FROM_FEATURE_REQUIREMENTS",
+      "final_acceptance": "UNASSESSED",
+      "weight_approved": false,
+      "coverage_scope": "LIMITED_OR_NOT_MAPPED",
+      "scope_observed": "local synthetic CSV-to-SQLite; Sheets/PG not proven",
+      "source_at_functional_ci": {
+        "sha": "2384e9d245ca60fc9b2055e9b82c4541b33bd6bd",
+        "path": "apps/ax-flow/axflow/engine.py",
+        "blob_sha": "74d50a0b4822f8ed704506e947fc7444d8130157"
+      },
+      "representative_test": {
+        "path": "apps/ax-flow/tests/test_engine.py",
+        "blob_sha": "2996a08af067046e7109df43b9aede71a912748c",
+        "case_name": "test_cli_csv_to_sqlite_vertical_path",
+        "observed_outcome": "OK",
+        "github_actions_run": 42990527614,
+        "run_head_sha": "2384e9d245ca60fc9b2055e9b82c4541b33bd6bd",
+        "overall_run_conclusion": "failure"
+      },
+      "source_case_pass_not_whole_requirement": true
+    },
+    {
+      "id": "HAE-R09",
+      "id_type": "OWNER_REQUIREMENT_FROM_FEATURE_REQUIREMENTS",
+      "final_acceptance": "UNASSESSED",
+      "weight_approved": false,
+      "coverage_scope": "LIMITED_OR_NOT_MAPPED",
+      "scope_observed": "DBVORA loopback read-only contract tests, not independent product restore",
+      "source_at_functional_ci": {
+        "sha": "2384e9d245ca60fc9b2055e9b82c4541b33bd6bd",
+        "path": "apps/ax-flow/axflow/dbvora_client.py",
+        "blob_sha": "f2f7904c417511b2124b42b16bdcdaf5cc5bfa5d"
+      },
+      "representative_test": {
+        "path": "apps/ax-flow/tests/test_dbvora_client.py",
+        "blob_sha": "bfe7eae6ce86e5ad3292caf4028456c23910ef54",
+        "case_name": "test_health_mode_must_be_local_and_read_only",
+        "observed_outcome": "OK",
+        "github_actions_run": 42990527614,
+        "run_head_sha": "2384e9d245ca60fc9b2055e9b82c4541b33bd6bd",
+        "overall_run_conclusion": "failure"
+      },
+      "source_case_pass_not_whole_requirement": true
+    },
+    {
+      "id": "HAE-R10",
+      "id_type": "OWNER_REQUIREMENT_FROM_FEATURE_REQUIREMENTS",
+      "final_acceptance": "UNASSESSED",
+      "weight_approved": false,
+      "coverage_scope": "LIMITED_OR_NOT_MAPPED",
+      "scope_observed": "source preservation in limited local backup fixture",
+      "source_at_functional_ci": {
+        "sha": "2384e9d245ca60fc9b2055e9b82c4541b33bd6bd",
+        "path": "apps/ax-flow/axflow/engine.py",
+        "blob_sha": "74d50a0b4822f8ed704506e947fc7444d8130157"
+      },
+      "representative_test": {
+        "path": "apps/ax-flow/tests/test_engine.py",
+        "blob_sha": "2996a08af067046e7109df43b9aede71a912748c",
+        "case_name": "test_backup_discards_snapshot_when_source_changes_before_publish",
+        "observed_outcome": "OK",
+        "github_actions_run": 42990527614,
+        "run_head_sha": "2384e9d245ca60fc9b2055e9b82c4541b33bd6bd",
+        "overall_run_conclusion": "failure"
+      },
+      "source_case_pass_not_whole_requirement": true
+    },
+    {
+      "id": "HAE-R11",
+      "id_type": "OWNER_REQUIREMENT_FROM_FEATURE_REQUIREMENTS",
+      "final_acceptance": "UNASSESSED",
+      "weight_approved": false,
+      "coverage_scope": "LIMITED_OR_NOT_MAPPED",
+      "scope_observed": "local web synthetic path; end-user Win10/11 delivery not proven",
+      "source_at_functional_ci": {
+        "sha": "2384e9d245ca60fc9b2055e9b82c4541b33bd6bd",
+        "path": "apps/ax-flow/axflow/web.py",
+        "blob_sha": "db24bdc8f0ec5bcc8f7b421f7b0ab3678b638e91"
+      },
+      "representative_test": {
+        "path": "apps/ax-flow/tests/test_web.py",
+        "blob_sha": "c9bbdf8818ba58ddb02fa16ce7161240b9de4d8b",
+        "case_name": "test_browser_run_writes_synthetic_rows_and_returns_redacted_status",
+        "observed_outcome": "OK",
+        "github_actions_run": 42990527614,
+        "run_head_sha": "2384e9d245ca60fc9b2055e9b82c4541b33bd6bd",
+        "overall_run_conclusion": "failure"
+      },
+      "source_case_pass_not_whole_requirement": true
+    },
+    {
+      "id": "HAE-R12",
+      "id_type": "OWNER_REQUIREMENT_FROM_FEATURE_REQUIREMENTS",
+      "final_acceptance": "UNASSESSED",
+      "weight_approved": false,
+      "coverage_scope": "LIMITED_OR_NOT_MAPPED",
+      "scope_observed": "HTTP origin rejection subset; prompt injection/live boundaries untested",
+      "source_at_functional_ci": {
+        "sha": "2384e9d245ca60fc9b2055e9b82c4541b33bd6bd",
+        "path": "apps/ax-flow/axflow/web.py",
+        "blob_sha": "db24bdc8f0ec5bcc8f7b421f7b0ab3678b638e91"
+      },
+      "representative_test": {
+        "path": "apps/ax-flow/tests/test_asset_registry_web.py",
+        "blob_sha": "6ee7238278f500f4c701426634028bdf658ed0fc",
+        "case_name": "test_rejects_cross_origin_and_missing_origin",
+        "observed_outcome": "OK",
+        "github_actions_run": 42990527614,
+        "run_head_sha": "2384e9d245ca60fc9b2055e9b82c4541b33bd6bd",
+        "overall_run_conclusion": "failure"
+      },
+      "source_case_pass_not_whole_requirement": true
+    },
+    {
+      "id": "HAE-R13",
+      "id_type": "OWNER_REQUIREMENT_FROM_FEATURE_REQUIREMENTS",
+      "final_acceptance": "UNASSESSED",
+      "weight_approved": false,
+      "coverage_scope": "LIMITED_OR_NOT_MAPPED",
+      "scope_observed": "shipped package parity mismatch prevents release acceptance",
+      "source_at_functional_ci": {
+        "sha": "2384e9d245ca60fc9b2055e9b82c4541b33bd6bd",
+        "path": "apps/ax-flow/axflow/engine.py",
+        "blob_sha": "74d50a0b4822f8ed704506e947fc7444d8130157"
+      },
+      "representative_test": {
+        "path": "apps/ax-flow/tests/test_shipped_package.py",
+        "blob_sha": "ce8a630440ec63b7b8fe32f0ae85eb5919c87eba",
+        "case_name": "test_checked_in_zipapp_matches_current_hae_and_staged_la_sources",
+        "observed_outcome": "FAIL",
+        "github_actions_run": 42990527614,
+        "run_head_sha": "2384e9d245ca60fc9b2055e9b82c4541b33bd6bd",
+        "overall_run_conclusion": "failure"
+      },
+      "source_case_pass_not_whole_requirement": true
+    }
+  ]
+}

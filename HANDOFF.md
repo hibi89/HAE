@@ -1,3 +1,15 @@
+## [2026-11-13 KST] HAE 최종설계 CI 추적 초안 인수인계 10항
+1. **목표/기술/승인 설계:** 사용자 확정 전체 최종설계(HAE 자연어→실 LLM→LA 범용 계획/교정→승인·실행→SOVIA·DBVORA 독립 연동), 기존 13 R-ID 100% 기준.
+2. **결정/변경:** `docs/evidence/HAE_FINAL_BLUEPRINT_CI_TRACE_DRAFT_20261113.json`에 13개 id/실제 기능 코드 blob/대표 테스트 case/기능 CI SHA·FAIL 기록; 승인 없는 공식 manifest/가중치 생성 보류.
+3. **검증:** Actions #42990527614 기능 SHA `2384e9d245ca60fc9b2055e9b82c4541b33bd6bd`, Ubuntu·Windows 각 264PASS/2FAIL/7SKIP; repo source/tests 해당 SHA blob 및 Ubuntu 테스트 결과 재조회. 이번 doc-only 단계 신규 제품 suite 0.
+4. **진행/차단:** 13/13 추적 인덱스 형식, 공식률 UNASSESSED. 기존 배송 ZIP parity FAIL 2개, 실 고객 LLM→LA→SOVIA/DBVORA E2E 및 가중치 승인 미완료, RELEASE HOLD.
+5. **실패·원인·대안:** 현재 feature 브랜치에서 `docs/ECOSYSTEM_CANONICAL.md` 정본 파일 404; main에만 존재. local-file-only gate가 canonical scope를 충분히 검증하지 못함. 정본 복제 대신 본 branch에는 pinned main HEAD/정본 blob 기록 후 독립 정본 검증 프로토콜 필요.
+6. **repo/branch/SHA:** `hibi89/HAE@feature/axflow-mvp` 문서작업 이전 HEAD `019ffce2529ad18087d81451dbda00fe17617d65`, 기능 시험 SHA `2384e9d245ca60fc9b2055e9b82c4541b33bd6bd`. 문서 커밋 정확 SHA는 GitHub 후속 재조회. 정본 main HEAD `ff763ba...`.
+7. **환경/Production:** 기존 Actions Ubuntu/Windows 합성 실행; 외부 API/고객 PC/Production 미검증, Vercel 미적용.
+8. **원본/권한/백업:** 소스·데이터·기존 ZIP·고객자료·토큰·Git 권한·CI workflow·과거 수치 무변경; 문서 Git 부모 커밋으로 롤백.
+9. **다음 작업:** canonical scope read-only 검증, 모든 요구 수용조건/100점 가중치 독립 승인, HAE 기존 CI FAIL 2개 해결 및 실제 E2E. 비밀/실 모델 호출/권한/유료/배포는 별도 승인.
+10. **시점·범위:** 2026-11-13 KST, 원격 source/test blob+기존 GH Actions log read-only 대조, 신규 기능 CI 0, 공식률 UNASSESSED.
+
 ## [2026-11-13 KST] HAE 최종설계 대비 항목별 감사 / 인수인계 10항
 1. **목표/확정 기술:** 자연어→실 LLM 해석→HAE IR→LA 범용 플로우 자동 구성·에러 왕복→SOVIA/DBVORA→승인 실행/복구. 정본 `main/docs/ECOSYSTEM_CANONICAL.md` 및 `feature/axflow-mvp/REQUIREMENTS.md`.
 2. **완료/결정:** [R-01..R-13 근거 추적표](docs/HAE_FINAL_BLUEPRINT_TRACE_20261113.md) 신규 작성. 현재 CSV 5종 규칙/planner·로컬 IR/SQLite·승인·재개 코드는 보존하고 범용/AI 기능과 혼용하지 않는다. 소스 코드는 변경하지 않았다.
