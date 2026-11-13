@@ -1,3 +1,11 @@
+## [2026-11-13 KST] AZENTFLOW AX 70→85 합성 기술 단계 양 OS 수용 PASS / 공식 전체률 UNASSESSED
+
+- 85 기술 게이트: **3개 서로 다른 합성 업무**(고객 CSV 전체 import, 매출 조건부 import, 읽기 전용 고객 ID 조회), **DBVORA localhost HTTP mock 계약** (`p0-01.v1`, read-only `/health`+`/api/inventory`, 계약 불일치/접속 중단), **LA 승인 audit·사업 SQLite 영수증**, 독립 실행 프로세스 2회 + 재시작 뒤 1회 이어지는 bounded schedule을 원본 HAE/독립 LA로 실 통과. 신규 `apps/ax-flow/tests/test_azentflow_p85_acceptance.py` 7개, 서비스 코어·출고물 무변경.
+- **실 코드 SHA:** `a640666db7a1bf2011c5d2abc944f13199ce455f`; [HAE Actions #43382552489](https://github.com/hibi89/HAE/actions/runs/43382552489), Ubuntu/Windows 각각 신규 **P85 7/7 PASS**; 기존 P70 7/7·P50 3/3 유지, Node mock UI 24 PASS. Python full 각 **290건 = 281 PASS/2 FAIL/7 SKIP**, 전체 workflow **FAILURE**: 원본 배송 zipapp/ZIP ↔ 현행 소스 2건 source parity(기존 오류).
+- 첫 P85 SHA `39d9b4f6...`의 테스트에서 응답 최상위 속성을 중첩 `integration`으로 잘못 접근해 1 ERROR; 현 `a640666db7a1bf2011c5d2abc944f13199ce455f`에서 테스트 필드 수정, schedule 거부 예외도 정확한 `ApprovalRequired`/`PlanError`로 강화, Ubuntu/Windows 7/7 통과. 원본 실행기 버그/배송 패키지 수리라고 주장하지 않는다.
+- LA 별도 branch 조회 `feature/lightning-azent@36f9882eb50e0de9e85eedb320a5778c8321cda5`, CI는 **동적 branch checkout**으로 SHA pin assert 미실시. 테스트는 합성 localhost·독립 Python CLI, DBVORA 실제 서버/실 고객·OS reboot·Chrome/Edge/Google OAuth/실 SOVIA 미검증.
+- [제품 브랜치 P85 근거](https://github.com/hibi89/Freelancer/blob/product/hae-la-automation/docs/P85_ACCEPTANCE_EVIDENCE_20261113.md). 사용자 최종설계 100점 가중치·전수 독립검수 미완: **공식 최종완성률 UNASSESSED** / `[작업중]` 유지 / RELEASE HOLD·크몽 미등록. 다음 85→95 CI 0FAIL + packaging parity 안전 백업/재빌드/실 DBVORA process/고객 Windows 설치; 외부 사용료·권한·원본 덮어쓰기는 별도 승인. Vercel N/A.
+
 ## [2026-11-13 약 15:20 KST] AZENTFLOW AX 50→70 기술 수용 PASS (양 OS 7/7) / 공식 최종률 UNASSESSED
 
 - 사용자 목표: Freelancer `AZENTFLOW AX` 70% 단계. 제품 최종 100% 분모/승인 가중치 축소 금지. **70 기술 구간 synthetic 수용 PASS**, 전체 제품 공식 최종완성률 **UNASSESSED** / RELEASE HOLD.
