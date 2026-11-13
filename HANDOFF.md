@@ -1,3 +1,15 @@
+## [2026-11-13 약 15:20 KST] AZENTFLOW AX P70 실 검증 — 필수 10항 인수인계
+1. **목표·확정 요구·기술:** Freelancer 기업형 AZENTFLOW AX final blueprint 0→70 기술 단계. HAE 동의/IR+독립 LA 런타임+분리 SQLite/감사, 한국어 지원 2 업무. 전체 100% 공식 기준 변경 금지.
+2. **완료·변경·결정 근거:** `test_azentflow_p70_acceptance.py` 7개 추가. 원본 HAE/LA 코드·출고물 변경 없이 기존 HAE↔LA 연동을 직접 통과시키는 방식 B 채택(새 복제 엔진 A 대비 소스 drift·유지보수/보안 비용 절감, 외부 API비 0). 2 업무 흐름/동시성과 독립 CLI/재시작·재승인/크기·처리 상한 검증. 기존 P50 3 PASS 보존.
+3. **테스트/정확 SHA·성공 실패:** 기능 SHA `12987055802c1e2e3dbf7eb5c5820382a52daef4` [Actions #43377368138](https://github.com/hibi89/HAE/actions/runs/43377368138) Windows+Ubuntu 각 신규 P70 7 PASS/0 FAIL/0 SKIP, P50 3 PASS, smoke 6 PASS, LA adapter 5 PASS, Node UI24 PASS; 전체 Python 각 283 = 274 PASS/2 FAIL/7 SKIP. full workflow **FAILURE** (2 shipping parity). `cd apps/ax-flow && python -m unittest discover -s tests -p test_azentflow_p70_acceptance.py -v`, 별도 LA staged 필요.
+4. **완료/진행/대기/차단:** 70% **기술 단계 synthetic 검증 PASS**, 전체 공식 완성률 **UNASSESSED**, 상용 RELEASE HOLD, 크몽 미등록. 브라우저 실조작·OS kill/reboot·고객 동의/유료·SOVIA/DBVORA 실 서비스·full CI GREEN 미검증.
+5. **오류 원인·시도·재시도금지·대안:** 첫 코드 SHA `4d7c824a...` P70 recovery 변경 요청이 unsupported였기에 expected409 대신422, valid changed IR로 변경한 SHA `12987055802c1e2e3dbf7eb5c5820382a52daef4`에서 양OS PASS. 기존 checked-in zipapp/ZIP vs 최신 소스 2 parity FAIL 보존; 무백업 재빌드로 덮어쓰기·skip·force-push·반복무의미 workflow 금지. 원본 보존 후 source/bundle diff→별도 빌드/비교.
+6. **저장소/브랜치/SHA/주요 파일:** `hibi89/HAE@feature/axflow-mvp@12987055802c1e2e3dbf7eb5c5820382a52daef4`; P70 test `apps/ax-flow/tests/test_azentflow_p70_acceptance.py`; HAE runtime `apps/ax-flow/axflow/{web,planner,la_adapter}.py`; LA 조회 branch `feature/lightning-azent@36f9882eb50e0de9e85eedb320a5778c8321cda5`. 문서 HEAD는 최종 readback 확인 필요.
+7. **Production/환경/실행:** Actions GitHub-hosted Ubuntu/Windows Python3.11+Node22. Local-only 127.0.0.1 + synthetic SQLite, 독립 LA child Python CLI. 고객 Production 및 Vercel URL **미적용**, 배포/판매 0.
+8. **원본·백업·보안/변경금지:** 테스트 전 HAE 브랜치 `cfa9881b701c9520f67e44a38619c333b65cbdf6`, Git 이력으로 복구. 코어 소스/기존 출고 바이너리·비밀·고객 자료·DB·권한·원격 전송 변경 0. P70 동시성은 로컬 SQLite에 한정, 외부 API exactly-once 주장 불가.
+9. **다음 작업·우선순위·완료기준·승인:** 제품과 중앙 크몽 레지스트리에 P70 합성 기술 PASS 기록, `[작업중]`는 공식 100점 최종률 검증 전 유지. 70→85 3종 업무·DBVORA protocol mock·SOVIA/audit·제한 스케줄; 동시에 패키지 parity 2건 백업/재현·LA SHA pin. 실 고객/권한/원본 덮어쓰기/유료 결제는 사전 승인.
+10. **갱신 일시(KST)·확인 범위·문서 기준:** 2026-11-13 약 15:20 KST, GitHub 원격 기능 SHA `12987055802c1e2e3dbf7eb5c5820382a52daef4`, Actions run #43377368138 두 Job 로그 7/7·전체 fail 확인. HAE 문서 갱신 후 branch HEAD readback 필수. Windows 실제 고객 PC·크롬/엣지 설치·원격 Google/DBVORA/SOVIA/Production 미검증.
+
 ## [2026-11-13 약 15:03 KST] AZENTFLOW AX P50 acceptance handoff — 10항
 1. **목표/용도/확정기술:** Freelancer 기업형 AZENTFLOW AX의 `0→50` 구간: HAE 한국어/템플릿→버전 고정 IR→Lightning Azent 독립 실행→승인 로컬 SQLite/감사. 최종 100% 정본 축소 금지.
 2. **완료/결정:** 기존 HAE/LA 실행 소스·고객 데이터 무변경, `test_azentflow_p50_acceptance.py` 3개 실제 합성 HTTP 수용 추가. 복제 엔진(유지비·원본 분기·검증 위험) 대신 기존 HAE↔LA 버전 계약 adapter를 검증하는 최소 테스트(로컬·무 API 요금) 선택. 예고된 첫 test `run` 명 충돌 1회 교정.
