@@ -1,3 +1,13 @@
+## [2026-11-13 약 15:03 KST] AZENTFLOW AX P50 synthetic acceptance — 검증된 50구간 기술, 공식 점수 UNASSESSED
+
+- 사용자 목표: Freelancer 상품 `AZENTFLOW AX`의 최종설계 `0→50` 구간. 제품 구분에 유의: 이것은 HAE 전체 100점 공식률 또는 RELEASE 허가가 아니다.
+- 기능 소스 코드는 무변경. 신규 `apps/ax-flow/tests/test_azentflow_p50_acceptance.py` 3개 실 계약/e2e 안전 수용시험. 검증 코드 SHA `91963ae3ba656b384c2c5db092c9bc6cdcdc1e39`; LA 독립 `feature/lightning-azent` 브랜치 확인 SHA `36f9882eb50e0de9e85eedb320a5778c8321cda5` (워크플로는 움직이는 branch ref checkout; 완전 불변 pin 검증은 아님).
+- [GitHub Actions #43375517050](https://github.com/hibi89/HAE/actions/runs/43375517050), Ubuntu/Windows에서 **AZENTFLOW 신규 3/3 각각 PASS**, HAE→LA→SQLite smoke 6/6 각 PASS, LA adapter 5/5 각 PASS, Node UI 24 PASS. Python 전체 각각 **267 PASS / 2 FAIL / 7 SKIP**(총 276).
+- 신규 테스트: `axflow.ir.v0`/LA `azent.api.v0` capability handshake + fingerprint; 로컬 합성 CSV 2행 → preview → 승인 → 별도 runtime/business SQLite, LA 감사 읽기; 승인 없는 403/0 DB, 입력 변경 409/0 DB, 같은 run 재호출 시 비즈니스 행 2개 유지.
+- 전체 CI 두 OS **FAILURE** (기존 출고물 `hae-integrated.pyz` 및 `HAE-Windows-offline.zip` vs 현재 소스 parity 2개 FAIL; 임의 skip/덮어쓰기 없음). 테스트 첫 커밋 `1d1523f...`의 unittest `run` 이름 충돌을 확인하여 `91963ae3...`에서 `execute_preview`로 교정 후 유일한 실재시도 성공.
+- **AZENTFLOW P50 기술 수용시험 통과**와 **공식 최종완성률 UNASSESSED / RELEASE HOLD**를 별도 유지. 포괄적 HAE 13 R-ID 전체 가중치·실 고객/실 DBVORA/SOVIA/OAuth/Windows 배포물 패리티·독립 100점 검증은 미완료.
+- 다음: 고정 LA SHA를 CI에 계약적으로 추적, 원본 배포물을 백업·재빌드 후 parity 2건 원인 해결, 50→70 단계의 2업무/재시작·동시성·UI 수용, 사용자 승인 가중치와 독립 검증. Vercel Production 미적용.
+
 ## [2026-11-13 KST] 해총 최종설계 13개 요구 CI 증거 정규화
 - [R-01..R-13 추적 초안](docs/evidence/HAE_FINAL_BLUEPRINT_CI_TRACE_DRAFT_20261113.json): 기존 user-confirmed `REQUIREMENTS.md` ID 13개에 정확 기능 SHA `2384e9d245ca60fc9b2055e9b82c4541b33bd6bd`, Git blob 해시, 선택된 Ubuntu 테스트 case 로그 결과를 매핑. **대표 테스트 통과는 전체 요구 수용이나 현행 브랜치 전체 CI 통과가 아님**.
 - 실제 [Actions #42990527614](https://github.com/hibi89/HAE/actions/runs/42990527614) Ubuntu/Windows 모두 273중 264 PASS, 2 FAIL, 7 SKIP. ZIP/pyz 정합성 실패 2개를 유지. 현재 브랜치 문서 SHA와 기능 CI SHA는 서로 다르며 최신 전체 E2E 재검증 없음.
