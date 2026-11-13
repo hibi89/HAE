@@ -233,7 +233,7 @@ class AzentflowP70Acceptance(unittest.TestCase):
         self.stop_server()
         self.start_server()
         code, _ = self.post("/api/preview", {
-            "task": SALES_TASK, "csv_path": "orders.csv", "resume_run_id": run_id,
+            "task": "Find rows in this CSV where id equals 11", "csv_path": "orders.csv", "resume_run_id": run_id,
         })
         self.assertEqual(code, 409, "changed recovery plan must be rejected")
         second_preview = self.preview(resume_run_id=run_id)
