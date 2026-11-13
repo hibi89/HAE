@@ -56,6 +56,42 @@ class LAExecutor:
             raise PlanError("CSV workflows require an explicit input_root")
         if not approve_writes and any(step["op"] in _WRITE_OPS for step in normalized["steps"]):
             raise ApprovalRequired("explicit SQLite write approval required")
+        # Engine's completed-run fast path returns cached output. Validate the
+        # ledger first, so a removed business receipt cannot be replayed as
+        # success when execute() (instead of resume()) is called again.
+        if self.state_path.is_file():
+            try:
+                existing = inspect_run(self.state_path, run_id)
+            except RunLogError as exc:
+                if str(exc) not in ("run_id not found",
+                                    "invalid or unreadable runtime ledger"):
+                    raise PlanError(str(exc)) from exc
+                # A valid but entirely uninitialized SQLite file has no runs
+                # table yet. Keep original transactional Engine migration
+                # authoritative: it still preflights and rejects corruption.
+            else:
+                expected = hashlib.sha256(
+                    canonical_json(normalized).encode("utf-8")
+                ).hexdigest()
+                if existing["plan_sha256"] != expected:
+                    raise PlanError("same run id cannot be reused with a different plan")
+                if existing["status"] == "completed":
+                    try:
+                        inspect_business_ledger(self.business_path)
+                        inspect_completed_business_receipts(
+                            self.state_path, self.business_path, run_id, normalized)
+                    except RunLogError as exc:
+                        raise PlanError(str(exc)) from exc
+                    counts = existing.get("step_outcomes")
+                    count = len(normalized["steps"])
+                    if (type(existing.get("steps_recorded")) is not int
+                            or existing["steps_recorded"] != count
+                            or not isinstance(counts, dict)
+                            or any(type(counts.get(name)) is not int or counts[name] < 0
+                                   for name in ("completed", "skipped", "failed", "running"))
+                            or counts["failed"] != 0 or counts["running"] != 0
+                            or counts["completed"] + counts["skipped"] != count):
+                        raise PlanError("cached Lightning Azent step ledger is incomplete")
         return self._new_engine().execute(normalized, run_id, approve_writes=approve_writes)
 
     def resume(self, plan: object, run_id: str, *, approve_writes: bool = False) -> object:

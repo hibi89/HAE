@@ -24,6 +24,20 @@ def _path(path: Path | str) -> Path:
     return candidate.resolve(strict=False)
 
 
+def _logical_fingerprint(connection: sqlite3.Connection) -> str:
+    """Hash SQLite's logical committed rows, including WAL-only updates.
+
+    Never export source rows. This is conservative: a logical modification
+    during backup invalidates the new artifact even if the main file's
+    timestamp is unchanged. Costs a local full-table scan.
+    """
+    digest = hashlib.sha256()
+    for statement in connection.iterdump():
+        digest.update(statement.encode("utf-8"))
+        digest.update(b"\\n")
+    return digest.hexdigest()
+
+
 def _fingerprint(path: Path) -> tuple[str, int, int]:
     digest = hashlib.sha256()
     with path.open("rb") as source:
@@ -77,15 +91,24 @@ def _clone_runtime_state(source_path: Path | str, destination_path: Path | str) 
     else:
         raise StateBackupError("destination already exists; overwrite is refused")
 
-    before = _fingerprint(source)
+    # An SQLite update may live only in a WAL sidecar, leaving the .db file
+    # hash/mtime unchanged. Keep ONE read-only observer alive across the copy;
+    # PRAGMA data_version detects commits from other connections reliably
+    # even before WAL checkpoint. This complements the file fingerprint.
+    observer: sqlite3.Connection | None = None
+    before_version: tuple[int] | None = None
     staged: Path | None = None
     published = False
     completed = False
     try:
+        source_uri = source.as_uri() + "?mode=ro"
+        observer = sqlite3.connect(source_uri, uri=True, timeout=2)
+        before_version = observer.execute("PRAGMA data_version").fetchone()
+        before_logical = _logical_fingerprint(observer)
+        before = _fingerprint(source)
         fd, name = tempfile.mkstemp(prefix=".axflow-state-", suffix=".part", dir=destination.parent)
         os.close(fd)
         staged = Path(name)
-        source_uri = source.as_uri() + "?mode=ro"
         with closing(sqlite3.connect(source_uri, uri=True, timeout=2)) as src:
             _require_ledger(src)
             with closing(sqlite3.connect(staged, timeout=2)) as dst:
@@ -106,7 +129,14 @@ def _clone_runtime_state(source_path: Path | str, destination_path: Path | str) 
             os.close(fd)
 
         after = _fingerprint(source)
-        if after != before:
+        after_version = observer.execute("PRAGMA data_version").fetchone()
+        # Do not reuse the original reader's potentially pinned snapshot:
+        # Windows SQLite may retain a read cursor past iterdump() when WAL
+        # state changes. A NEW mode=ro connection must see committed updates.
+        with closing(sqlite3.connect(source_uri, uri=True, timeout=2)) as fresh:
+            after_logical = _logical_fingerprint(fresh)
+        if (after != before or after_version != before_version
+                or after_logical != before_logical):
             raise StateBackupError("runtime database source changed during backup")
         if os.name == "nt":
             # Windows os.rename is atomic on the same volume and refuses an existing target.
@@ -134,6 +164,8 @@ def _clone_runtime_state(source_path: Path | str, destination_path: Path | str) 
     except (OSError, sqlite3.Error, ValueError, TypeError):
         raise StateBackupError("runtime database backup or restore failed safely") from None
     finally:
+        if observer is not None:
+            observer.close()
         if published and not completed:
             try:
                 destination.unlink(missing_ok=True)

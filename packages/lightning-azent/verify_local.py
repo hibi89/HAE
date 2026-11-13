@@ -31,6 +31,9 @@ EXPECTED_MIN_TESTS = 65
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Offline, synthetic-only HAE/LA verification")
+    ap.add_argument("--expected-branch", default="feature/lightning-azent",
+                    choices=("feature/lightning-azent", "feature/la-p17-audit-evidence-20261112"),
+                    help="explicit checked-out source branch to verify; default is the preserved LA baseline")
     ap.add_argument("--skip-legacy", action="store_true")
     ap.add_argument("--skip-wheel", action="store_true")
     ap.add_argument("--timeout", type=int, default=240)
@@ -81,7 +84,7 @@ def main() -> int:
         report["branch"] = run("git_branch", ["git", "branch", "--show-current"]).strip()
         report["dirty"] = bool(run("git_dirty", ["git", "status", "--porcelain",
                                                 "--untracked-files=no"]).strip())
-        require(report["branch"] == "feature/lightning-azent", "Wrong Git branch")
+        require(report["branch"] == opts.expected_branch, "Wrong Git branch")
         require(not report["dirty"], "Tracked source tree is dirty; keep receipt SHA exact")
         require(sys.version_info >= (3, 11), "Requires Python >= 3.11")
         return {"sha": report["sha"]}

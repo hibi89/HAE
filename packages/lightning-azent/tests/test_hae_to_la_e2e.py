@@ -6,6 +6,7 @@ network or production service. The original HAE routes are not modified.
 from __future__ import annotations
 
 import hashlib
+import json
 import sys
 import tempfile
 import unittest
@@ -104,6 +105,78 @@ class HAEToLARealSQLiteTests(unittest.TestCase):
         self.assertEqual(first, replay)
         with sqlite_connection(self.business) as db:
             self.assertEqual(db.execute("SELECT COUNT(*) FROM csv_records").fetchone()[0], 3)
+
+
+    def approved_import(self, run_id="RunOne"):
+        preview = self.review(run_id)
+        self.consumer.execute(
+            TASK, "orders.csv", run_id, synthetic=True,
+            owner_confirmed=True,
+            confirmed_request_sha256=preview["request_sha256"])
+        return preview
+
+    def test_cached_execute_checks_actual_business_rows_not_only_run_status(self):
+        before = hashlib.sha256(self.source.read_bytes()).hexdigest()
+        preview = self.approved_import()
+        with sqlite_connection(self.business) as db:
+            db.execute("DELETE FROM csv_records WHERE row_number=2")
+        with self.assertRaisesRegex(PlanError, "inconsistent|missing"):
+            self.consumer.execute(
+                TASK, "orders.csv", "RunOne", synthetic=True,
+                owner_confirmed=True,
+                confirmed_request_sha256=preview["request_sha256"])
+        with sqlite_connection(self.business) as db:
+            self.assertEqual(2, db.execute("SELECT COUNT(*) FROM csv_records").fetchone()[0])
+        self.assertEqual(before, hashlib.sha256(self.source.read_bytes()).hexdigest())
+
+    def test_cached_execute_denies_forged_completed_missing_step(self):
+        preview = self.approved_import()
+        with sqlite_connection(self.state) as db:
+            db.execute("DELETE FROM steps WHERE run_id=? AND step_id=("
+                       "SELECT step_id FROM steps WHERE run_id=? "
+                       "ORDER BY step_id DESC LIMIT 1)",
+                       ("RunOne", "RunOne"))
+        with self.assertRaisesRegex(PlanError, "step ledger is incomplete"):
+            self.consumer.execute(
+                TASK, "orders.csv", "RunOne", synthetic=True,
+                owner_confirmed=True,
+                confirmed_request_sha256=preview["request_sha256"])
+
+    def test_owner_evidence_requires_real_completed_audit_event(self):
+        self.approved_import()
+        good = self.consumer.evidence(TASK, "orders.csv", "RunOne")
+        self.assertTrue(good["verified"])
+        self.assertEqual(good["audit"]["run_id"], "RunOne")
+        with sqlite_connection(self.state) as db:
+            db.execute("DELETE FROM audit_events WHERE run_id=? AND event_type=?",
+                       ("RunOne", "run_completed"))
+        with self.assertRaisesRegex(PlanError, "completed audit event"):
+            self.consumer.evidence(TASK, "orders.csv", "RunOne")
+
+    def test_owner_evidence_requires_unmodified_write_approval_scope(self):
+        self.approved_import()
+        with sqlite_connection(self.state) as db:
+            row = db.execute("SELECT approval_id,scope_json FROM approval_receipts "
+                             "WHERE run_id=? ORDER BY approval_id DESC LIMIT 1",
+                             ("RunOne",)).fetchone()
+            self.assertIsNotNone(row)
+            scope = json.loads(row[1])
+            scope["write_steps"] = []
+            db.execute("UPDATE approval_receipts SET scope_json=? WHERE approval_id=?",
+                       (json.dumps(scope), row[0]))
+        with self.assertRaisesRegex(PlanError, "write approval receipt"):
+            self.consumer.evidence(TASK, "orders.csv", "RunOne")
+
+    def test_owner_evidence_replay_after_resume_keeps_terminal_audit(self):
+        digest = self.approved_import()["request_sha256"]
+        replay = self.consumer.execute(
+            TASK, "orders.csv", "RunOne", synthetic=True,
+            owner_confirmed=True, confirmed_request_sha256=digest, resume=True)
+        evidence = self.consumer.evidence(TASK, "orders.csv", "RunOne")
+        self.assertTrue(evidence["verified"])
+        self.assertEqual(evidence["audit"]["events"][-1]["event_type"], "run_replayed")
+        self.assertTrue(any(x["event_type"] == "run_completed"
+                            for x in evidence["audit"]["events"]))
 
     def test_unsupported_external_task_rejects_before_sqlite(self):
         with self.assertRaises(HAEPlanError):
